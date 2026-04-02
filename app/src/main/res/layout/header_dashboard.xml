@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#121212"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="16dp">
+
+    <!-- Lời chào (Bên trái) -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chào buổi sáng 🌤️"
+            android:textColor="#BDBDBD"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Minh Tuấn"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Cụm biểu tượng (Bên phải) -->
+    <!-- Icon Chuông -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/btn_notification"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        app:cardBackgroundColor="#2A2A2A"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:src="@android:drawable/ic_popup_reminder"
+            app:tint="#F2C94C" />
+    </androidx.cardview.widget.CardView>
+
+    <Space
+        android:layout_width="12dp"
+        android:layout_height="wrap_content" />
+
+    <!-- Hình đại diện cá nhân -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/btn_profile"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        app:cardBackgroundColor="#735BF2"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="MT"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </androidx.cardview.widget.CardView>
+
+</LinearLayout>

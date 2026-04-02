@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="16dp" />
+    <solid android:color="#2A2A2A" />
+    <!-- Bạn có thể điều chỉnh màu nền này để gần với background chung của hình, nhưng do text và icon màu tím nên nền xám đậm (#2A2A2A) là chuẩn trên nền Dark Mode (hoặc màu tím nhạt có độ opacity). Ở đây tôi dùng xám đậm cho giống phong cách glassmorphism tĩnh -->
+</shape>
