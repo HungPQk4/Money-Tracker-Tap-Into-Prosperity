@@ -1,4 +1,4 @@
-package vn.edu.usth.tip;
+package vn.edu.usth.tip.fragment;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -10,6 +10,8 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import android.widget.Toast;
+
+import vn.edu.usth.tip.R;
 
 public class AnalyticsFragment extends Fragment {
 

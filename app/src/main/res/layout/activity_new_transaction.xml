@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#12131A"
-    tools:context=".NewTransactionFragment">
+    tools:context=".fragment.NewTransactionFragment">
 
     <!-- Main Scrollable Content -->
     <androidx.core.widget.NestedScrollView

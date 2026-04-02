@@ -1,14 +1,16 @@
-package vn.edu.usth.tip;
+package vn.edu.usth.tip.fragment;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
-
+import vn.edu.usth.tip.fragment.WalletManagementFragment;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+
+import vn.edu.usth.tip.R;
 
 public class DashboardFragment extends Fragment {
 
@@ -36,7 +38,17 @@ public class DashboardFragment extends Fragment {
 
         if (btnProfile != null) {
             btnProfile.setOnClickListener(v ->
-                    Toast.makeText(requireContext(), "Mở Hồ sơ Minh Tuấn", Toast.LENGTH_SHORT).show()
+                    requireActivity().getSupportFragmentManager()
+                            .beginTransaction()
+                            .setCustomAnimations(
+                                    android.R.anim.slide_in_left,
+                                    android.R.anim.slide_out_right,
+                                    android.R.anim.slide_in_left,
+                                    android.R.anim.slide_out_right
+                            )
+                            .replace(R.id.nav_host_fragment, new WalletManagementFragment())
+                            .addToBackStack(null)
+                            .commit()
             );
         }
 

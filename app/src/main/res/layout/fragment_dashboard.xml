@@ -189,6 +189,7 @@
 
             <!-- Action 1 -->
             <androidx.cardview.widget.CardView
+                android:id="@+id/btn_add_expense"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="4dp"
@@ -211,7 +212,6 @@
                         app:tint="#999999" />
 
                     <TextView
-                        android:id="@+id/btn_add_expense"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"

@@ -1,4 +1,4 @@
-package vn.edu.usth.tip;
+package vn.edu.usth.tip.fragment;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -11,9 +11,11 @@ import androidx.fragment.app.Fragment;
 
 import android.widget.Toast;
 
-public class BudgetsFragment extends Fragment {
+import vn.edu.usth.tip.R;
 
-    public BudgetsFragment() {
+public class DebtsLoansFragment extends Fragment {
+
+    public DebtsLoansFragment() {
         // Required empty public constructor
     }
 
@@ -21,18 +23,18 @@ public class BudgetsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_budgets, container, false);
+        return inflater.inflate(R.layout.fragment_debts, container, false);
     }
     
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        View btnNewBudget = view.findViewById(R.id.btn_new_budget);
+        View btnAddDebt = view.findViewById(R.id.btn_add_debt);
 
-        if (btnNewBudget != null) {
-            btnNewBudget.setOnClickListener(v -> {
-                Toast.makeText(requireContext(), "Tạo Ngân sách mới", Toast.LENGTH_SHORT).show();
+        if (btnAddDebt != null) {
+            btnAddDebt.setOnClickListener(v -> {
+                Toast.makeText(requireContext(), "Thêm Nợ / Khoản vay mới", Toast.LENGTH_SHORT).show();
             });
         }
     }

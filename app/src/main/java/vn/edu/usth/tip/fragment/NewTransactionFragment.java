@@ -1,4 +1,4 @@
-package vn.edu.usth.tip;
+package vn.edu.usth.tip.fragment;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -9,6 +9,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+
+import vn.edu.usth.tip.R;
 
 public class NewTransactionFragment extends Fragment {
 

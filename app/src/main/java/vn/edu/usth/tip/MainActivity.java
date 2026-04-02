@@ -14,6 +14,8 @@ import androidx.navigation.ui.NavigationUI;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import vn.edu.usth.tip.fragment.NewTransactionFragment;
+
 public class MainActivity extends AppCompatActivity {
 
     @Override
