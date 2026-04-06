@@ -51,4 +51,7 @@ public class Wallet {
     public void setName(String name)              { this.name = name; }
     public void setBalanceVnd(long b)             { this.balanceVnd = b; }
     public void setIncludedInTotal(boolean v)     { this.includedInTotal = v; }
+    public void setIcon(String icon)              { this.icon = icon; }
+    public void setColor(int color)               { this.color = color; }
+    public void setType(Type type)                { this.type = type; }
 }

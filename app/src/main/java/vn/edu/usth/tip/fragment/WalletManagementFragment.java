@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -62,10 +63,10 @@ public class WalletManagementFragment extends Fragment
         view.findViewById(R.id.btn_empty_add)
                 .setOnClickListener(v -> openAddWalletSheet());
 
-        // Back button
+        // Back button → navigateUp() thông qua Jetpack Navigation
         view.findViewById(R.id.btn_back)
-                .setOnClickListener(v -> requireActivity()
-                        .getSupportFragmentManager().popBackStack());
+                .setOnClickListener(v ->
+                        Navigation.findNavController(v).navigateUp());
 
         updateSummary();
         updateEmptyState();
@@ -75,9 +76,23 @@ public class WalletManagementFragment extends Fragment
 
     @Override
     public void onEdit(Wallet wallet, int position) {
-        // TODO: mở AddEditWalletBottomSheet với dữ liệu wallet
-        Toast.makeText(requireContext(),
-                "Sửa ví: " + wallet.getName(), Toast.LENGTH_SHORT).show();
+        EditWalletBottomSheet sheet = EditWalletBottomSheet.newInstance(
+                wallet, position,
+                new EditWalletBottomSheet.OnWalletEditListener() {
+                    @Override
+                    public void onWalletUpdated(Wallet updated, int pos) {
+                        adapter.notifyItemChanged(pos);
+                        updateSummary();
+                    }
+                    @Override
+                    public void onWalletDeleted(int pos) {
+                        walletList.remove(pos);
+                        adapter.notifyItemRemoved(pos);
+                        updateSummary();
+                        updateEmptyState();
+                    }
+                });
+        sheet.show(getParentFragmentManager(), "edit_wallet");
     }
 
     @Override
@@ -97,8 +112,24 @@ public class WalletManagementFragment extends Fragment
 
     @Override
     public void onCardClick(Wallet wallet) {
-        Toast.makeText(requireContext(),
-                "Xem chi tiết: " + wallet.getName(), Toast.LENGTH_SHORT).show();
+        // Tìm vị trí của ví trong danh sách
+        int position = walletList.indexOf(wallet);
+        
+        WalletDetailSheet detailSheet = WalletDetailSheet.newInstance(
+                wallet,
+                new WalletDetailSheet.OnDetailActionListener() {
+                    @Override
+                    public void onEdit(Wallet w) {
+                        // Gọi lại hàm onEdit của Fragment (WalletManagementFragment.this)
+                        WalletManagementFragment.this.onEdit(w, position);
+                    }
+
+                    @Override
+                    public void onDelete(Wallet w) {
+                        WalletManagementFragment.this.onDelete(w, position);
+                    }
+                });
+        detailSheet.show(getParentFragmentManager(), "wallet_detail");
     }
 
     @Override
@@ -110,9 +141,13 @@ public class WalletManagementFragment extends Fragment
     // ── Helpers ───────────────────────────────────────────────────────
 
     private void openAddWalletSheet() {
-        // TODO: hiển thị AddEditWalletBottomSheet
-        Toast.makeText(requireContext(),
-                "Mở thêm ví mới", Toast.LENGTH_SHORT).show();
+        AddWalletBottomSheet sheet = AddWalletBottomSheet.newInstance(wallet -> {
+            walletList.add(wallet);
+            adapter.notifyItemInserted(walletList.size() - 1);
+            updateSummary();
+            updateEmptyState();
+        });
+        sheet.show(getParentFragmentManager(), "add_wallet");
     }
 
     private void updateSummary() {

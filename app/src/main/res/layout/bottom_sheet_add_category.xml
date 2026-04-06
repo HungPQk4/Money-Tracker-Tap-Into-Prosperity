@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#1A1A35"
+        android:padding="24dp">
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="24dp"
+            android:background="#4D4D7A" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Thêm danh mục mới"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Preview Icon -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_gravity="center_horizontal"
+            app:cardBackgroundColor="#2D2E45"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp"
+            android:layout_marginBottom="24dp">
+            <TextView
+                android:id="@+id/tv_category_icon_preview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="⭐"
+                android:textSize="32sp" />
+        </androidx.cardview.widget.CardView>
+
+        <!-- Category Name -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Tên danh mục"
+            app:hintTextColor="#735BF2"
+            app:boxStrokeColor="#735BF2"
+            app:boxBackgroundColor="#1A1B29"
+            android:textColorHint="#9CA3AF"
+            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_category_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:inputType="textCapSentences" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Emoji grid -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chọn biểu tượng"
+            android:textColor="#9CA3AF"
+            android:textSize="13sp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="12dp" />
+
+        <GridLayout
+            android:id="@+id/grid_emojis"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="6"
+            android:alignmentMode="alignBounds">
+
+            <TextView style="@style/EmojiKey" android:text="🍔" />
+            <TextView style="@style/EmojiKey" android:text="🍿" />
+            <TextView style="@style/EmojiKey" android:text="🎮" />
+            <TextView style="@style/EmojiKey" android:text="🎨" />
+            <TextView style="@style/EmojiKey" android:text="💼" />
+            <TextView style="@style/EmojiKey" android:text="👗" />
+            <TextView style="@style/EmojiKey" android:text="🔧" />
+            <TextView style="@style/EmojiKey" android:text="🏠" />
+            <TextView style="@style/EmojiKey" android:text="💳" />
+            <TextView style="@style/EmojiKey" android:text="💡" />
+            <TextView style="@style/EmojiKey" android:text="🎁" />
+            <TextView style="@style/EmojiKey" android:text="💎" />
+        </GridLayout>
+
+        <!-- Add Button -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btn_add_category_save"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="40dp"
+            app:cardBackgroundColor="#735BF2"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="Thêm danh mục"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

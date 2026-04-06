@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F0F1A">
+
+    <!-- ── AppBar ── -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar_all_tx"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:paddingHorizontal="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/btn_back_all_tx"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="8dp"
+                    android:src="@android:drawable/ic_menu_revert"
+                    app:tint="#FFFFFF" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Tất cả giao dịch"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <!-- Month/Period pill -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    app:cardBackgroundColor="#1E1E35"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp">
+                    <TextView
+                        android:id="@+id/tv_all_tx_period"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:paddingHorizontal="14dp"
+                        android:text="Tháng 4 ▾"
+                        android:textColor="#A78BFA"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+        </androidx.appcompat.widget.Toolbar>
+
+        <!-- ── Summary strip ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="12dp"
+            android:weightSum="2">
+
+            <!-- Income total -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▲  Thu nhập"
+                    android:textColor="#22C55E"
+                    android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tv_summary_income"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="₫0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="#2D2D50" />
+
+            <!-- Expense total -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▼  Chi tiêu"
+                    android:textColor="#EF4444"
+                    android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tv_summary_expense"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="₫0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ── Search bar ── -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="10dp"
+            app:boxBackgroundColor="#1C1C2E"
+            app:boxCornerRadiusBottomEnd="14dp"
+            app:boxCornerRadiusBottomStart="14dp"
+            app:boxCornerRadiusTopEnd="14dp"
+            app:boxCornerRadiusTopStart="14dp"
+            app:boxStrokeColor="#3D3D6A"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="#9CA3AF"
+            app:startIconDrawable="@android:drawable/ic_menu_search"
+            app:startIconTint="#9CA3AF"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_search_transactions"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:color/transparent"
+                android:hint="Tìm giao dịch..."
+                android:textColor="#FFFFFF"
+                android:textColorHint="#4B5563"
+                android:textSize="14sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_filter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="12dp"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <!-- Chip: Tất cả -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_all"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:checked="true"
+                android:text="Tất cả"
+                android:textColor="#FFFFFF"
+                app:chipBackgroundColor="#735BF2"
+                app:chipStrokeWidth="0dp"
+                app:checkedIconVisible="false"
+                style="@style/Widget.MaterialComponents.Chip.Filter" />
+
+            <!-- Chip: Thu nhập -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_income"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Thu nhập"
+                android:textColor="#6EE7A0"
+                app:chipBackgroundColor="#1C2A20"
+                app:chipStrokeColor="#22C55E"
+                app:chipStrokeWidth="1dp"
+                app:checkedIconVisible="false"
+                style="@style/Widget.MaterialComponents.Chip.Filter" />
+
+            <!-- Chip: Chi tiêu -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_expense"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Chi tiêu"
+                android:textColor="#FCA5A5"
+                app:chipBackgroundColor="#2D1C1C"
+                app:chipStrokeColor="#EF4444"
+                app:chipStrokeWidth="1dp"
+                app:checkedIconVisible="false"
+                style="@style/Widget.MaterialComponents.Chip.Filter" />
+
+            <!-- Chip: Chuyển khoản -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_transfer"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Chuyển khoản"
+                android:textColor="#C4B5FD"
+                app:chipBackgroundColor="#1C1C2A"
+                app:chipStrokeColor="#A78BFA"
+                app:chipStrokeWidth="1dp"
+                app:checkedIconVisible="false"
+                style="@style/Widget.MaterialComponents.Chip.Filter" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- ── Transaction list ── -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_all_transactions"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="24dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <!-- ── Empty state ── -->
+    <LinearLayout
+        android:id="@+id/layout_all_tx_empty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="💸"
+            android:textSize="56sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="Không tìm thấy giao dịch nào"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm"
+            android:textColor="#6B7280"
+            android:textSize="13sp" />
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
