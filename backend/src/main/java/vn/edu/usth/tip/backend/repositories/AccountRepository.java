@@ -2,11 +2,12 @@ package vn.edu.usth.tip.backend.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import vn.edu.usth.tip.backend.models.DebtLoan;
+import vn.edu.usth.tip.backend.models.Account;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface DebtLoanRepository extends JpaRepository<DebtLoan, Long> {
-    List<DebtLoan> findByUserId(Long userId);
+public interface AccountRepository extends JpaRepository<Account, UUID> {
+    List<Account> findByUserId(UUID userId);
 }
