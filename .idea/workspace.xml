@@ -201,32 +201,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f55769a6-fd56-4461-a5db-104b39f830ca" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/controllers/TransactionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/controllers/TransactionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/controllers/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/controllers/UserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Budget.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Budget.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Category.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Category.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/DebtLoan.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Goal.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Goal.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Transaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Transaction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/User.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/BudgetRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/BudgetRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/CategoryRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/CategoryRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/DebtLoanRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/GoalRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/GoalRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/TransactionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/TransactionRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/UserRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/TransactionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/TransactionService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/UserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/test/java/vn/edu/usth/tip/backend/BackendApplicationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/test/java/vn/edu/usth/tip/backend/BackendApplicationTests.java" afterDir="false" />
-    </list>
+    <list default="true" id="f55769a6-fd56-4461-a5db-104b39f830ca" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
