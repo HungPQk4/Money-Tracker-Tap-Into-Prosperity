@@ -57,34 +57,37 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/tv_net_worth"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="128.450.000"
+                        android:text="0"
                         android:textColor="#FFFFFF"
                         android:textSize="36sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
                 <TextView
+                    android:id="@+id/tv_net_worth_growth"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="+3.2% so với tháng trước"
+                    android:text="Cập nhật thời gian thực..."
                     android:textColor="#D0C9FF"
                     android:textSize="12sp" />
 
-                <!-- Income/Expense Sub-blocks -->
+                <!-- Income/Expense/Transfer Sub-blocks -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:weightSum="3">
 
                     <!-- Income -->
                     <androidx.cardview.widget.CardView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="4dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="#8471F5"
                         app:cardCornerRadius="12dp"
@@ -92,9 +95,10 @@
 
                         <LinearLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp"
+                            android:gravity="center_vertical">
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
@@ -111,19 +115,20 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginStart="6dp"
-                                    android:text="Thu nhập"
+                                    android:layout_marginStart="4dp"
+                                    android:text="Thu"
                                     android:textColor="#FFFFFF"
-                                    android:textSize="13sp" />
+                                    android:textSize="12sp" />
                             </LinearLayout>
 
                             <TextView
+                                android:id="@+id/tv_monthly_income"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="₫18.000.000"
+                                android:text="₫0"
                                 android:textColor="#FFFFFF"
-                                android:textSize="16sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold" />
                         </LinearLayout>
                     </androidx.cardview.widget.CardView>
@@ -132,7 +137,7 @@
                     <androidx.cardview.widget.CardView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginHorizontal="2dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="#8471F5"
                         app:cardCornerRadius="12dp"
@@ -140,9 +145,10 @@
 
                         <LinearLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp"
+                            android:gravity="center_vertical">
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
@@ -159,19 +165,70 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginStart="6dp"
-                                    android:text="Chi tiêu"
+                                    android:layout_marginStart="4dp"
+                                    android:text="Chi"
                                     android:textColor="#FFFFFF"
-                                    android:textSize="13sp" />
+                                    android:textSize="12sp" />
                             </LinearLayout>
 
                             <TextView
+                                android:id="@+id/tv_monthly_expense"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="₫5.550.000"
+                                android:text="₫0"
                                 android:textColor="#FFFFFF"
-                                android:textSize="16sp"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Transfer -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="#8471F5"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="10dp"
+                            android:gravity="center_vertical">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="⇄"
+                                    android:textColor="#909FFC"
+                                    android:textSize="10sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:text="Chuyển"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tv_monthly_transfer"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="₫0"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp"
                                 android:textStyle="bold" />
                         </LinearLayout>
                     </androidx.cardview.widget.CardView>
@@ -225,6 +282,7 @@
 
             <!-- Action 2 -->
             <androidx.cardview.widget.CardView
+                android:id="@+id/btn_add_income"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="4dp"
@@ -261,6 +319,7 @@
 
             <!-- Action 3 -->
             <androidx.cardview.widget.CardView
+                android:id="@+id/btn_scan_receipt"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="4dp"

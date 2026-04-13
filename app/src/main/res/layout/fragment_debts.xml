@@ -57,10 +57,11 @@
                             android:textSize="11sp"
                             android:textStyle="bold" />
                         <TextView
+                            android:id="@+id/tv_total_i_owe"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="₫2,500,000"
+                            android:text="₫0"
                             android:textColor="#E76E60"
                             android:textSize="18sp"
                             android:textStyle="bold" />
@@ -100,10 +101,11 @@
                             android:textSize="11sp"
                             android:textStyle="bold" />
                         <TextView
+                            android:id="@+id/tv_total_owed_to_me"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="₫4,800,000"
+                            android:text="₫0"
                             android:textColor="#2DD3A1"
                             android:textSize="18sp"
                             android:textStyle="bold" />
@@ -113,254 +115,12 @@
         </LinearLayout>
 
         <!-- Detailed Cards List -->
-        
-        <!-- Item 1: Anh Nam -->
-        <androidx.cardview.widget.CardView
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_debts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            app:cardBackgroundColor="#3B2323"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
+            android:nestedScrollingEnabled="false" />
             
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_margin="1dp"
-                app:cardBackgroundColor="#1E191C"
-                app:cardCornerRadius="15dp"
-                app:cardElevation="0dp">
-                
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="20dp"
-                    android:orientation="vertical">
-                    
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Anh Nam"
-                            android:textColor="#FFFFFF"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-                            
-                        <!-- I owe label pill -->
-                        <androidx.cardview.widget.CardView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:cardBackgroundColor="#3D2929"
-                            app:cardCornerRadius="8dp"
-                            app:cardElevation="0dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="10dp"
-                                android:paddingVertical="4dp"
-                                android:text="I owe"
-                                android:textColor="#E76E60"
-                                android:textSize="11sp" />
-                        </androidx.cardview.widget.CardView>
-                    </LinearLayout>
-                    
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Borrowed for repair"
-                        android:textColor="#8C8D99"
-                        android:textSize="13sp" />
-                        
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="₫1,500,000"
-                        android:textColor="#E76E60"
-                        android:textSize="22sp"
-                        android:textStyle="bold" />
-                        
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Due: 15 Apr 2026"
-                        android:textColor="#8C8D99"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Item 2: Chị Hoa -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="#3B2323"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
-            
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_margin="1dp"
-                app:cardBackgroundColor="#1E191C"
-                app:cardCornerRadius="15dp"
-                app:cardElevation="0dp">
-                
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="20dp"
-                    android:orientation="vertical">
-                    
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Chị Hoa"
-                            android:textColor="#FFFFFF"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-                            
-                        <!-- I owe label pill -->
-                        <androidx.cardview.widget.CardView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:cardBackgroundColor="#3D2929"
-                            app:cardCornerRadius="8dp"
-                            app:cardElevation="0dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="10dp"
-                                android:paddingVertical="4dp"
-                                android:text="I owe"
-                                android:textColor="#E76E60"
-                                android:textSize="11sp" />
-                        </androidx.cardview.widget.CardView>
-                    </LinearLayout>
-                    
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Split dinner bill"
-                        android:textColor="#8C8D99"
-                        android:textSize="13sp" />
-                        
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="₫1,000,000"
-                        android:textColor="#E76E60"
-                        android:textSize="22sp"
-                        android:textStyle="bold" />
-                        
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Due: 20 Apr 2026"
-                        android:textColor="#8C8D99"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Item 3: Bạn Tuấn -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="#1D3A31"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
-            
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_margin="1dp"
-                app:cardBackgroundColor="#151E20"
-                app:cardCornerRadius="15dp"
-                app:cardElevation="0dp">
-                
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="20dp"
-                    android:orientation="vertical">
-                    
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Bạn Tuấn"
-                            android:textColor="#FFFFFF"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-                            
-                        <!-- Lent label pill -->
-                        <androidx.cardview.widget.CardView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:cardBackgroundColor="#1C3833"
-                            app:cardCornerRadius="8dp"
-                            app:cardElevation="0dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="10dp"
-                                android:paddingVertical="4dp"
-                                android:text="Lent"
-                                android:textColor="#2DD3A1"
-                                android:textSize="11sp" />
-                        </androidx.cardview.widget.CardView>
-                    </LinearLayout>
-                    
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Lent for phone"
-                        android:textColor="#8C8D99"
-                        android:textSize="13sp" />
-                        
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="₫4,800,000"
-                        android:textColor="#2DD3A1"
-                        android:textSize="22sp"
-                        android:textStyle="bold" />
-                        
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Due: 30 Apr 2026"
-                        android:textColor="#8C8D99"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-        </androidx.cardview.widget.CardView>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

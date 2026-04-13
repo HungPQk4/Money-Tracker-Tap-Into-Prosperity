@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#1E1F2C"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ngân sách mới"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Emoji + Name row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <!-- Emoji Picker -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_pick_emoji"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="#2A2B3D"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+            <TextView
+                android:id="@+id/tv_selected_emoji"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="💰"
+                android:textSize="26sp" />
+        </androidx.cardview.widget.CardView>
+
+        <!-- Budget Name -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:hint="Tên ngân sách"
+            app:hintTextColor="#735BF2"
+            app:boxStrokeColor="#735BF2"
+            app:boxBackgroundColor="#1E1F2C"
+            android:textColorHint="#8C8D99">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_budget_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#8C8D99"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
+    <!-- Category -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:hint="Danh mục giao dịch (bỏ trống = tất cả)"
+        app:hintTextColor="#735BF2"
+        app:boxStrokeColor="#735BF2"
+        app:boxBackgroundColor="#1E1F2C"
+        android:textColorHint="#8C8D99">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_budget_category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#8C8D99"
+            android:inputType="text" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Amount -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:hint="Số tiền giới hạn (₫)"
+        app:hintTextColor="#735BF2"
+        app:boxStrokeColor="#735BF2"
+        app:boxBackgroundColor="#1E1F2C"
+        android:textColorHint="#8C8D99">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_budget_amount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#8C8D99"
+            android:inputType="numberDecimal" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Period selector -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Kỳ theo dõi"
+        android:textColor="#8C8D99"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="24dp">
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btn_period_month"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="#735BF2"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp">
+            <TextView
+                android:id="@+id/tv_period_month"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="Tháng này"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btn_period_week"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="#2A2B3D"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp">
+            <TextView
+                android:id="@+id/tv_period_week"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="Tuần này"
+                android:textColor="#8C8D99"
+                android:textSize="13sp" />
+        </androidx.cardview.widget.CardView>
+    </LinearLayout>
+
+    <!-- Color chips -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Màu sắc"
+        android:textColor="#8C8D99"
+        android:textSize="12sp"
+        android:layout_marginBottom="10dp" />
+
+    <LinearLayout
+        android:id="@+id/ll_color_chips"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="28dp" />
+
+    <!-- Save button -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/btn_save_budget"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="#735BF2"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="Tạo ngân sách"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </androidx.cardview.widget.CardView>
+
+</LinearLayout>

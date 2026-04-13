@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#161726"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:background="#37384D" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="Thêm Nợ / Khoản vay"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <!-- Type Selector -->
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/toggle_debt_type"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:checkedButton="@+id/btn_type_i_owe">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_type_i_owe"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="52dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="#FF7043"
+            android:textColor="#FF7043"
+            android:text="Mình nợ" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_type_lent"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="52dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="#26A69A"
+            android:textColor="#26A69A"
+            android:text="Cho vay" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <!-- Name Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:hint="Tên người liên quan (VD: Tuấn, Ngân hàng...)"
+        app:hintTextColor="#735BF2"
+        app:boxStrokeColor="#735BF2"
+        app:boxBackgroundColor="#1C1C2A"
+        android:textColorHint="#8C8D99"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_debt_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#8C8D99" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Reason Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:hint="Lý do / Danh mục (VD: Vay mua xe)"
+        app:hintTextColor="#735BF2"
+        app:boxStrokeColor="#735BF2"
+        app:boxBackgroundColor="#1C1C2A"
+        android:textColorHint="#8C8D99"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_debt_reason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#8C8D99" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Amount Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_debt_amount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:hint="Số tiền (VND)"
+        app:hintTextColor="#FF7043"
+        app:boxStrokeColor="#FF7043"
+        app:boxBackgroundColor="#1C1C2A"
+        android:textColorHint="#8C8D99"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_debt_amount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:textColor="#FF7043"
+            android:textStyle="bold"
+            android:textColorHint="#8C8D99" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_save_debt"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Lưu khoản nợ"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:backgroundTint="#FF7043"
+        app:cornerRadius="16dp" />
+</LinearLayout>

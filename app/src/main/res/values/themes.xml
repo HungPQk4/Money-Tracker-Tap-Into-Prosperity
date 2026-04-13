@@ -1,11 +1,30 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Base application theme – chỉ override màu chữ, an toàn 100% -->
     <style name="Base.Theme.Tip" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- Màu chữ: trắng toàn app -->
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorHint">#888899</item>
+
+        <!-- EditText text: trắng -->
+        <item name="android:editTextColor">#FFFFFF</item>
+        <item name="android:colorControlActivated">#735BF2</item>
+        <item name="android:colorControlHighlight">#33735BF2</item>
     </style>
 
     <style name="Theme.Tip" parent="Base.Theme.Tip" />
+
+    <!-- Dark Popup Menu Style for dropdowns -->
+    <style name="DarkPopupMenuStyle" parent="ThemeOverlay.Material3.Dark">
+        <item name="colorSurface">#1C1C2A</item>
+        <item name="android:colorBackground">#1C1C2A</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <!-- For standard android.widget.PopupMenu -->
+        <item name="android:popupBackground">#1C1C2A</item>
+    </style>
+
+
+
+
 
     <style name="NumpadKey">
         <item name="android:layout_width">0dp</item>

@@ -11,7 +11,7 @@
 
     <fragment
         android:id="@+id/dashboardFragment"
-        android:name="vn.edu.usth.tip.fragment.DashboardFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.DashboardFragment"
         android:label="Dashboard"
         tools:layout="@layout/fragment_dashboard">
 
@@ -38,35 +38,64 @@
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+
+        <action
+            android:id="@+id/action_dashboard_to_scanReceipt"
+            app:destination="@id/scanReceiptFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     </fragment>
 
     <fragment
+        android:id="@+id/scanReceiptFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.ScanReceiptFragment"
+        android:label="Scan Receipt"
+        tools:layout="@layout/fragment_scan_receipt">
+
+        <action
+            android:id="@+id/action_scanReceipt_to_extractInvoice"
+            app:destination="@id/extractInvoiceFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/extractInvoiceFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.ExtractInvoiceFragment"
+        android:label="Extract Invoice"
+        tools:layout="@layout/fragment_extract_invoice" />
+
+    <fragment
         android:id="@+id/analyticsFragment"
-        android:name="vn.edu.usth.tip.fragment.AnalyticsFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.AnalyticsFragment"
         android:label="Analytics"
         tools:layout="@layout/fragment_analytics" />
 
     <fragment
         android:id="@+id/goalsFragment"
-        android:name="vn.edu.usth.tip.fragment.GoalsFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.GoalsFragment"
         android:label="Goals"
         tools:layout="@layout/fragment_goals" />
 
     <fragment
         android:id="@+id/budgetsFragment"
-        android:name="vn.edu.usth.tip.fragment.BudgetsFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.BudgetsFragment"
         android:label="Budgets"
         tools:layout="@layout/fragment_budgets" />
 
     <fragment
         android:id="@+id/debtsFragment"
-        android:name="vn.edu.usth.tip.fragment.DebtsLoansFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.DebtsLoansFragment"
         android:label="Debts"
         tools:layout="@layout/fragment_debts" />
 
     <fragment
         android:id="@+id/profileFragment"
-        android:name="vn.edu.usth.tip.fragment.ProfileFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.ProfileFragment"
         android:label="Profile"
         tools:layout="@layout/fragment_profile" />
 
@@ -76,7 +105,7 @@
 
     <fragment
         android:id="@+id/walletManagementFragment"
-        android:name="vn.edu.usth.tip.fragment.WalletManagementFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.WalletManagementFragment"
         android:label="Wallet Management"
         tools:layout="@layout/fragment_wallet_management">
 
@@ -91,13 +120,13 @@
 
     <fragment
         android:id="@+id/newTransactionFragment"
-        android:name="vn.edu.usth.tip.fragment.NewTransactionFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.NewTransactionFragment"
         android:label="New Transaction"
         tools:layout="@layout/activity_new_transaction" />
 
     <fragment
         android:id="@+id/allTransactionsFragment"
-        android:name="vn.edu.usth.tip.fragment.AllTransactionsFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.AllTransactionsFragment"
         android:label="All Transactions"
         tools:layout="@layout/fragment_all_transactions" />
 
