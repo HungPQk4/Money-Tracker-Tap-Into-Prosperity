@@ -1,3 +1,15 @@
 <resources>
-    <string name="app_name">tip</string>
+    <string name="app_name">MoneyTracker</string>
+    <string name="app_tagline">Quản lý tài chính cá nhân</string>
+    <string name="welcome_back">Chào mừng trở lại</string>
+    <string name="welcome_sub">Đăng nhập để tiếp tục quản lý tài chính</string>
+    <string name="email_label">Email</string>
+    <string name="email_hint">Nhập địa chỉ email</string>
+    <string name="password_label">Mật khẩu</string>
+    <string name="password_hint">Nhập mật khẩu</string>
+    <string name="forgot_password">Quên mật khẩu?</string>
+    <string name="login">Đăng nhập</string>
+    <string name="or_continue_with">hoặc tiếp tục với</string>
+    <string name="continue_with_google">Tiếp tục với Google</string>
+    <string name="dont_have_account">Chưa có tài khoản? Tạo tài khoản mới</string>
 </resources>

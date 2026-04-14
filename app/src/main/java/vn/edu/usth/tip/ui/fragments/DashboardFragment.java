@@ -66,6 +66,28 @@ public class DashboardFragment extends BaseFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // Kích hoạt đồng bộ hóa dữ liệu từ Backend khi mở Dashboard
+        viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
+            @Override
+            public void onSuccess() {
+                // LiveData sẽ tự động trigger UI update khi dữ liệu vào Room
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> 
+                        Toast.makeText(getContext(), "Đồng bộ thành công", Toast.LENGTH_SHORT).show()
+                    );
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> 
+                        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show()
+                    );
+                }
+            }
+        });
+
         // ── Header buttons ────────────────────────────────────────────
         View btnNotification = view.findViewById(R.id.btn_notification);
         if (btnNotification != null) {

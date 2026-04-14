@@ -38,6 +38,7 @@ public class AppViewModel extends AndroidViewModel {
     private final BudgetDao      budgetDao;
     private final DebtLoanDao    debtLoanDao;
     private final GoalDao        goalDao;
+    private final TransactionRepository transactionRepository;
 
     private final LiveData<List<Transaction>> transactionsLiveData;
     private final LiveData<List<Category>>    categoriesLiveData;
@@ -83,6 +84,7 @@ public class AppViewModel extends AndroidViewModel {
         budgetDao      = db.budgetDao();
         debtLoanDao    = db.debtLoanDao();
         goalDao        = db.goalDao();
+        transactionRepository = new TransactionRepository(application);
 
         transactionsLiveData = transactionDao.getAllTransactions();
         categoriesLiveData   = categoryDao.getAllCategories();
@@ -249,6 +251,10 @@ public class AppViewModel extends AndroidViewModel {
 
     public List<Transaction> getCurrentList() {
         return transactionsLiveData.getValue() != null ? transactionsLiveData.getValue() : new ArrayList<>();
+    }
+
+    public void syncTransactions(TransactionRepository.SyncCallback callback) {
+        transactionRepository.syncTransactions(callback);
     }
 
     private static String uuid() { return UUID.randomUUID().toString(); }
