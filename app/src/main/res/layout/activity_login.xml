@@ -26,8 +26,8 @@
             android:layout_marginTop="64dp"
             android:background="@drawable/bg_logo_placeholder"
             android:padding="12dp"
-            android:src="@android:drawable/ic_menu_sort_by_size"
-            app:tint="@color/surface_white"
+            android:src="@drawable/ic_home"
+            app:tint="@color/white"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -171,7 +171,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="end"
-                    android:layout_marginTop="8dp"
+                     android:layout_marginTop="8dp"
                     android:paddingVertical="8dp"
                     android:text="@string/forgot_password"
                     android:textColor="@color/purple_primary"
@@ -227,6 +227,9 @@
                     android:textAllCaps="false"
                     android:textColor="@color/text_primary"
                     app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_google"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
                     app:strokeColor="@color/border_color"
                     app:strokeWidth="1.5dp" />
                 <TextView

@@ -1,0 +1,105 @@
+package vn.edu.usth.tip.repositories;
+
+import android.content.Context;
+import android.graphics.Color;
+import androidx.annotation.NonNull;
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import vn.edu.usth.tip.AppDatabase;
+import vn.edu.usth.tip.models.Wallet;
+import vn.edu.usth.tip.models.WalletDao;
+import vn.edu.usth.tip.network.FinancialApi;
+import vn.edu.usth.tip.network.RetrofitClient;
+import vn.edu.usth.tip.network.responses.FinancialDtos.AccountDto;
+import vn.edu.usth.tip.network.requests.FinancialRequests;
+import vn.edu.usth.tip.utils.TokenManager;
+import java.util.UUID;
+
+public class WalletsRepository {
+    private final WalletDao walletDao;
+    private final FinancialApi financialApi;
+    private final TokenManager tokenManager;
+
+    public WalletsRepository(Context context) {
+        this.walletDao = AppDatabase.getDatabase(context).walletDao();
+        this.tokenManager = new TokenManager(context);
+        this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
+    }
+
+    public void addOnline(Wallet w) {
+        UUID userId = UUID.fromString(tokenManager.getUserId());
+        FinancialRequests.CreateAccountRequest req = new FinancialRequests.CreateAccountRequest(
+            userId, w.getName(), w.getType().name(), new java.math.BigDecimal(w.getBalanceVnd())
+        );
+
+        financialApi.createAccount(req).enqueue(new Callback<AccountDto>() {
+            @Override public void onResponse(Call<AccountDto> call, Response<AccountDto> response) {}
+            @Override public void onFailure(Call<AccountDto> call, Throwable t) {}
+        });
+    }
+
+    public void updateOnline(Wallet w) {
+        UUID userId = UUID.fromString(tokenManager.getUserId());
+        FinancialRequests.CreateAccountRequest req = new FinancialRequests.CreateAccountRequest(
+            userId, w.getName(), w.getType().name(), new java.math.BigDecimal(w.getBalanceVnd())
+        );
+
+        try {
+            UUID id = UUID.fromString(w.getId());
+            financialApi.updateAccount(id, req).enqueue(new Callback<AccountDto>() {
+                @Override public void onResponse(Call<AccountDto> call, Response<AccountDto> response) {}
+                @Override public void onFailure(Call<AccountDto> call, Throwable t) {}
+            });
+        } catch (Exception ignored) {}
+    }
+
+    public void deleteOnline(String walletId) {
+        try {
+            UUID id = UUID.fromString(walletId);
+            financialApi.deleteAccount(id).enqueue(new Callback<Void>() {
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {}
+                @Override public void onFailure(Call<Void> call, Throwable t) {}
+            });
+        } catch (Exception ignored) {}
+    }
+
+    public void sync(SyncCallback callback) {
+        financialApi.getAllAccounts().enqueue(new Callback<List<AccountDto>>() {
+            @Override
+            public void onResponse(@NonNull Call<List<AccountDto>> call, @NonNull Response<List<AccountDto>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    AppDatabase.databaseWriteExecutor.execute(() -> {
+                        for (AccountDto dto : response.body()) {
+                            walletDao.insert(convertToModel(dto));
+                        }
+                        callback.onSuccess();
+                    });
+                } else callback.onError("Error: " + response.code());
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<List<AccountDto>> call, @NonNull Throwable t) {
+                callback.onError(t.getMessage());
+            }
+        });
+    }
+
+    private Wallet convertToModel(AccountDto dto) {
+        Wallet.Type type = Wallet.Type.OTHER;
+        try { type = Wallet.Type.valueOf(dto.getType()); } catch (Exception ignored) {}
+        
+        return new Wallet(
+            dto.getId().toString(),
+            dto.getName(),
+            dto.getBalance().longValue(),
+            "💳", // Default icon
+            Color.BLUE, 
+            type,
+            true
+        );
+    }
+
+    public interface SyncCallback { void onSuccess(); void onError(String msg); }
+}

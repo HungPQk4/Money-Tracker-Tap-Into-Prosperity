@@ -16,18 +16,72 @@ import vn.edu.usth.tip.models.TransactionDao;
 import vn.edu.usth.tip.network.RetrofitClient;
 import vn.edu.usth.tip.network.TransactionApi;
 import vn.edu.usth.tip.network.responses.TransactionDto;
+import vn.edu.usth.tip.network.requests.CreateTransactionRequest;
 import vn.edu.usth.tip.utils.TokenManager;
+import java.util.UUID;
 
 public class TransactionRepository {
     private final TransactionDao transactionDao;
     private final TransactionApi transactionApi;
+    private final TokenManager tokenManager;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
     public TransactionRepository(Context context) {
         AppDatabase db = AppDatabase.getDatabase(context);
         this.transactionDao = db.transactionDao();
-        TokenManager tokenManager = new TokenManager(context);
+        this.tokenManager = new TokenManager(context);
         this.transactionApi = RetrofitClient.createService(TransactionApi.class, tokenManager);
+    }
+
+    public void addTransactionOnline(Transaction tx) {
+        UUID userId = UUID.fromString(tokenManager.getUserId());
+        UUID accountId = UUID.nameUUIDFromBytes(tx.getWalletName().getBytes());
+        UUID categoryId = UUID.nameUUIDFromBytes(tx.getCategory().getBytes());
+
+        CreateTransactionRequest req = new CreateTransactionRequest(
+                userId, accountId, categoryId,
+                new java.math.BigDecimal(tx.getAmountVnd()),
+                tx.getType().name(),
+                dateFormat.format(new java.util.Date(tx.getTimestampMs()))
+        );
+        req.setNote(tx.getNote());
+
+        transactionApi.createTransaction(req).enqueue(new Callback<TransactionDto>() {
+            @Override public void onResponse(Call<TransactionDto> call, Response<TransactionDto> response) {}
+            @Override public void onFailure(Call<TransactionDto> call, Throwable t) {}
+        });
+    }
+
+    public void updateTransactionOnline(Transaction tx) {
+        UUID userId = UUID.fromString(tokenManager.getUserId());
+        UUID accountId = UUID.nameUUIDFromBytes(tx.getWalletName().getBytes());
+        UUID categoryId = UUID.nameUUIDFromBytes(tx.getCategory().getBytes());
+
+        CreateTransactionRequest req = new CreateTransactionRequest(
+                userId, accountId, categoryId,
+                new java.math.BigDecimal(tx.getAmountVnd()),
+                tx.getType().name(),
+                dateFormat.format(new java.util.Date(tx.getTimestampMs()))
+        );
+        req.setNote(tx.getNote());
+
+        try {
+            UUID id = UUID.fromString(tx.getId());
+            transactionApi.updateTransaction(id, req).enqueue(new Callback<TransactionDto>() {
+                @Override public void onResponse(Call<TransactionDto> call, Response<TransactionDto> response) {}
+                @Override public void onFailure(Call<TransactionDto> call, Throwable t) {}
+            });
+        } catch (Exception ignored) {}
+    }
+
+    public void deleteTransactionOnline(String txId) {
+        try {
+            UUID id = UUID.fromString(txId);
+            transactionApi.deleteTransaction(id).enqueue(new Callback<Void>() {
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {}
+                @Override public void onFailure(Call<Void> call, Throwable t) {}
+            });
+        } catch (Exception ignored) {}
     }
 
     public void syncTransactions(SyncCallback callback) {

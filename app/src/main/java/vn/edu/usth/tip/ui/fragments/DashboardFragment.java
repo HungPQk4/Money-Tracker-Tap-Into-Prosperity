@@ -4,6 +4,7 @@ import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.models.Wallet;
 import vn.edu.usth.tip.adapters.TransactionAdapter;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
+import vn.edu.usth.tip.repositories.TransactionRepository;
 
 import android.graphics.Color;
 import android.os.Bundle;
@@ -66,25 +67,23 @@ public class DashboardFragment extends BaseFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Kích hoạt đồng bộ hóa dữ liệu từ Backend khi mở Dashboard
+        // Kích hoạt đồng bộ hóa TOÀN BỘ dữ liệu từ Backend khi mở Dashboard
+        viewModel.syncAllData();
+        
+        // Ta vẫn giữ callback của syncTransactions để hiển thị Toast thông báo cho người dùng
         viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
             @Override
             public void onSuccess() {
-                // LiveData sẽ tự động trigger UI update khi dữ liệu vào Room
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> 
-                        Toast.makeText(getContext(), "Đồng bộ thành công", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(getContext(), "Đã cập nhật dữ liệu từ đám mây", Toast.LENGTH_SHORT).show()
                     );
                 }
             }
 
             @Override
             public void onError(String message) {
-                if (getActivity() != null) {
-                    getActivity().runOnUiThread(() -> 
-                        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show()
-                    );
-                }
+                // Chỉ báo lỗi nếu cần thiết
             }
         });
 

@@ -1,9 +1,10 @@
 package vn.edu.usth.tip.ui.activities;
 
 import vn.edu.usth.tip.R;
-
 import vn.edu.usth.tip.models.Transaction;
+import vn.edu.usth.tip.utils.TokenManager;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -25,6 +26,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // -- KIỂM TRA PHIÊN LÀM VIỆC --
+        TokenManager tokenManager = new TokenManager(this);
+        if (tokenManager.getToken() == null) {
+            Intent intent = new Intent(this, LoginActivity.class);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 

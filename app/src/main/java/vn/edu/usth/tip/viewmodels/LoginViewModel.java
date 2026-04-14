@@ -30,11 +30,14 @@ public class LoginViewModel extends AndroidViewModel {
     public void login(String email, String password) {
         isLoading.setValue(true);
         repository.login(email, password, loginSuccess, loginError);
-        // Lưu ý: Trong thực tế, repository nên xử lý việc tắt isLoading 
-        // ở đây ta đơn giản hóa để quan sát
+    }
+
+    public void register(String email, String password, String fullName) {
+        isLoading.setValue(true);
+        repository.register(email, password, fullName, loginSuccess, loginError);
     }
 
     public void saveAuthData(AuthResponse response) {
-        tokenManager.saveToken(response.getToken(), response.getFullName());
+        tokenManager.saveAuthData(response.getToken(), response.getFullName(), response.getUserId().toString());
     }
 }

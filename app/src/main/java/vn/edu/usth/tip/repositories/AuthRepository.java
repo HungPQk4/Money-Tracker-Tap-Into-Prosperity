@@ -7,6 +7,7 @@ import retrofit2.Response;
 import vn.edu.usth.tip.network.AuthApi;
 import vn.edu.usth.tip.network.RetrofitClient;
 import vn.edu.usth.tip.network.requests.LoginRequest;
+import vn.edu.usth.tip.network.requests.RegisterRequest;
 import vn.edu.usth.tip.network.responses.AuthResponse;
 
 public class AuthRepository {
@@ -24,6 +25,24 @@ public class AuthRepository {
                     successData.postValue(response.body());
                 } else {
                     errorData.postValue("Đăng nhập thất bại: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<AuthResponse> call, Throwable t) {
+                errorData.postValue("Lỗi kết nối: " + t.getMessage());
+            }
+        });
+    }
+
+    public void register(String email, String password, String fullName, MutableLiveData<AuthResponse> successData, MutableLiveData<String> errorData) {
+        authApi.register(new RegisterRequest(email, password, fullName)).enqueue(new Callback<AuthResponse>() {
+            @Override
+            public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    successData.postValue(response.body());
+                } else {
+                    errorData.postValue("Đăng ký thất bại: " + response.code());
                 }
             }
 

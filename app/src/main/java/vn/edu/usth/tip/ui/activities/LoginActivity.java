@@ -68,7 +68,8 @@ public class LoginActivity extends AppCompatActivity {
         });
 
         binding.tvSignup.setOnClickListener(v -> {
-            Toast.makeText(this, "Chuyển sang màn hình Đăng ký (đang phát triển)", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(this, SignupActivity.class);
+            startActivity(intent);
         });
 
         binding.btnGoogle.setOnClickListener(v -> {

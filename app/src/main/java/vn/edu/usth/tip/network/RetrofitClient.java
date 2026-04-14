@@ -18,17 +18,24 @@ public class RetrofitClient {
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
         httpClient.addInterceptor(logging);
 
-        // Interceptor để thêm Authorization Header
-        if (tokenManager != null && tokenManager.getToken() != null) {
-            httpClient.addInterceptor(chain -> {
-                Request original = chain.request();
-                Request request = original.newBuilder()
-                        .header("Authorization", "Bearer " + tokenManager.getToken())
-                        .method(original.method(), original.body())
-                        .build();
-                return chain.proceed(request);
-            });
-        }
+        // Interceptor để thêm Authorization Header và xử lý lỗi 401
+        httpClient.addInterceptor(chain -> {
+            Request original = chain.request();
+            Request.Builder builder = original.newBuilder();
+            
+            if (tokenManager != null && tokenManager.getToken() != null) {
+                builder.header("Authorization", "Bearer " + tokenManager.getToken());
+            }
+
+            okhttp3.Response response = chain.proceed(builder.build());
+
+            // Nếu gặp lỗi 401 (Hết hạn token hoặc không hợp lệ), xóa token
+            if (response.code() == 401 && tokenManager != null) {
+                tokenManager.clear(); 
+            }
+            
+            return response;
+        });
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)

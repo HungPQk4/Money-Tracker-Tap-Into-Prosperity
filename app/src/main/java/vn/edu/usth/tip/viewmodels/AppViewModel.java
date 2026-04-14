@@ -27,6 +27,13 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
 
+import vn.edu.usth.tip.repositories.BudgetsRepository;
+import vn.edu.usth.tip.repositories.CategoriesRepository;
+import vn.edu.usth.tip.repositories.DebtsRepository;
+import vn.edu.usth.tip.repositories.GoalsRepository;
+import vn.edu.usth.tip.repositories.TransactionRepository;
+import vn.edu.usth.tip.repositories.WalletsRepository;
+
 /**
  * ViewModel chia sẻ giữa các Fragment (Financial Engine).
  */
@@ -35,10 +42,15 @@ public class AppViewModel extends AndroidViewModel {
     private final TransactionDao transactionDao;
     private final CategoryDao    categoryDao;
     private final WalletDao      walletDao;
+    private final GoalDao        goalDao;
     private final BudgetDao      budgetDao;
     private final DebtLoanDao    debtLoanDao;
-    private final GoalDao        goalDao;
     private final TransactionRepository transactionRepository;
+    private final WalletsRepository     walletsRepository;
+    private final CategoriesRepository  categoriesRepository;
+    private final BudgetsRepository     budgetsRepository;
+    private final GoalsRepository       goalsRepository;
+    private final DebtsRepository       debtsRepository;
 
     private final LiveData<List<Transaction>> transactionsLiveData;
     private final LiveData<List<Category>>    categoriesLiveData;
@@ -85,6 +97,11 @@ public class AppViewModel extends AndroidViewModel {
         debtLoanDao    = db.debtLoanDao();
         goalDao        = db.goalDao();
         transactionRepository = new TransactionRepository(application);
+        walletsRepository     = new WalletsRepository(application);
+        categoriesRepository  = new CategoriesRepository(application);
+        budgetsRepository     = new BudgetsRepository(application);
+        goalsRepository       = new GoalsRepository(application);
+        debtsRepository       = new DebtsRepository(application);
 
         transactionsLiveData = transactionDao.getAllTransactions();
         categoriesLiveData   = categoryDao.getAllCategories();
@@ -198,55 +215,94 @@ public class AppViewModel extends AndroidViewModel {
 
     // ── DAO Operations ──────────────────────────────────────────────
     public void addCategory(Category category) {
-        AppDatabase.databaseWriteExecutor.execute(() -> categoryDao.insert(category));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            categoryDao.insert(category);
+            categoriesRepository.addOnline(category);
+        });
     }
 
     public void addTransaction(Transaction tx) {
-        AppDatabase.databaseWriteExecutor.execute(() -> transactionDao.insert(tx));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            transactionDao.insert(tx);
+            transactionRepository.addTransactionOnline(tx);
+        });
     }
 
     public void updateTransaction(Transaction tx) {
-        AppDatabase.databaseWriteExecutor.execute(() -> transactionDao.update(tx));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            transactionDao.update(tx);
+            transactionRepository.updateTransactionOnline(tx);
+        });
     }
 
     public void deleteTransaction(Transaction tx) {
-        AppDatabase.databaseWriteExecutor.execute(() -> transactionDao.delete(tx));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            transactionDao.delete(tx);
+            transactionRepository.deleteTransactionOnline(tx.getId());
+        });
     }
 
     public void addWallet(Wallet w) {
-        AppDatabase.databaseWriteExecutor.execute(() -> walletDao.insert(w));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            walletDao.insert(w);
+            walletsRepository.addOnline(w);
+        });
     }
 
     public void updateWallet(Wallet w) {
-        AppDatabase.databaseWriteExecutor.execute(() -> walletDao.update(w));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            walletDao.update(w);
+            walletsRepository.updateOnline(w);
+        });
     }
 
     public void deleteWallet(Wallet w) {
-        AppDatabase.databaseWriteExecutor.execute(() -> walletDao.delete(w));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            walletDao.delete(w);
+            walletsRepository.deleteOnline(w.getId());
+        });
     }
 
     public void addBudget(Budget b) {
-        AppDatabase.databaseWriteExecutor.execute(() -> budgetDao.insert(b));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            budgetDao.insert(b);
+            budgetsRepository.addOnline(b);
+        });
     }
 
     public void deleteBudget(Budget b) {
-        AppDatabase.databaseWriteExecutor.execute(() -> budgetDao.delete(b));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            budgetDao.delete(b);
+            budgetsRepository.deleteOnline(b.getId());
+        });
     }
 
     public void addDebtLoan(DebtLoan debtLoan) {
-        AppDatabase.databaseWriteExecutor.execute(() -> debtLoanDao.insert(debtLoan));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            debtLoanDao.insert(debtLoan);
+            debtsRepository.addOnline(debtLoan);
+        });
     }
     
     public void deleteDebtLoan(DebtLoan debtLoan) {
-        AppDatabase.databaseWriteExecutor.execute(() -> debtLoanDao.delete(debtLoan));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            debtLoanDao.delete(debtLoan);
+            debtsRepository.deleteOnline(debtLoan.getId());
+        });
     }
 
     public void addGoal(Goal goal) {
-        AppDatabase.databaseWriteExecutor.execute(() -> goalDao.insert(goal));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            goalDao.insert(goal);
+            goalsRepository.addOnline(goal);
+        });
     }
 
     public void deleteGoal(Goal goal) {
-        AppDatabase.databaseWriteExecutor.execute(() -> goalDao.delete(goal));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            goalDao.delete(goal);
+            goalsRepository.deleteOnline(goal.getId());
+        });
     }
 
     public List<Transaction> getCurrentList() {
@@ -255,6 +311,34 @@ public class AppViewModel extends AndroidViewModel {
 
     public void syncTransactions(TransactionRepository.SyncCallback callback) {
         transactionRepository.syncTransactions(callback);
+    }
+
+    public void syncAllData() {
+        // Đồng bộ song song tất cả các mục
+        transactionRepository.syncTransactions(new TransactionRepository.SyncCallback() {
+            @Override public void onSuccess() {} 
+            @Override public void onError(String msg) {}
+        });
+        walletsRepository.sync(new WalletsRepository.SyncCallback() {
+            @Override public void onSuccess() {}
+            @Override public void onError(String msg) {}
+        });
+        categoriesRepository.sync(new CategoriesRepository.SyncCallback() {
+            @Override public void onSuccess() {}
+            @Override public void onError(String msg) {}
+        });
+        budgetsRepository.sync(new BudgetsRepository.SyncCallback() {
+            @Override public void onSuccess() {}
+            @Override public void onError(String msg) {}
+        });
+        goalsRepository.sync(new GoalsRepository.SyncCallback() {
+            @Override public void onSuccess() {}
+            @Override public void onError(String msg) {}
+        });
+        debtsRepository.sync(new DebtsRepository.SyncCallback() {
+            @Override public void onSuccess() {}
+            @Override public void onError(String msg) {}
+        });
     }
 
     private static String uuid() { return UUID.randomUUID().toString(); }

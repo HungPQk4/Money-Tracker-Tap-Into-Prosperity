@@ -11,5 +11,18 @@
     <string name="login">Đăng nhập</string>
     <string name="or_continue_with">hoặc tiếp tục với</string>
     <string name="continue_with_google">Tiếp tục với Google</string>
-    <string name="dont_have_account">Chưa có tài khoản? Tạo tài khoản mới</string>
+    <string name="dont_have_account">Chưa có tài khoản?</string>
+    <string name="btn_signup">Đăng ký</string>
+
+    <!-- Màn hình Đăng ký -->
+    <string name="signup_title">Tạo tài khoản</string>
+    <string name="signup_subtitle">Bắt đầu hành trình thịnh vượng của bạn</string>
+    <string name="hint_full_name">Họ và tên</string>
+    <string name="hint_confirm_password">Nhập lại mật khẩu</string>
+    <string name="already_have_account">Đã có tài khoản?</string>
+    <string name="btn_login_link">Đăng nhập</string>
+    <string name="error_password_mismatch">Mật khẩu không khớp</string>
+    <string name="signup_success">Đăng ký thành công!</string>
+    <string name="back">Quay lại</string>
+    <string name="desc_google_icon">Icon Google</string>
 </resources>
