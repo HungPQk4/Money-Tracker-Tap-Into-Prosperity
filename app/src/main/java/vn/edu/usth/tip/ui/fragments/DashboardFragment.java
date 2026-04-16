@@ -4,6 +4,7 @@ import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.models.Wallet;
 import vn.edu.usth.tip.adapters.TransactionAdapter;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
+import vn.edu.usth.tip.viewmodels.DashboardViewModel;
 import vn.edu.usth.tip.repositories.TransactionRepository;
 
 import android.graphics.Color;
@@ -37,9 +38,8 @@ public class DashboardFragment extends BaseFragment {
     private static final int TAB_TODAY = 0, TAB_WEEK = 1, TAB_MONTH = 2;
     private int currentTab = TAB_TODAY;
 
-    // viewModel is inherited from BaseFragment
+    private DashboardViewModel dashboardViewModel;
     private TransactionAdapter txAdapter;
-    private List<Transaction>  allTransactions = new ArrayList<>();
     private View               emptyState;
 
     // ── Tab views ─────────────────────────────────────────────────────
@@ -64,28 +64,42 @@ public class DashboardFragment extends BaseFragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        if (dashboardViewModel != null) {
+            dashboardViewModel.loadDashboardSummary();
+            selectTab(currentTab);
+        }
+    }
+
+    @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         // Kích hoạt đồng bộ hóa TOÀN BỘ dữ liệu từ Backend khi mở Dashboard
         viewModel.syncAllData();
         
+        dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
+
         // Ta vẫn giữ callback của syncTransactions để hiển thị Toast thông báo cho người dùng
         viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
             @Override
             public void onSuccess() {
                 if (getActivity() != null) {
-                    getActivity().runOnUiThread(() -> 
-                        Toast.makeText(getContext(), "Đã cập nhật dữ liệu từ đám mây", Toast.LENGTH_SHORT).show()
-                    );
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Đã cập nhật dữ liệu từ đám mây", Toast.LENGTH_SHORT).show();
+                        dashboardViewModel.loadDashboardSummary();
+                        dashboardViewModel.loadRecentTransactions("month");
+                    });
                 }
             }
 
             @Override
-            public void onError(String message) {
-                // Chỉ báo lỗi nếu cần thiết
-            }
+            public void onError(String message) {}
         });
+
+        // Tải dữ liệu ban đầu
+        dashboardViewModel.loadDashboardSummary();
 
         // ── Header buttons ────────────────────────────────────────────
         View btnNotification = view.findViewById(R.id.btn_notification);
@@ -150,45 +164,47 @@ public class DashboardFragment extends BaseFragment {
             sheet.show(getParentFragmentManager(), "tx_detail");
         });
 
-        // Quan trọng: Quan sát dữ liệu từ ViewModel
-        // Báo AppViewModel quan sát State chung
-        viewModel.getEngineState().observe(getViewLifecycleOwner(), state -> {
-            if (state == null) return;
+        // Quan trọng: Quan sát dữ liệu từ DashboardViewModel
+        dashboardViewModel.getSummaryData().observe(getViewLifecycleOwner(), summary -> {
+            if (summary == null) return;
             
-            // Xử lý Tài sản ròng
             TextView tvNetWorth = view.findViewById(R.id.tv_net_worth);
             if (tvNetWorth != null) {
-                tvNetWorth.setText(String.format("%,d", state.netWorth).replace(",", "."));
+                tvNetWorth.setText(String.format("%,d", summary.getNetWorth()).replace(",", "."));
             }
 
-            // Xử lý Phần trăm (Cố định ở mức Demo hiện tại -> TODO: Tích hợp Engine thời gian)
             TextView tvGrowth = view.findViewById(R.id.tv_net_worth_growth);
             if (tvGrowth != null) {
-                tvGrowth.setText("Dựa trên số liệu giao dịch...");
+                tvGrowth.setText("Dữ liệu trực tiếp từ API");
             }
 
-            // Xử lý Khối Thu thập tháng
             TextView tvIncome = view.findViewById(R.id.tv_monthly_income);
             if (tvIncome != null) {
-                tvIncome.setText("₫" + String.format("%,d", state.mIncome).replace(",", "."));
+                tvIncome.setText("₫" + String.format("%,d", summary.getTotalIncomeThisMonth()).replace(",", "."));
             }
 
-            // Xử lý Khối Chi tiêu tháng
             TextView tvExpense = view.findViewById(R.id.tv_monthly_expense);
             if (tvExpense != null) {
-                tvExpense.setText("₫" + String.format("%,d", state.mExpense).replace(",", "."));
+                tvExpense.setText("₫" + String.format("%,d", summary.getTotalExpenseThisMonth()).replace(",", "."));
             }
 
-            // Xử lý Khối Chuyển khoản tháng
             TextView tvTransfer = view.findViewById(R.id.tv_monthly_transfer);
             if (tvTransfer != null) {
-                tvTransfer.setText("₫" + String.format("%,d", state.mTransfer).replace(",", "."));
+                tvTransfer.setText("₫" + String.format("%,d", summary.getTotalTransferThisMonth()).replace(",", "."));
             }
         });
 
-        viewModel.getTransactions().observe(getViewLifecycleOwner(), transactions -> {
-            allTransactions = transactions;
-            selectTab(currentTab); // Cập nhật lại list theo tab hiện tại
+        dashboardViewModel.getRecentTransactionsData().observe(getViewLifecycleOwner(), responseList -> {
+            List<Transaction> localTxList = new ArrayList<>();
+            if (responseList != null) {
+                for (vn.edu.usth.tip.network.responses.TransactionResponse r : responseList) {
+                    localTxList.add(mapToLocalTransaction(r));
+                }
+            }
+            txAdapter.setData(localTxList);
+            if (emptyState != null) {
+                emptyState.setVisibility(localTxList.isEmpty() ? View.VISIBLE : View.GONE);
+            }
         });
 
         RecyclerView rv = view.findViewById(R.id.rv_recent_transactions);
@@ -245,13 +261,12 @@ public class DashboardFragment extends BaseFragment {
         active.setBackgroundColor(COLOR_TAB_ACTIVE);
         active.setTextColor(COLOR_TAB_TEXT_ON);
 
-        // Filter data
-        List<Transaction> filtered = filterByTab(tab);
-        txAdapter.setData(filtered);
-
-        if (emptyState != null) {
-            emptyState.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
-        }
+        String period = "today";
+        if (tab == TAB_WEEK) period = "week";
+        if (tab == TAB_MONTH) period = "month";
+        
+        // Gọi API lọc
+        dashboardViewModel.loadRecentTransactions(period);
     }
 
     private void resetTab(TextView tab) {
@@ -260,36 +275,34 @@ public class DashboardFragment extends BaseFragment {
         tab.setTextColor(COLOR_TAB_TEXT_OFF);
     }
 
-    private List<Transaction> filterByTab(int tab) {
-        long now = System.currentTimeMillis();
-        Calendar cal = Calendar.getInstance();
-
-        // Start of today
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        long startOfDay = cal.getTimeInMillis();
-
-        // Start of this week (Monday)
-        cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-        long startOfWeek = cal.getTimeInMillis();
-
-        // Start of this month
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        long startOfMonth = cal.getTimeInMillis();
-
-        long cutoff = (tab == TAB_TODAY) ? startOfDay
-                    : (tab == TAB_WEEK)  ? startOfWeek
-                    : startOfMonth;
-
-        List<Transaction> result = new ArrayList<>();
-        for (Transaction tx : allTransactions) {
-            if (tx.getTimestampMs() >= cutoff && tx.getTimestampMs() <= now) {
-                result.add(tx);
+    private Transaction mapToLocalTransaction(vn.edu.usth.tip.network.responses.TransactionResponse remoteTx) {
+        long timestamp = 0;
+        try {
+            if (remoteTx.getTransactionDate() != null) {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                java.util.Date d = sdf.parse(remoteTx.getTransactionDate());
+                if (d != null) timestamp = d.getTime();
             }
+        } catch (Exception e) {
+            // fallback to current time
+            timestamp = System.currentTimeMillis();
         }
-        return result;
+        
+        Transaction.Type type = Transaction.Type.EXPENSE;
+        if ("income".equalsIgnoreCase(remoteTx.getType())) type = Transaction.Type.INCOME;
+        if ("transfer".equalsIgnoreCase(remoteTx.getType())) type = Transaction.Type.TRANSFER;
+
+        return new Transaction(
+                remoteTx.getId() != null ? remoteTx.getId().toString() : uuid(),
+                remoteTx.getNote() != null ? remoteTx.getNote() : "Giao dịch",
+                remoteTx.getCategoryName() != null ? remoteTx.getCategoryName() : "Khác",
+                "💰", // dummy icon cho đến khi API hỗ trợ icon 
+                remoteTx.getAccountName() != null ? remoteTx.getAccountName() : "Ví chính",
+                remoteTx.getAmount(),
+                type,
+                timestamp,
+                remoteTx.getNote()
+        );
     }
 
     private static String uuid() { return UUID.randomUUID().toString(); }

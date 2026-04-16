@@ -27,18 +27,13 @@ public class SignupActivity extends AppCompatActivity {
     }
 
     private void observeViewModel() {
-        viewModel.getLoginSuccess().observe(this, response -> {
+        viewModel.getRegisterSuccess().observe(this, response -> {
             binding.btnSignup.setEnabled(true);
-            viewModel.saveAuthData(response);
             Toast.makeText(this, "Đăng ký thành công!", Toast.LENGTH_SHORT).show();
-            
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
+            finish(); // Quay lại màn hình đăng nhập
         });
 
-        viewModel.getLoginError().observe(this, error -> {
+        viewModel.getRegisterError().observe(this, error -> {
             binding.btnSignup.setEnabled(true);
             Toast.makeText(this, error, Toast.LENGTH_LONG).show();
         });

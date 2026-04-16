@@ -28,19 +28,17 @@ public class LoginActivity extends AppCompatActivity {
 
     private void observeViewModel() {
         viewModel.getLoginSuccess().observe(this, response -> {
+            viewModel.setLoading(false);
             binding.btnLogin.setEnabled(true);
-            // Lưu token
             viewModel.saveAuthData(response);
-            
             Toast.makeText(this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-            
-            // Chuyển sang MainActivity
             Intent intent = new Intent(this, MainActivity.class);
             startActivity(intent);
             finish();
         });
 
         viewModel.getLoginError().observe(this, error -> {
+            viewModel.setLoading(false);
             binding.btnLogin.setEnabled(true);
             Toast.makeText(this, error, Toast.LENGTH_LONG).show();
         });

@@ -27,15 +27,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // -- KIỂM TRA PHIÊN LÀM VIỆC --
-        TokenManager tokenManager = new TokenManager(this);
-        if (tokenManager.getToken() == null) {
-            Intent intent = new Intent(this, LoginActivity.class);
-            startActivity(intent);
-            finish();
-            return;
-        }
-
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 

@@ -2,7 +2,8 @@ package vn.edu.usth.tip.ui.fragments;
 
 import vn.edu.usth.tip.models.Wallet;
 import vn.edu.usth.tip.adapters.WalletAdapter;
-import vn.edu.usth.tip.viewmodels.AppViewModel;
+import vn.edu.usth.tip.viewmodels.AccountViewModel;
+import vn.edu.usth.tip.network.responses.AccountResponse;
 
 import vn.edu.usth.tip.R;
 
@@ -29,7 +30,7 @@ import java.util.List;
 public class WalletManagementFragment extends Fragment
         implements WalletAdapter.WalletActionListener {
 
-    private AppViewModel appViewModel;
+    private AccountViewModel accountViewModel;
     private WalletAdapter adapter;
     private List<Wallet> currentWallets = new ArrayList<>();
 
@@ -39,7 +40,7 @@ public class WalletManagementFragment extends Fragment
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        appViewModel = new ViewModelProvider(requireActivity()).get(AppViewModel.class);
+        accountViewModel = new ViewModelProvider(requireActivity()).get(AccountViewModel.class);
     }
 
     @Nullable
@@ -56,21 +57,69 @@ public class WalletManagementFragment extends Fragment
         emptyState      = view.findViewById(R.id.layout_empty_state);
         tvSummaryTotal  = view.findViewById(R.id.tv_summary_total);
         tvSummaryCount  = view.findViewById(R.id.tv_summary_count);
+        
+        TextView tvSummaryIncluded = view.findViewById(R.id.tv_summary_included);
+
         RecyclerView rv = view.findViewById(R.id.rv_wallets);
 
         adapter = new WalletAdapter(new ArrayList<>(), this);
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setAdapter(adapter);
 
-        // Lắng nghe Financial Engine!
-        appViewModel.getEngineState().observe(getViewLifecycleOwner(), state -> {
-            if (state == null) return;
-            currentWallets = state.wallets;
+        // Lắng nghe AccountViewModel
+        accountViewModel.getAccountsData().observe(getViewLifecycleOwner(), accountResponses -> {
+            if (accountResponses == null) return;
+            
+            // Map remote AccountResponse to local Wallet
+            List<Wallet> newWallets = new ArrayList<>();
+            long totalNetWorth = 0;
+            int includedCount = 0;
+            
+            for (AccountResponse response : accountResponses) {
+                int defaultColor = android.graphics.Color.parseColor("#735BF2");
+                try {
+                    if (response.getColorHex() != null) {
+                        defaultColor = android.graphics.Color.parseColor(response.getColorHex());
+                    }
+                } catch (Exception e) {}
+
+                Wallet.Type mappedType = Wallet.Type.OTHER;
+                if(response.getType() != null) {
+                   String t = response.getType().toLowerCase();
+                   if(t.equals("bank")) mappedType = Wallet.Type.BANK;
+                   else if(t.equals("cash")) mappedType = Wallet.Type.CASH;
+                   else if(t.equals("e_wallet")) mappedType = Wallet.Type.EWALLET;
+                   else if(t.equals("investment")) mappedType = Wallet.Type.INVESTMENT;
+                }
+
+                Wallet w = new Wallet(
+                        response.getId(),
+                        response.getName() != null ? response.getName() : "Ví",
+                        response.getBalance(),
+                        response.getIcon() != null ? response.getIcon() : "💳",
+                        defaultColor,
+                        mappedType,
+                        response.getIncludeInTotal() != null ? response.getIncludeInTotal() : true
+                );
+                newWallets.add(w);
+                
+                if (w.isIncludedInTotal()) {
+                    totalNetWorth += w.getBalanceVnd();
+                    includedCount++;
+                }
+            }
+
+            currentWallets = newWallets;
             adapter.updateData(currentWallets);
             
-            // Update Summary from Engine
+            // Update Summary
             tvSummaryCount.setText(currentWallets.size() + " ví");
-            String formattedTotal = String.format("₫%,.0f", (double) state.netWorth).replace(",", ".");
+            
+            if (tvSummaryIncluded != null) {
+                tvSummaryIncluded.setText(includedCount + "/" + currentWallets.size());
+            }
+
+            String formattedTotal = String.format("₫%,.0f", (double) totalNetWorth).replace(",", ".");
             tvSummaryTotal.setText(formattedTotal);
 
             // Update toolbar total
@@ -84,6 +133,16 @@ public class WalletManagementFragment extends Fragment
             boolean empty = currentWallets.isEmpty();
             emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
             rv.setVisibility(empty ? View.GONE : View.VISIBLE);
+        });
+
+        // Tải dữ liệu từ server
+        accountViewModel.loadAccounts();
+
+        // Lắng nghe kết quả thêm mới để tự động tải lại mà không cần delay "đoán mò"
+        accountViewModel.getCreatedAccountData().observe(getViewLifecycleOwner(), accountResponse -> {
+            if (accountResponse != null) {
+                accountViewModel.loadAccounts();
+            }
         });
 
         // FAB
@@ -106,11 +165,12 @@ public class WalletManagementFragment extends Fragment
                 new EditWalletBottomSheet.OnWalletEditListener() {
                     @Override
                     public void onWalletUpdated(Wallet updated, int pos) {
-                        appViewModel.updateWallet(updated);
+                        // TODO: Implement update via AccountViewModel later
+                        android.widget.Toast.makeText(getContext(), "Tính năng sửa đang được cập nhật", android.widget.Toast.LENGTH_SHORT).show();
                     }
                     @Override
                     public void onWalletDeleted(int pos) {
-                        appViewModel.deleteWallet(wallet);
+                        // TODO: Implement delete via AccountViewModel later
                     }
                 });
         sheet.show(getParentFragmentManager(), "edit_wallet");
@@ -120,10 +180,10 @@ public class WalletManagementFragment extends Fragment
     public void onDelete(Wallet wallet, int position) {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Xóa ví")
-                .setMessage("Bạn có chắc muốn xóa ví \"" + wallet.getName() + "\"? Toàn bộ giao dịch thuộc ví này sẽ mất nơi tham chiếu nhưng vẫn tính vào tổng tài khoản ẩn!")
+                .setMessage("Bạn có chắc muốn xóa ví \"" + wallet.getName() + "\"?")
                 .setNegativeButton("Hủy", null)
                 .setPositiveButton("Xóa", (dialog, which) -> {
-                    appViewModel.deleteWallet(wallet);
+                    android.widget.Toast.makeText(getContext(), "Tính năng xóa API đang được cập nhật", android.widget.Toast.LENGTH_SHORT).show();
                 })
                 .show();
     }
@@ -149,12 +209,26 @@ public class WalletManagementFragment extends Fragment
     @Override
     public void onToggleInclude(Wallet wallet, boolean included) {
         wallet.setIncludedInTotal(included);
-        appViewModel.updateWallet(wallet);
+        // TODO: Gửi cập nhật này lên server
     }
 
     private void openAddWalletSheet() {
         AddWalletBottomSheet sheet = AddWalletBottomSheet.newInstance(wallet -> {
-            appViewModel.addWallet(wallet);
+            vn.edu.usth.tip.network.requests.AccountRequest req = new vn.edu.usth.tip.network.requests.AccountRequest();
+            req.setName(wallet.getName());
+            
+            String t = "cash";
+            if(wallet.getType() == Wallet.Type.BANK) t = "bank";
+            else if(wallet.getType() == Wallet.Type.EWALLET) t = "e_wallet";
+            else if(wallet.getType() == Wallet.Type.INVESTMENT) t = "investment";
+            req.setType(t);
+            
+            req.setBalance(wallet.getBalanceVnd());
+            req.setIcon(wallet.getIcon());
+            req.setIncludeInTotal(wallet.isIncludedInTotal());
+            req.setColorHex(String.format("#%06X", (0xFFFFFF & wallet.getColor())));
+            
+            accountViewModel.createAccount(req);
         });
         sheet.show(getParentFragmentManager(), "add_wallet");
     }

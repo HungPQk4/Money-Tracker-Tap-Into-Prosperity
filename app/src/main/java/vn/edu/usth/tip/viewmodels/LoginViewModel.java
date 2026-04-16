@@ -15,6 +15,8 @@ public class LoginViewModel extends AndroidViewModel {
 
     private MutableLiveData<AuthResponse> loginSuccess = new MutableLiveData<>();
     private MutableLiveData<String> loginError = new MutableLiveData<>();
+    private MutableLiveData<AuthResponse> registerSuccess = new MutableLiveData<>();
+    private MutableLiveData<String> registerError = new MutableLiveData<>();
     private MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
 
     public LoginViewModel(@NonNull Application application) {
@@ -25,6 +27,8 @@ public class LoginViewModel extends AndroidViewModel {
 
     public LiveData<AuthResponse> getLoginSuccess() { return loginSuccess; }
     public LiveData<String> getLoginError() { return loginError; }
+    public LiveData<AuthResponse> getRegisterSuccess() { return registerSuccess; }
+    public LiveData<String> getRegisterError() { return registerError; }
     public LiveData<Boolean> getIsLoading() { return isLoading; }
 
     public void login(String email, String password) {
@@ -34,10 +38,13 @@ public class LoginViewModel extends AndroidViewModel {
 
     public void register(String email, String password, String fullName) {
         isLoading.setValue(true);
-        repository.register(email, password, fullName, loginSuccess, loginError);
+        repository.register(email, password, fullName, registerSuccess, registerError);
     }
 
     public void saveAuthData(AuthResponse response) {
         tokenManager.saveAuthData(response.getToken(), response.getFullName(), response.getUserId().toString());
+    }
+    public void setLoading(boolean loading) {
+        isLoading.setValue(loading);
     }
 }
