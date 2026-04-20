@@ -2,12 +2,15 @@ package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.transaction.CreateTransactionRequest;
 import vn.edu.usth.tip.backend.dto.transaction.TransactionResponse;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.*;
+import vn.edu.usth.tip.backend.models.enums.TransactionType;
 import vn.edu.usth.tip.backend.repositories.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,12 +25,14 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final GoalRepository goalRepository;
 
+    @Transactional
     public TransactionResponse createTransaction(CreateTransactionRequest req) {
         Transaction tx = new Transaction();
         tx.setUser(userRepository.findById(req.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", req.getUserId())));
-        tx.setAccount(accountRepository.findById(req.getAccountId())
-                .orElseThrow(() -> new ResourceNotFoundException("Account", "id", req.getAccountId())));
+        Account account = accountRepository.findById(req.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "id", req.getAccountId()));
+        tx.setAccount(account);
         tx.setCategory(categoryRepository.findById(req.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategoryId())));
         if (req.getGoalId() != null) {
@@ -41,6 +46,17 @@ public class TransactionService {
         tx.setReceiptUrl(req.getReceiptUrl());
         tx.setIsRecurring(req.getIsRecurring() != null ? req.getIsRecurring() : false);
         tx.setRecurInterval(req.getRecurInterval());
+
+        // ─── Cập nhật số dư account ───────────────────────────────────────
+        BigDecimal amount = req.getAmount();
+        BigDecimal currentBalance = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
+        if (TransactionType.income == req.getType()) {
+            account.setBalance(currentBalance.add(amount));
+        } else if (TransactionType.expense == req.getType() || TransactionType.transfer == req.getType()) {
+            account.setBalance(currentBalance.subtract(amount));
+        }
+        accountRepository.save(account);
+
         return toResponse(transactionRepository.save(tx));
     }
 
@@ -71,9 +87,21 @@ public class TransactionService {
         return toResponse(transactionRepository.save(tx));
     }
 
+    @Transactional
     public void deleteTransaction(UUID id) {
         Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", "id", id));
+        // ─── Hoàn nguyên số dư account ─────────────────────────────────────
+        Account account = tx.getAccount();
+        if (account != null && tx.getAmount() != null) {
+            BigDecimal currentBalance = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
+            if (TransactionType.income == tx.getType()) {
+                account.setBalance(currentBalance.subtract(tx.getAmount()));
+            } else if (TransactionType.expense == tx.getType() || TransactionType.transfer == tx.getType()) {
+                account.setBalance(currentBalance.add(tx.getAmount()));
+            }
+            accountRepository.save(account);
+        }
         transactionRepository.delete(tx);
     }
 

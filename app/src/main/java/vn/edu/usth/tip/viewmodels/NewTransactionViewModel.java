@@ -1,15 +1,20 @@
 package vn.edu.usth.tip.viewmodels;
 
+import android.app.Application;
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
 
+import java.util.List;
 import java.util.UUID;
 
 import vn.edu.usth.tip.models.Category;
 import vn.edu.usth.tip.models.Transaction;
+import vn.edu.usth.tip.network.responses.AccountResponse;
+import vn.edu.usth.tip.repositories.AccountRepository;
 
-public class NewTransactionViewModel extends ViewModel {
+public class NewTransactionViewModel extends AndroidViewModel {
 
     // View State representing the UI at any given moment
     public static class UiState {
@@ -17,37 +22,59 @@ public class NewTransactionViewModel extends ViewModel {
         public Transaction.Type selectedType = Transaction.Type.EXPENSE;
         public long timestampMs = System.currentTimeMillis();
         public String note = "";
-        
+
         // For editing mode
         public Transaction editingTx = null;
+
+        // Selected account
+        public String selectedAccountId = null;
+        public String selectedAccountName = "Chọn ví...";
     }
 
     private final MutableLiveData<UiState> uiState = new MutableLiveData<>(new UiState());
-    
-    // Using a SingleLiveEvent wrapper pattern conceptually by using simple String messages
     private final MutableLiveData<String> validationError = new MutableLiveData<>();
     private final MutableLiveData<Transaction> transactionToSave = new MutableLiveData<>();
 
-    public LiveData<UiState> getUiState() {
-        return uiState;
+    // Accounts list loaded from server
+    private final MutableLiveData<List<AccountResponse>> accounts = new MutableLiveData<>();
+    private final MutableLiveData<String> accountsError = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> sessionExpired = new MutableLiveData<>(false);
+
+    private final AccountRepository accountRepository;
+
+    public NewTransactionViewModel(@NonNull Application application) {
+        super(application);
+        accountRepository = new AccountRepository(application, sessionExpired);
     }
 
-    public LiveData<String> getValidationError() {
-        return validationError;
+    public LiveData<UiState> getUiState() { return uiState; }
+    public LiveData<String> getValidationError() { return validationError; }
+    public LiveData<Transaction> getTransactionToSave() { return transactionToSave; }
+    public LiveData<List<AccountResponse>> getAccounts() { return accounts; }
+    public LiveData<String> getAccountsError() { return accountsError; }
+
+    public void loadAccounts() {
+        accountRepository.fetchAllAccounts(accounts, accountsError);
     }
 
-    public LiveData<Transaction> getTransactionToSave() {
-        return transactionToSave;
+    public void selectAccount(AccountResponse account) {
+        UiState state = uiState.getValue();
+        if (state != null) {
+            state.selectedAccountId = account.getId();
+            state.selectedAccountName = account.getName();
+            uiState.setValue(state);
+        }
     }
 
     public void initEditMode(Transaction tx) {
         UiState state = uiState.getValue();
-        if (state != null && tx != null && state.editingTx == null) { // only run once
+        if (state != null && tx != null && state.editingTx == null) {
             state.editingTx = tx;
             state.amountStr = String.valueOf(tx.getAmountVnd());
             state.selectedType = tx.getType();
             state.timestampMs = tx.getTimestampMs();
             state.note = tx.getNote() != null ? tx.getNote() : "";
+            state.selectedAccountName = tx.getWalletName() != null ? tx.getWalletName() : "Chọn ví...";
             uiState.setValue(state);
         }
     }
@@ -119,12 +146,18 @@ public class NewTransactionViewModel extends ViewModel {
 
         if (amount <= 0) {
             validationError.setValue("Vui lòng nhập số tiền hợp lệ");
-            validationError.setValue(null); // clear event
+            validationError.setValue(null);
             return;
         }
 
         if (selectedCategory == null) {
             validationError.setValue("Vui lòng chọn danh mục");
+            validationError.setValue(null);
+            return;
+        }
+
+        if (state.selectedAccountId == null || state.selectedAccountId.isEmpty()) {
+            validationError.setValue("Vui lòng chọn ví");
             validationError.setValue(null);
             return;
         }
@@ -136,7 +169,7 @@ public class NewTransactionViewModel extends ViewModel {
                     selectedCategory.getName(),
                     selectedCategory.getName(),
                     selectedCategory.getIcon(),
-                    state.editingTx.getWalletName(),
+                    state.selectedAccountName,
                     amount,
                     state.selectedType,
                     state.timestampMs,
@@ -148,13 +181,15 @@ public class NewTransactionViewModel extends ViewModel {
                     selectedCategory.getName(),
                     selectedCategory.getName(),
                     selectedCategory.getIcon(),
-                    "Ví chính",
+                    state.selectedAccountName,
                     amount,
                     state.selectedType,
                     state.timestampMs,
                     state.note
             );
         }
+        // Embed the real account ID so the repository can use it
+        tx.setAccountId(state.selectedAccountId);
         transactionToSave.setValue(tx);
     }
 }

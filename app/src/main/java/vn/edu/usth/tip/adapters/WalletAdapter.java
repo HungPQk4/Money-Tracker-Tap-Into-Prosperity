@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import android.view.ContextThemeWrapper;
 import java.util.List;
 
 public class WalletAdapter extends RecyclerView.Adapter<WalletAdapter.WalletViewHolder> {
@@ -61,7 +62,8 @@ public class WalletAdapter extends RecyclerView.Adapter<WalletAdapter.WalletView
 
         // Options menu
         holder.btnOptions.setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(v.getContext(), v);
+            android.content.Context wrapper = new ContextThemeWrapper(v.getContext(), R.style.LightPopupMenuStyle);
+            PopupMenu popup = new PopupMenu(wrapper, v);
             popup.inflate(R.menu.menu_wallet_options);
             popup.setOnMenuItemClickListener(item -> {
                 int id = item.getItemId();

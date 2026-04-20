@@ -163,33 +163,46 @@
             android:orientation="horizontal"
             android:paddingHorizontal="24dp">
 
+            <!-- Xóa -->
             <androidx.cardview.widget.CardView
-                android:id="@+id/btn_detail_close"
+                android:id="@+id/btn_detail_delete"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
-                android:layout_marginEnd="12dp"
-                app:cardBackgroundColor="#212140"
+                android:layout_marginEnd="10dp"
+                app:cardBackgroundColor="#B91C1C"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
-                <TextView
+                app:cardElevation="4dp">
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:text="Đóng"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_marginEnd="6dp"
+                        android:src="@android:drawable/ic_menu_delete"
+                        app:tint="#FFFFFF" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Xóa"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- Chỉnh sửa -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/btn_detail_edit"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
-                android:layout_weight="1.2"
-                app:cardBackgroundColor="#735BF2"
+                android:layout_weight="1.5"
+                app:cardBackgroundColor="#5B21B6"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="8dp">
+                app:cardElevation="4dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -207,7 +220,7 @@
                         android:layout_height="wrap_content"
                         android:text="Chỉnh sửa"
                         android:textColor="#FFFFFF"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

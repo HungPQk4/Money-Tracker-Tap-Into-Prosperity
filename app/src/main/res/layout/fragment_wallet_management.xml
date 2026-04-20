@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F0F1A">
+    android:background="#F3F4F6">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -32,7 +32,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:padding="8dp"
                     android:src="@android:drawable/ic_menu_revert"
-                    app:tint="#FFFFFF" />
+                    app:tint="#1F2937" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -40,16 +40,16 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:text="Quản lý ví"
-                    android:textColor="#FFFFFF"
+                    android:textColor="#1F2937"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
-                    app:cardBackgroundColor="#1E1E35"
+                    app:cardBackgroundColor="#FFFFFF"
                     app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp">
+                    app:cardElevation="2dp">
 
                     <TextView
                         android:id="@+id/tv_total_balance"
@@ -58,7 +58,7 @@
                         android:gravity="center"
                         android:paddingHorizontal="12dp"
                         tools:text="₫128.450.000"
-                        android:textColor="#A78BFA"
+                        android:textColor="#735BF2"
                         android:textSize="13sp"
                         android:textStyle="bold" />
                 </androidx.cardview.widget.CardView>
@@ -85,9 +85,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
-                app:cardBackgroundColor="#1A1A35"
+                app:cardBackgroundColor="#FFFFFF"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="0dp">
+                app:cardElevation="4dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -106,15 +106,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Tổng tài sản"
-                            android:textColor="#6B7280"
-                            android:textSize="11sp" />
+                            android:textColor="#374151"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
                         <TextView
                             android:id="@+id/tv_summary_total"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             tools:text="₫128.4M"
-                            android:textColor="#FFFFFF"
+                            android:textColor="#1F2937"
                             android:textSize="15sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -122,7 +123,7 @@
                     <View
                         android:layout_width="1dp"
                         android:layout_height="match_parent"
-                        android:background="#2D2D50" />
+                        android:background="#E5E7EB" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -134,15 +135,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Số ví"
-                            android:textColor="#6B7280"
-                            android:textSize="11sp" />
+                            android:textColor="#374151"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
                         <TextView
                             android:id="@+id/tv_summary_count"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             tools:text="3 ví"
-                            android:textColor="#FFFFFF"
+                            android:textColor="#1F2937"
                             android:textSize="15sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -150,7 +152,7 @@
                     <View
                         android:layout_width="1dp"
                         android:layout_height="match_parent"
-                        android:background="#2D2D50" />
+                        android:background="#E5E7EB" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -162,15 +164,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Đã bao gồm"
-                            android:textColor="#6B7280"
-                            android:textSize="11sp" />
+                            android:textColor="#374151"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
                         <TextView
                             android:id="@+id/tv_summary_included"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             tools:text="3/3"
-                            android:textColor="#4ADE80"
+                            android:textColor="#22C55E"
                             android:textSize="15sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -190,7 +193,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Ví của tôi"
-                    android:textColor="#FFFFFF"
+                    android:textColor="#1F2937"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -231,7 +234,7 @@
                     android:layout_marginTop="16dp"
                     android:gravity="center"
                     android:text="Chưa có ví nào"
-                    android:textColor="#FFFFFF"
+                    android:textColor="#1F2937"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 

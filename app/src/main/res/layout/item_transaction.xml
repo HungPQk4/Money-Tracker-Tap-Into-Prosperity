@@ -7,9 +7,9 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="10dp"
     android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="#1C1C2E"
+    app:cardBackgroundColor="#FFFFFF"
     app:cardCornerRadius="18dp"
-    app:cardElevation="0dp">
+    app:cardElevation="2dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -24,7 +24,7 @@
             android:id="@+id/card_tx_icon"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            app:cardBackgroundColor="#2A2A42"
+            app:cardBackgroundColor="#F3F4F6"
             app:cardCornerRadius="14dp"
             app:cardElevation="0dp">
 
@@ -53,7 +53,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="Phở Thìn"
-                android:textColor="#F3F4F6"
+                android:textColor="#1F2937"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -70,7 +70,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="22dp"
                     android:layout_marginEnd="8dp"
-                    app:cardBackgroundColor="#2D2D50"
+                    app:cardBackgroundColor="#F3F4F6"
                     app:cardCornerRadius="11dp"
                     app:cardElevation="0dp">
 
@@ -81,7 +81,7 @@
                         android:gravity="center"
                         android:paddingHorizontal="8dp"
                         android:text="Ăn uống"
-                        android:textColor="#9CA3AF"
+                        android:textColor="#4B5563"
                         android:textSize="11sp" />
 
                 </androidx.cardview.widget.CardView>

@@ -65,7 +65,8 @@ public class AppViewModel extends AndroidViewModel {
     // ── FINANCIAL ENGINE OUTPUTS ────────────────────────────────────
     public static class EngineState {
         public List<Wallet> wallets;
-        public long netWorth;
+        public long totalAssets; // Tổng giá trị các ví (khớp với Wallet Management)
+        public long netWorth;    // Tổng tài sản - Nợ + Cho vay
         public long mIncome;
         public long mExpense;
         public long mTransfer;
@@ -113,13 +114,41 @@ public class AppViewModel extends AndroidViewModel {
         totalIOweLiveData     = debtLoanDao.getTotalIOwe();
         totalOwedToMeLiveData = debtLoanDao.getTotalOwedToMe();
 
-        // Financial Engine: lắng nghe transactions + wallets
+        // Financial Engine: lắng nghe transactions + wallets + debts + loans
         engineStateLiveData.addSource(transactionsLiveData, v -> calculateEngine());
         engineStateLiveData.addSource(walletsDbLiveData,    v -> calculateEngine());
+        engineStateLiveData.addSource(totalIOweLiveData,    v -> calculateEngine());
+        engineStateLiveData.addSource(totalOwedToMeLiveData,v -> calculateEngine());
 
         // Budget Engine: lắng nghe transactions + budgets
         budgetStateLiveData.addSource(transactionsLiveData, v -> calculateBudgets());
         budgetStateLiveData.addSource(budgetsLiveData,      v -> calculateBudgets());
+
+        // Tự động khôi phục danh mục nếu bị trống (Self-healing)
+        categoriesLiveData.observeForever(categories -> {
+            if (categories == null || categories.isEmpty()) {
+                initializeDefaultCategories();
+            }
+        });
+    }
+
+    private void initializeDefaultCategories() {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            // Kiểm tra một lần nữa trong background thread để tránh race condition
+            List<Category> current = categoryDao.getAllCategoriesSync();
+            if (current == null || current.isEmpty()) {
+                List<Category> list = new ArrayList<>();
+                list.add(new Category("cat_food", "Ăn uống", "🍜"));
+                list.add(new Category("cat_transport", "Di chuyển", "🛵"));
+                list.add(new Category("cat_shopping", "Mua sắm", "🛒"));
+                list.add(new Category("cat_fun", "Giải trí", "🎬"));
+                list.add(new Category("cat_health", "Sức khỏe", "💊"));
+                list.add(new Category("cat_bills", "Hóa đơn", "⚡"));
+                list.add(new Category("cat_family", "Gia đình", "❤️"));
+                list.add(new Category("cat_add", "Thêm", "+", true));
+                categoryDao.insertAll(list);
+            }
+        });
     }
 
     // ── Financial Engine ────────────────────────────────────────────
@@ -128,7 +157,7 @@ public class AppViewModel extends AndroidViewModel {
         List<Wallet>      ws  = walletsDbLiveData.getValue();
         if (txs == null || ws == null) return;
 
-        long netWorth = 0, mIncome = 0, mExpense = 0, mTransfer = 0;
+        long totalAssets = 0, mIncome = 0, mExpense = 0, mTransfer = 0;
 
         Calendar c = Calendar.getInstance();
         c.set(Calendar.DAY_OF_MONTH, 1);
@@ -139,18 +168,21 @@ public class AppViewModel extends AndroidViewModel {
 
         List<Wallet> calculatedWallets = new ArrayList<>();
         for (Wallet w : ws) {
+            // KHÔNG cộng trừ giao dịch thủ công ở đây để khớp với Wallet Management (vốn đã được đồng bộ từ API/Room)
             Wallet dw = new Wallet(w.getId(), w.getName(), w.getBalanceVnd(),
                     w.getIcon(), w.getColor(), w.getType(), w.isIncludedInTotal());
-            for (Transaction t : txs) {
-                if (t.getWalletName() != null && t.getWalletName().equals(w.getName())) {
-                    if      (t.getType() == Transaction.Type.INCOME)   dw.setBalanceVnd(dw.getBalanceVnd() + t.getAmountVnd());
-                    else if (t.getType() == Transaction.Type.EXPENSE)  dw.setBalanceVnd(dw.getBalanceVnd() - t.getAmountVnd());
-                    else if (t.getType() == Transaction.Type.TRANSFER) dw.setBalanceVnd(dw.getBalanceVnd() - t.getAmountVnd());
-                }
-            }
             calculatedWallets.add(dw);
-            if (dw.isIncludedInTotal()) netWorth += dw.getBalanceVnd();
+            if (dw.isIncludedInTotal()) totalAssets += dw.getBalanceVnd();
         }
+
+        // Lấy dữ liệu nợ/cho vay để tính Net Worth
+        Long iOwe      = totalIOweLiveData.getValue();
+        Long owedToMe  = totalOwedToMeLiveData.getValue();
+        long totalDebts = (iOwe != null)     ? iOwe     : 0;
+        long totalLoans = (owedToMe != null) ? owedToMe : 0;
+
+        // Net Worth = Tài sản - Nợ + Cho vay
+        long netWorth = totalAssets - totalDebts + totalLoans;
 
         for (Transaction t : txs) {
             if (t.getTimestampMs() >= startOfMonth) {
@@ -161,11 +193,12 @@ public class AppViewModel extends AndroidViewModel {
         }
 
         EngineState state = new EngineState();
-        state.wallets   = calculatedWallets;
-        state.netWorth  = netWorth;
-        state.mIncome   = mIncome;
-        state.mExpense  = mExpense;
-        state.mTransfer = mTransfer;
+        state.wallets     = calculatedWallets;
+        state.totalAssets = totalAssets;
+        state.netWorth    = netWorth;
+        state.mIncome     = mIncome;
+        state.mExpense    = mExpense;
+        state.mTransfer   = mTransfer;
         engineStateLiveData.postValue(state);
     }
 
@@ -196,6 +229,9 @@ public class AppViewModel extends AndroidViewModel {
     public LiveData<EngineState>             getEngineState()  { return engineStateLiveData;  }
     public LiveData<List<BudgetWithSpent>>   getBudgetState()  { return budgetStateLiveData;  }
     public LiveData<List<Transaction>>       getTransactions() { return transactionsLiveData; }
+    public LiveData<List<Transaction>>       getTransactionsBetween(long fromMs, long toMs) {
+        return transactionDao.getTransactionsBetween(fromMs, toMs);
+    }
     public LiveData<List<Category>>          getCategories()   { return categoriesLiveData;   }
     public LiveData<List<DebtLoan>>          getDebts()        { return debtsLiveData;        }
     public LiveData<List<Goal>>              getGoals()        { return goalsLiveData;        }
@@ -223,6 +259,7 @@ public class AppViewModel extends AndroidViewModel {
 
     public void addTransaction(Transaction tx) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
+            tx.setSynced(false); // Đánh dấu là chưa đồng bộ để Dashboard tính toán thủ công
             transactionDao.insert(tx);
             transactionRepository.addTransactionOnline(tx);
         });

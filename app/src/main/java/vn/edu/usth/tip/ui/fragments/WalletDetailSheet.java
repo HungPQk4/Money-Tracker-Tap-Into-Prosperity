@@ -78,10 +78,21 @@ public class WalletDetailSheet extends BottomSheetDialogFragment {
         tvIncluded.setText(wallet.isIncludedInTotal() ? "Có" : "Không");
 
         // Action Buttons
-        view.findViewById(R.id.btn_detail_close).setOnClickListener(v -> dismiss());
         view.findViewById(R.id.btn_detail_edit).setOnClickListener(v -> {
             if (listener != null) listener.onEdit(wallet);
             dismiss();
+        });
+
+        view.findViewById(R.id.btn_detail_delete).setOnClickListener(v -> {
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Xóa ví")
+                    .setMessage("Bạn có chắc muốn xóa ví \"" + wallet.getName() + "\"?")
+                    .setNegativeButton("Hủy", null)
+                    .setPositiveButton("Xóa", (dialog, which) -> {
+                        if (listener != null) listener.onDelete(wallet);
+                        dismiss();
+                    })
+                    .show();
         });
     }
 

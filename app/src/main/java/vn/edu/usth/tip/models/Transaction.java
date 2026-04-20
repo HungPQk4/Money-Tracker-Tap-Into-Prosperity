@@ -2,6 +2,7 @@ package vn.edu.usth.tip.models;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 /**
@@ -23,6 +24,10 @@ public class Transaction {
     private Type   type;
     private long   timestampMs; // epoch milliseconds
     private String note;        // Ghi chú giao dịch
+    private boolean isSynced = true; // Mặc định là true cho dữ liệu từ API, false cho tạo mới cục bộ
+
+    @Ignore // Không lưu vào Room, chỉ dùng khi gửi lên API
+    private String accountId;
 
     public Transaction(@NonNull String id, String title, String category,
                        String icon, String walletName,
@@ -36,6 +41,7 @@ public class Transaction {
         this.type        = type;
         this.timestampMs = timestampMs;
         this.note        = note;
+        this.isSynced    = true; 
     }
 
     /** Trả về chuỗi số tiền có dấu, vd: "-₫75.000" hoặc "+₫18.000.000" */
@@ -65,6 +71,7 @@ public class Transaction {
     public Type   getType()         { return type; }
     public long   getTimestampMs()  { return timestampMs; }
     public String getNote()         { return note; }
+    public boolean isSynced()       { return isSynced; }
 
     // ── Setters ───────────────────────────────────────────────────────
     public void setId(@NonNull String id) { this.id = id; }
@@ -76,4 +83,7 @@ public class Transaction {
     public void setType(Type type) { this.type = type; }
     public void setTimestampMs(long timestampMs) { this.timestampMs = timestampMs; }
     public void setNote(String note) { this.note = note; }
+    public void setSynced(boolean synced) { isSynced = synced; }
+    public void setAccountId(String accountId) { this.accountId = accountId; }
+    public String getAccountId() { return accountId; }
 }

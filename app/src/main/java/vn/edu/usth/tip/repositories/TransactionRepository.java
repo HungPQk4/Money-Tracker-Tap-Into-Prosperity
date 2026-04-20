@@ -35,13 +35,20 @@ public class TransactionRepository {
 
     public void addTransactionOnline(Transaction tx) {
         UUID userId = UUID.fromString(tokenManager.getUserId());
-        UUID accountId = UUID.nameUUIDFromBytes(tx.getWalletName().getBytes());
+        // Dùng accountId thực nếu có, fallback nếu chỉ có tên ví
+        UUID accountId;
+        if (tx.getAccountId() != null && !tx.getAccountId().isEmpty()) {
+            try { accountId = UUID.fromString(tx.getAccountId()); }
+            catch (IllegalArgumentException e) { accountId = UUID.nameUUIDFromBytes(tx.getWalletName().getBytes()); }
+        } else {
+            accountId = UUID.nameUUIDFromBytes(tx.getWalletName().getBytes());
+        }
         UUID categoryId = UUID.nameUUIDFromBytes(tx.getCategory().getBytes());
 
         CreateTransactionRequest req = new CreateTransactionRequest(
                 userId, accountId, categoryId,
                 new java.math.BigDecimal(tx.getAmountVnd()),
-                tx.getType().name(),
+                tx.getType().name().toLowerCase(), // backend enum: income/expense/transfer
                 dateFormat.format(new java.util.Date(tx.getTimestampMs()))
         );
         req.setNote(tx.getNote());
@@ -54,13 +61,19 @@ public class TransactionRepository {
 
     public void updateTransactionOnline(Transaction tx) {
         UUID userId = UUID.fromString(tokenManager.getUserId());
-        UUID accountId = UUID.nameUUIDFromBytes(tx.getWalletName().getBytes());
+        UUID accountId;
+        if (tx.getAccountId() != null && !tx.getAccountId().isEmpty()) {
+            try { accountId = UUID.fromString(tx.getAccountId()); }
+            catch (IllegalArgumentException e) { accountId = UUID.nameUUIDFromBytes(tx.getWalletName().getBytes()); }
+        } else {
+            accountId = UUID.nameUUIDFromBytes(tx.getWalletName().getBytes());
+        }
         UUID categoryId = UUID.nameUUIDFromBytes(tx.getCategory().getBytes());
 
         CreateTransactionRequest req = new CreateTransactionRequest(
                 userId, accountId, categoryId,
                 new java.math.BigDecimal(tx.getAmountVnd()),
-                tx.getType().name(),
+                tx.getType().name().toLowerCase(),
                 dateFormat.format(new java.util.Date(tx.getTimestampMs()))
         );
         req.setNote(tx.getNote());
@@ -124,10 +137,13 @@ public class TransactionRepository {
         }
 
         Transaction.Type type = Transaction.Type.EXPENSE;
-        if ("INCOME".equalsIgnoreCase(dto.getType())) type = Transaction.Type.INCOME;
-        else if ("TRANSFER".equalsIgnoreCase(dto.getType())) type = Transaction.Type.TRANSFER;
+        if (dto.getType() != null) {
+            String typeStr = dto.getType().toString().toLowerCase();
+            if ("income".equals(typeStr)) type = Transaction.Type.INCOME;
+            else if ("transfer".equals(typeStr)) type = Transaction.Type.TRANSFER;
+        }
 
-        return new Transaction(
+        Transaction tx = new Transaction(
             dto.getId().toString(),
             dto.getNote() != null ? dto.getNote() : "Giao dịch",
             dto.getCategory() != null ? dto.getCategory().getName() : "Khác",
@@ -138,6 +154,8 @@ public class TransactionRepository {
             timestamp,
             dto.getNote()
         );
+        tx.setSynced(true); // Dữ liệu từ API mặc định đã đồng bộ
+        return tx;
     }
 
     public interface SyncCallback {

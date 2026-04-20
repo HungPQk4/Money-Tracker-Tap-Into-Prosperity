@@ -19,5 +19,5 @@
     <item
         android:id="@+id/walletManagementFragment"
         android:icon="@drawable/ic_user"
-        android:title="Profile" />
+        android:title="Wallet" />
 </menu>

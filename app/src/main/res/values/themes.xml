@@ -22,6 +22,12 @@
         <item name="android:popupBackground">#1C1C2A</item>
     </style>
 
+    <!-- Light Popup Menu Style for quick interaction menu -->
+    <style name="LightPopupMenuStyle" parent="ThemeOverlay.Material3.Light">
+        <item name="android:textColorPrimary">#1F2937</item>
+        <item name="android:popupBackground">#FFFFFF</item>
+    </style>
+
 
 
 

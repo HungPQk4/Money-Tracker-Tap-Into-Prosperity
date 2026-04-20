@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212"
+    android:background="#F3F4F6"
     android:clipToPadding="false"
     android:paddingBottom="90dp">
 
@@ -31,6 +31,48 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TỔNG TÀI SẢN"
+                    android:textColor="#D0C9FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:alpha="0.8" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:text="₫"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_total_assets"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="40dp"
+                    android:layout_height="1dp"
+                    android:background="#8471F5"
+                    android:layout_marginBottom="12dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -251,9 +293,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="4dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="#1A1A1A"
+                app:cardBackgroundColor="#FFFFFF"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -275,8 +317,9 @@
                         android:gravity="center"
                         android:lineSpacingExtra="-2dp"
                         android:text="Thêm chi\ntiêu"
-                        android:textColor="#9E9E9E"
-                        android:textSize="11sp" />
+                        android:textColor="#374151"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -287,9 +330,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="4dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="#1A1A1A"
+                app:cardBackgroundColor="#FFFFFF"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -312,8 +355,9 @@
                         android:gravity="center"
                         android:lineSpacingExtra="-2dp"
                         android:text="Thêm thu\nnhập"
-                        android:textColor="#9E9E9E"
-                        android:textSize="11sp" />
+                        android:textColor="#374151"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -324,9 +368,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="4dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="#1A1A1A"
+                app:cardBackgroundColor="#FFFFFF"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -349,8 +393,9 @@
                         android:gravity="center"
                         android:lineSpacingExtra="-2dp"
                         android:text="Quét hóa\nđơn"
-                        android:textColor="#9E9E9E"
-                        android:textSize="11sp" />
+                        android:textColor="#374151"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -360,9 +405,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="#1A1A1A"
+                app:cardBackgroundColor="#FFFFFF"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -385,8 +430,9 @@
                         android:gravity="center"
                         android:lineSpacingExtra="-2dp"
                         android:text="Ngân\nsách"
-                        android:textColor="#9E9E9E"
-                        android:textSize="11sp" />
+                        android:textColor="#374151"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
         </LinearLayout>
@@ -396,9 +442,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            app:cardBackgroundColor="#1A192D"
+            app:cardBackgroundColor="#FFFFFF"
             app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
+            app:cardElevation="2dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -445,7 +491,7 @@
                     android:layout_marginTop="12dp"
                     android:lineSpacingExtra="4dp"
                     android:text="Chi tiêu cho Ăn uống đang cao hơn 28% mức trung bình. Hãy giảm khoảng ₫800.000 để duy trì ngân sách tuần này."
-                    android:textColor="#A0A0B0"
+                    android:textColor="#4B5563"
                     android:textSize="13sp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -465,7 +511,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Giao dịch gần đây"
-                android:textColor="#FFFFFF"
+                android:textColor="#1F2937"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -487,7 +533,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:layout_marginBottom="4dp"
-            android:background="#1C1C2E"
+            android:background="#E5E7EB"
             android:orientation="horizontal"
             android:padding="4dp"
             android:weightSum="3">
@@ -574,9 +620,9 @@
             android:layout_marginTop="12dp"
             android:layout_marginBottom="4dp"
             android:foreground="?attr/selectableItemBackground"
-            app:cardBackgroundColor="#1C1C2E"
+            app:cardBackgroundColor="#FFFFFF"
             app:cardCornerRadius="14dp"
-            app:cardElevation="0dp">
+            app:cardElevation="2dp">
 
             <TextView
                 android:layout_width="match_parent"

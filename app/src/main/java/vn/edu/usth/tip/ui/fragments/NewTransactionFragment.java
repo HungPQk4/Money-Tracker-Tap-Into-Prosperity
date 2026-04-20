@@ -3,6 +3,7 @@ package vn.edu.usth.tip.ui.fragments;
 import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.models.Category;
 import vn.edu.usth.tip.adapters.CategoryAdapter;
+import vn.edu.usth.tip.network.responses.AccountResponse;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 import vn.edu.usth.tip.viewmodels.NewTransactionViewModel;
 
@@ -44,7 +45,7 @@ public class NewTransactionFragment extends Fragment {
     // View references
     private TextView tvAmount;
     private CardView btnTypeExpense, btnTypeIncome, btnTypeTransfer;
-    private TextView tvNotePreview, tvDatePreview;
+    private TextView tvNotePreview, tvDatePreview, tvWalletPreview;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -70,6 +71,7 @@ public class NewTransactionFragment extends Fragment {
         btnTypeTransfer = view.findViewById(R.id.btn_type_transfer);
         tvNotePreview = view.findViewById(R.id.tv_note_preview);
         tvDatePreview = view.findViewById(R.id.tv_date_preview);
+        tvWalletPreview = view.findViewById(R.id.tv_wallet_preview);
 
         // Header Back Button
         view.findViewById(R.id.btnBack).setOnClickListener(v -> {
@@ -93,6 +95,7 @@ public class NewTransactionFragment extends Fragment {
 
         setupNumpad(view);
         setupNoteAndDate(view);
+        setupWalletPicker(view);
 
         // Setup Categories
         RecyclerView rvCategories = view.findViewById(R.id.rv_categories);
@@ -129,6 +132,45 @@ public class NewTransactionFragment extends Fragment {
                 appViewModel.clearEditingTransaction();
                 Navigation.findNavController(requireView()).navigateUp();
             }
+        });
+
+        // Load danh sách ví từ backend
+        newTxViewModel.loadAccounts();
+
+        newTxViewModel.getAccountsError().observe(getViewLifecycleOwner(), err -> {
+            if (err != null && tvWalletPreview != null) {
+                tvWalletPreview.setText("Không tải được ví");
+            }
+        });
+    }
+
+    private void setupWalletPicker(View view) {
+        CardView btnSelectWallet = view.findViewById(R.id.btn_select_wallet);
+        if (btnSelectWallet == null) return;
+
+        btnSelectWallet.setOnClickListener(v -> {
+            List<AccountResponse> accounts = newTxViewModel.getAccounts().getValue();
+            if (accounts == null || accounts.isEmpty()) {
+                Toast.makeText(requireContext(), "Chưa có ví, vui lòng tạo ví trước", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Xây dựng danh sách tên ví để hiển thị
+            String[] accountNames = new String[accounts.size()];
+            for (int i = 0; i < accounts.size(); i++) {
+                AccountResponse acc = accounts.get(i);
+                String icon = (acc.getIcon() != null && !acc.getIcon().isEmpty()) ? acc.getIcon() + "  " : "💳  ";
+                String balance = String.format("%,d₫", acc.getBalance()).replace(",", ".");
+                accountNames[i] = icon + acc.getName() + "  (" + balance + ")";
+            }
+
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Chọn ví")
+                    .setItems(accountNames, (dialog, which) -> {
+                        newTxViewModel.selectAccount(accounts.get(which));
+                    })
+                    .setNegativeButton("Hủy", null)
+                    .show();
         });
     }
 
@@ -178,6 +220,11 @@ public class NewTransactionFragment extends Fragment {
 
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
         tvDatePreview.setText(sdf.format(state.timestampMs));
+
+        // Render wallet name
+        if (tvWalletPreview != null) {
+            tvWalletPreview.setText(state.selectedAccountName);
+        }
     }
 
     private void setupNoteAndDate(View view) {
@@ -229,6 +276,7 @@ public class NewTransactionFragment extends Fragment {
                 public void onAddCategoryClick() {
                     AddCategorySheet sheet = AddCategorySheet.newInstance(cat -> {
                         appViewModel.addCategory(cat);
+                        // Khi thêm mới, Room sẽ reload và updateCategoryList sẽ được gọi lại
                         Toast.makeText(requireContext(), "Đã thêm danh mục: " + cat.getName(), Toast.LENGTH_SHORT).show();
                     });
                     sheet.show(getChildFragmentManager(), "add_category");
@@ -236,8 +284,7 @@ public class NewTransactionFragment extends Fragment {
             });
             rv.setAdapter(categoryAdapter);
         } else {
-            // Let the adapter handle new data properly later
-            categoryAdapter.notifyDataSetChanged();
+            categoryAdapter.updateData(categories);
         }
     }
 

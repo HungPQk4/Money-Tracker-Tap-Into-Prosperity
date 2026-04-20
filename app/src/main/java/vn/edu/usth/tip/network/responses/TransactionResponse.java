@@ -1,5 +1,12 @@
 package vn.edu.usth.tip.network.responses;
 
+import com.google.gson.annotations.SerializedName;
+
+/**
+ * DTO nhận từ GET /api/dashboard/recent và /api/transactions
+ * amount là BigDecimal từ backend → dùng double để Gson parse đúng
+ * type là enum lowercase: income, expense, transfer
+ */
 public class TransactionResponse {
     private String id;
     private String userId;
@@ -8,9 +15,10 @@ public class TransactionResponse {
     private String categoryId;
     private String categoryName;
     private String goalId;
-    private long amount;
-    private String type; // income, expense, transfer
+    private double amount; // BigDecimal JSON → double để tránh mismatch
+    private String type;   // "income" | "expense" | "transfer"
     private String note;
+    @SerializedName("transactionDate")
     private String transactionDate; // Format YYYY-MM-DD
     private String receiptUrl;
     private Boolean isRecurring;
@@ -39,8 +47,10 @@ public class TransactionResponse {
     public String getGoalId() { return goalId; }
     public void setGoalId(String goalId) { this.goalId = goalId; }
 
-    public long getAmount() { return amount; }
-    public void setAmount(long amount) { this.amount = amount; }
+    public double getAmount() { return amount; }
+    public void setAmount(double amount) { this.amount = amount; }
+    /** Helper trả về long VND */
+    public long getAmountLong() { return (long) amount; }
 
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }

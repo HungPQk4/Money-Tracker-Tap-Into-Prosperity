@@ -13,8 +13,16 @@ import java.util.List;
 @Dao
 public interface TransactionDao {
 
+    /** Tất cả giao dịch, mới nhất trước */
     @Query("SELECT * FROM transactions ORDER BY timestampMs DESC")
     LiveData<List<Transaction>> getAllTransactions();
+
+    /**
+     * Lọc giao dịch theo khoảng [fromMs, toMs].
+     * Dùng cho filter Hôm nay / Tuần này / Tháng này trên Dashboard.
+     */
+    @Query("SELECT * FROM transactions WHERE timestampMs >= :fromMs AND timestampMs < :toMs ORDER BY timestampMs DESC")
+    LiveData<List<Transaction>> getTransactionsBetween(long fromMs, long toMs);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(Transaction transaction);
@@ -25,3 +33,4 @@ public interface TransactionDao {
     @Delete
     void delete(Transaction transaction);
 }
+

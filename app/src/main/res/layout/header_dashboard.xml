@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#121212"
+    android:background="#F3F4F6"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingHorizontal="16dp"
@@ -20,14 +20,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Chào buổi sáng 🌤️"
-            android:textColor="#BDBDBD"
+            android:textColor="#6B7280"
             android:textSize="14sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Minh Tuấn"
-            android:textColor="#FFFFFF"
+            android:textColor="#1F2937"
             android:textSize="22sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -38,9 +38,9 @@
         android:id="@+id/btn_notification"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        app:cardBackgroundColor="#2A2A2A"
+        app:cardBackgroundColor="#FFFFFF"
         app:cardCornerRadius="20dp"
-        app:cardElevation="0dp">
+        app:cardElevation="2dp">
 
         <ImageView
             android:layout_width="20dp"

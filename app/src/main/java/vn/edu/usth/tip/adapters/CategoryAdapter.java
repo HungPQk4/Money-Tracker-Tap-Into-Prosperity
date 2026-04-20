@@ -23,7 +23,7 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
         void onAddCategoryClick();
     }
 
-    private final List<Category> categories;
+    private List<Category> categories;
     private final OnCategoryClickListener listener;
     private int selectedPosition = 0; // "Ăn uống" is first by default
 
@@ -83,9 +83,21 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
 
     public Category getSelectedCategory() {
         if (selectedPosition >= 0 && selectedPosition < categories.size()) {
-            return categories.get(selectedPosition);
+            Category cat = categories.get(selectedPosition);
+            if (cat.isAddButton()) return null; // Không được chọn nút "Thêm" làm danh mục
+            return cat;
         }
         return null;
+    }
+
+    public void updateData(List<Category> newCategories) {
+        if (newCategories == null) return;
+        this.categories = newCategories;
+        // Kiểm tra nếu selectedPosition cũ vượt quá size mới
+        if (selectedPosition >= categories.size()) {
+            selectedPosition = 0;
+        }
+        notifyDataSetChanged();
     }
 
     public void selectCategoryByName(String name) {
