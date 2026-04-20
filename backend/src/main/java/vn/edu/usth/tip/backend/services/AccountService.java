@@ -44,9 +44,55 @@ public class AccountService {
         account.setColorHex(request.getColorHex());
         account.setIcon(request.getIcon());
         account.setIncludeInTotal(request.getIncludeInTotal() != null ? request.getIncludeInTotal() : true);
+        account.setIsDefault(false);
+        account.setIsActive(true);
         
         Account savedAccount = accountRepository.save(account);
         return mapToResponse(savedAccount);
+    }
+
+    @Transactional
+    public AccountResponse updateAccount(java.util.UUID id, AccountRequest request) {
+        User user = getCurrentUser();
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "id", id.toString()));
+
+        if (!account.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Bạn không có quyền chỉnh sửa ví này");
+        }
+
+        account.setName(request.getName());
+        if (request.getType() != null) {
+            account.setType(request.getType());
+        }
+        if (request.getBalance() != null) {
+            account.setBalance(request.getBalance());
+        }
+        if (request.getColorHex() != null) {
+            account.setColorHex(request.getColorHex());
+        }
+        if (request.getIcon() != null) {
+            account.setIcon(request.getIcon());
+        }
+        if (request.getIncludeInTotal() != null) {
+            account.setIncludeInTotal(request.getIncludeInTotal());
+        }
+
+        Account updatedAccount = accountRepository.save(account);
+        return mapToResponse(updatedAccount);
+    }
+
+    @Transactional
+    public void deleteAccount(java.util.UUID id) {
+        User user = getCurrentUser();
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "id", id.toString()));
+
+        if (!account.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Bạn không có quyền xóa ví này");
+        }
+
+        accountRepository.delete(account);
     }
 
     private AccountResponse mapToResponse(Account account) {

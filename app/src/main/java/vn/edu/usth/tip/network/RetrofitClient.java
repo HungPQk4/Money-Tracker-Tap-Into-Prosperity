@@ -22,7 +22,7 @@ public class RetrofitClient {
         httpClient.addInterceptor(chain -> {
             Request original = chain.request();
             Request.Builder builder = original.newBuilder();
-            
+
             if (tokenManager != null && tokenManager.getToken() != null) {
                 builder.header("Authorization", "Bearer " + tokenManager.getToken());
             }
@@ -30,8 +30,8 @@ public class RetrofitClient {
             okhttp3.Response response = chain.proceed(builder.build());
 
             // Nếu gặp lỗi 401 (Hết hạn token hoặc không hợp lệ), xóa token
-            if (response.code() == 401 && tokenManager != null) {
-                tokenManager.clear(); 
+            if ((response.code() == 401 || response.code() == 403) && tokenManager != null) {
+                tokenManager.clear();
             }
             
             return response;

@@ -142,6 +142,39 @@ public class WalletManagementFragment extends Fragment
         accountViewModel.getCreatedAccountData().observe(getViewLifecycleOwner(), accountResponse -> {
             if (accountResponse != null) {
                 accountViewModel.loadAccounts();
+                accountViewModel.clearCreatedAccountData();
+                android.widget.Toast.makeText(getContext(), "Thêm ví thành công!", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Lắng nghe kết quả cập nhật ví
+        accountViewModel.getUpdatedAccountData().observe(getViewLifecycleOwner(), accountResponse -> {
+            if (accountResponse != null) {
+                accountViewModel.loadAccounts();
+                accountViewModel.clearUpdatedAccountData();
+                android.widget.Toast.makeText(getContext(), "Cập nhật ví thành công!", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Lắng nghe kết quả xóa ví
+        accountViewModel.getDeleteSuccessData().observe(getViewLifecycleOwner(), success -> {
+            if (success != null && success) {
+                accountViewModel.loadAccounts();
+                accountViewModel.clearDeleteSuccessData();
+                android.widget.Toast.makeText(getContext(), "Xóa ví thành công chạy!", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Lắng nghe lỗi để hiển thị nếu tạo ví thất bại
+        // Sau – hiển thị lâu hơn và clear error sau khi hiển thị
+        accountViewModel.getErrorMessage().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                android.widget.Toast.makeText(
+                        getContext(),
+                        error,
+                        android.widget.Toast.LENGTH_LONG // ✅ Đổi thành LONG để đọc kịp
+                ).show();
+                accountViewModel.clearErrorMessage(); // ✅ Clear để không hiện lại
             }
         });
 
@@ -165,12 +198,23 @@ public class WalletManagementFragment extends Fragment
                 new EditWalletBottomSheet.OnWalletEditListener() {
                     @Override
                     public void onWalletUpdated(Wallet updated, int pos) {
-                        // TODO: Implement update via AccountViewModel later
-                        android.widget.Toast.makeText(getContext(), "Tính năng sửa đang được cập nhật", android.widget.Toast.LENGTH_SHORT).show();
+                        vn.edu.usth.tip.network.requests.AccountRequest req = new vn.edu.usth.tip.network.requests.AccountRequest();
+                        req.setName(updated.getName());
+                        String t = "cash";
+                        if(updated.getType() == Wallet.Type.BANK) t = "bank";
+                        else if(updated.getType() == Wallet.Type.EWALLET) t = "e_wallet";
+                        else if(updated.getType() == Wallet.Type.INVESTMENT) t = "investment";
+                        req.setType(t);
+                        req.setBalance(updated.getBalanceVnd());
+                        req.setIcon(updated.getIcon());
+                        req.setIncludeInTotal(updated.isIncludedInTotal());
+                        req.setColorHex(String.format("#%06X", (0xFFFFFF & updated.getColor())));
+                        
+                        accountViewModel.updateAccount(updated.getId(), req);
                     }
                     @Override
                     public void onWalletDeleted(int pos) {
-                        // TODO: Implement delete via AccountViewModel later
+                        accountViewModel.deleteAccount(wallet.getId());
                     }
                 });
         sheet.show(getParentFragmentManager(), "edit_wallet");
@@ -183,7 +227,7 @@ public class WalletManagementFragment extends Fragment
                 .setMessage("Bạn có chắc muốn xóa ví \"" + wallet.getName() + "\"?")
                 .setNegativeButton("Hủy", null)
                 .setPositiveButton("Xóa", (dialog, which) -> {
-                    android.widget.Toast.makeText(getContext(), "Tính năng xóa API đang được cập nhật", android.widget.Toast.LENGTH_SHORT).show();
+                    accountViewModel.deleteAccount(wallet.getId());
                 })
                 .show();
     }
@@ -209,7 +253,19 @@ public class WalletManagementFragment extends Fragment
     @Override
     public void onToggleInclude(Wallet wallet, boolean included) {
         wallet.setIncludedInTotal(included);
-        // TODO: Gửi cập nhật này lên server
+        vn.edu.usth.tip.network.requests.AccountRequest req = new vn.edu.usth.tip.network.requests.AccountRequest();
+        req.setName(wallet.getName());
+        String t = "cash";
+        if(wallet.getType() == Wallet.Type.BANK) t = "bank";
+        else if(wallet.getType() == Wallet.Type.EWALLET) t = "e_wallet";
+        else if(wallet.getType() == Wallet.Type.INVESTMENT) t = "investment";
+        req.setType(t);
+        req.setBalance(wallet.getBalanceVnd());
+        req.setIcon(wallet.getIcon());
+        req.setIncludeInTotal(included);
+        req.setColorHex(String.format("#%06X", (0xFFFFFF & wallet.getColor())));
+        
+        accountViewModel.updateAccount(wallet.getId(), req);
     }
 
     private void openAddWalletSheet() {

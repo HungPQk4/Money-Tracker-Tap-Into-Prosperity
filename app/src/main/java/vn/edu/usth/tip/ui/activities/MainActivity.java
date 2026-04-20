@@ -1,10 +1,9 @@
 package vn.edu.usth.tip.ui.activities;
 
 import vn.edu.usth.tip.R;
-import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.utils.TokenManager;
+import vn.edu.usth.tip.viewmodels.AccountViewModel;
 
-import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -12,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
@@ -22,6 +22,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 public class MainActivity extends AppCompatActivity {
 
     private NavController navController;
+    private AccountViewModel accountViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,12 +57,10 @@ public class MainActivity extends AppCompatActivity {
             int id = item.getItemId();
 
             if (id == R.id.placeholder) {
-                // Safety guard – should never be tapped
                 return false;
             }
 
             if (id == R.id.goalsFragment) {
-                // Show popup so user can pick: Goals / Budgets / Debts
                 android.view.ContextThemeWrapper wrapper = new android.view.ContextThemeWrapper(this, R.style.DarkPopupMenuStyle);
                 android.widget.PopupMenu popup = new android.widget.PopupMenu(
                         wrapper,
@@ -72,16 +71,41 @@ public class MainActivity extends AppCompatActivity {
                         NavigationUI.onNavDestinationSelected(menuItem, navController)
                 );
                 popup.show();
-                // Return false so the bottom nav doesn't visually select Goals immediately
                 return false;
             }
 
-            // For all other tabs, use the standard NavigationUI behavior
             return NavigationUI.onNavDestinationSelected(item, navController);
         });
 
         // ── Floating Action Button → New Transaction ──────────────────────
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(v -> navController.navigate(R.id.newTransactionFragment));
+
+        // ── Lắng nghe token hết hạn → tự động logout ─────────────────────
+        accountViewModel = new ViewModelProvider(this).get(AccountViewModel.class);
+        accountViewModel.getSessionExpired().observe(this, expired -> {
+            if (expired != null && expired) {
+                // Xóa token đã lưu
+                new TokenManager(this).clear();
+
+                // Reset cờ để tránh trigger nhiều lần
+                accountViewModel.clearSessionExpired();
+
+                // Thông báo cho user
+                android.widget.Toast.makeText(
+                        this,
+                        "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+                        android.widget.Toast.LENGTH_LONG
+                ).show();
+
+                // Chuyển về màn hình Login và xóa toàn bộ back stack
+                navController.navigate(R.id.action_global_loginFragment,
+                        null,
+                        new androidx.navigation.NavOptions.Builder()
+                                .setPopUpTo(navController.getGraph().getStartDestinationId(), true)
+                                .build()
+                );
+            }
+        });
     }
 }

@@ -15,4 +15,10 @@ public interface AccountApi {
 
     @POST("accounts")
     Call<AccountResponse> createAccount(@Body AccountRequest request);
+
+    @retrofit2.http.PUT("accounts/{id}")
+    Call<AccountResponse> updateAccount(@retrofit2.http.Path("id") String id, @Body AccountRequest request);
+
+    @retrofit2.http.DELETE("accounts/{id}")
+    Call<Void> deleteAccount(@retrofit2.http.Path("id") String id);
 }

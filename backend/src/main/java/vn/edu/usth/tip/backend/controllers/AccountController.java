@@ -23,8 +23,38 @@ public class AccountController {
     }
 
     @PostMapping
-    public ResponseEntity<AccountResponse> createAccount(@RequestBody AccountRequest request) {
-        AccountResponse newAccount = accountService.createAccount(request);
-        return new ResponseEntity<>(newAccount, HttpStatus.CREATED);
+    public ResponseEntity<?> createAccount(@RequestBody AccountRequest request) {
+        try {
+            AccountResponse newAccount = accountService.createAccount(request);
+            return new ResponseEntity<>(newAccount, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Tạo tài khoản thất bại: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateAccount(@PathVariable java.util.UUID id, @RequestBody AccountRequest request) {
+        try {
+            AccountResponse updatedAccount = accountService.updateAccount(id, request);
+            return ResponseEntity.ok(updatedAccount);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Cập nhật tài khoản thất bại: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteAccount(@PathVariable java.util.UUID id) {
+        try {
+            accountService.deleteAccount(id);
+            return ResponseEntity.ok("Xóa ví thành công");
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Xóa ví thất bại: " + e.getMessage());
+        }
     }
 }

@@ -6,6 +6,21 @@
     app:startDestination="@id/dashboardFragment">
 
     <!-- ═══════════════════════════════════════════════════════
+         GLOBAL DESTINATIONS / ACTIONS
+         ═══════════════════════════════════════════════════════ -->
+    <activity
+        android:id="@+id/loginFragment"
+        android:name="vn.edu.usth.tip.ui.activities.LoginActivity"
+        android:label="Login"
+        tools:layout="@layout/activity_login" />
+
+    <action
+        android:id="@+id/action_global_loginFragment"
+        app:destination="@id/loginFragment"
+        app:popUpTo="@id/nav_graph"
+        app:popUpToInclusive="true" />
+
+    <!-- ═══════════════════════════════════════════════════════
          BOTTOM NAV TABS (top-level destinations)
          ═══════════════════════════════════════════════════════ -->
 

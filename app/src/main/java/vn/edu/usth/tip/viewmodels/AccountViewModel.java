@@ -17,12 +17,23 @@ public class AccountViewModel extends AndroidViewModel {
 
     private final MutableLiveData<List<AccountResponse>> accountsData = new MutableLiveData<>();
     private final MutableLiveData<AccountResponse> createdAccountData = new MutableLiveData<>();
+    private final MutableLiveData<AccountResponse> updatedAccountData = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> deleteSuccessData = new MutableLiveData<>();
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    private final MutableLiveData<Boolean> sessionExpired = new MutableLiveData<>(false);
 
     public AccountViewModel(@NonNull Application application) {
         super(application);
-        repository = new AccountRepository(application);
+        repository = new AccountRepository(application, sessionExpired);
+    }
+
+    public LiveData<Boolean> getSessionExpired() {
+        return sessionExpired;
+    }
+
+    public void clearSessionExpired() {
+        sessionExpired.setValue(false);
     }
 
     public LiveData<List<AccountResponse>> getAccountsData() {
@@ -31,6 +42,26 @@ public class AccountViewModel extends AndroidViewModel {
 
     public LiveData<AccountResponse> getCreatedAccountData() {
         return createdAccountData;
+    }
+
+    public void clearCreatedAccountData() {
+        createdAccountData.setValue(null);
+    }
+
+    public LiveData<AccountResponse> getUpdatedAccountData() {
+        return updatedAccountData;
+    }
+
+    public void clearUpdatedAccountData() {
+        updatedAccountData.setValue(null);
+    }
+
+    public LiveData<Boolean> getDeleteSuccessData() {
+        return deleteSuccessData;
+    }
+
+    public void clearDeleteSuccessData() {
+        deleteSuccessData.setValue(null);
     }
 
     public LiveData<String> getErrorMessage() {
@@ -51,5 +82,21 @@ public class AccountViewModel extends AndroidViewModel {
         isLoading.setValue(true);
         repository.createAccount(request, createdAccountData, errorMessage);
         isLoading.setValue(false);
+    }
+
+    public void updateAccount(String id, AccountRequest request) {
+        isLoading.setValue(true);
+        repository.updateAccount(id, request, updatedAccountData, errorMessage);
+        isLoading.setValue(false);
+    }
+
+    public void deleteAccount(String id) {
+        isLoading.setValue(true);
+        repository.deleteAccount(id, deleteSuccessData, errorMessage);
+        isLoading.setValue(false);
+    }
+
+    public void clearErrorMessage() {
+        errorMessage.setValue(null);
     }
 }
