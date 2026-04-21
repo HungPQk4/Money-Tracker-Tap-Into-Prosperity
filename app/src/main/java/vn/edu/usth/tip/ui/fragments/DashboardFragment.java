@@ -107,12 +107,13 @@ public class DashboardFragment extends BaseFragment {
         emptyState = view.findViewById(R.id.layout_tx_empty);
 
         // ── Observe Wallet Data (PostgreSQL Source + Optimistic Local Tx) ──
+        // ── Observe Wallet Data (PostgreSQL Source + Optimistic Local Tx) ──
         accountViewModel.getAccountsData().observe(getViewLifecycleOwner(), accounts -> {
-            updateOptimisticBalance(view, accounts, viewModel.getTransactions().getValue());
+            updateOptimisticDashboard(view);
         });
 
         viewModel.getTransactions().observe(getViewLifecycleOwner(), transactions -> {
-            updateOptimisticBalance(view, accountViewModel.getAccountsData().getValue(), transactions);
+            updateOptimisticDashboard(view);
         });
 
         // ── Observe Summary từ API (Thu chi tháng) ─────────────
@@ -122,18 +123,7 @@ public class DashboardFragment extends BaseFragment {
             TextView tvGrowth = view.findViewById(R.id.tv_net_worth_growth);
             if (tvGrowth != null) tvGrowth.setText("Dữ liệu đồng bộ từ đám mây");
 
-            TextView tvIncome = view.findViewById(R.id.tv_monthly_income);
-            if (tvIncome != null) {
-                tvIncome.setText("₫" + String.format("%,d", summary.getTotalIncomeThisMonth()).replace(",", "."));
-            }
-            TextView tvExpense = view.findViewById(R.id.tv_monthly_expense);
-            if (tvExpense != null) {
-                tvExpense.setText("₫" + String.format("%,d", summary.getTotalExpenseThisMonth()).replace(",", "."));
-            }
-            TextView tvTransfer = view.findViewById(R.id.tv_monthly_transfer);
-            if (tvTransfer != null) {
-                tvTransfer.setText("₫" + String.format("%,d", summary.getTotalTransferThisMonth()).replace(",", "."));
-            }
+            updateOptimisticDashboard(view);
         });
 
         // ── Header buttons ────────────────────────────────────────────
@@ -214,17 +204,24 @@ public class DashboardFragment extends BaseFragment {
         });
     }
 
-    private void updateOptimisticBalance(View view, List<vn.edu.usth.tip.network.responses.AccountResponse> accounts, List<Transaction> transactions) {
+    private void updateOptimisticDashboard(View view) {
+        List<vn.edu.usth.tip.network.responses.AccountResponse> accounts = accountViewModel.getAccountsData().getValue();
+        List<Transaction> transactions = viewModel.getTransactions().getValue();
+        vn.edu.usth.tip.network.responses.DashboardSummary summary = dashboardViewModel.getSummaryData().getValue();
+
         if (accounts == null || view == null) return;
         
         TextView tvTotalAssets = view.findViewById(R.id.tv_total_assets);
         TextView tvNetWorthInside = view.findViewById(R.id.tv_net_worth);
+        TextView tvMonthlyIncome = view.findViewById(R.id.tv_monthly_income);
+        TextView tvMonthlyExpense = view.findViewById(R.id.tv_monthly_expense);
+        TextView tvMonthlyTransfer = view.findViewById(R.id.tv_monthly_transfer);
 
+        // 1. Tính Tài sản ròng lạc quan (Optimistic Net Worth)
         long totalAssets = 0;
         for (vn.edu.usth.tip.network.responses.AccountResponse acc : accounts) {
             if (acc.getIncludeInTotal() != null && acc.getIncludeInTotal()) {
                 long balance = acc.getBalance();
-                
                 if (transactions != null) {
                     for (Transaction t : transactions) {
                         if (!t.isSynced() && t.getWalletName() != null && t.getWalletName().equals(acc.getName())) {
@@ -247,6 +244,38 @@ public class DashboardFragment extends BaseFragment {
         }
         if (tvNetWorthInside != null) {
             tvNetWorthInside.setText(String.format("%,d", netWorth).replace(",", "."));
+        }
+
+        // 2. Tính Tổng hợp tháng lạc quan (Optimistic Monthly Summary)
+        if (summary != null) {
+            long optIncome = summary.getTotalIncomeThisMonth();
+            long optExpense = summary.getTotalExpenseThisMonth();
+            long optTransfer = summary.getTotalTransferThisMonth();
+
+            if (transactions != null) {
+                Calendar cal = Calendar.getInstance();
+                cal.set(Calendar.DAY_OF_MONTH, 1);
+                clearTime(cal);
+                long startOfMonth = cal.getTimeInMillis();
+
+                for (Transaction t : transactions) {
+                    if (!t.isSynced() && t.getTimestampMs() >= startOfMonth) {
+                        if (t.getType() == Transaction.Type.INCOME) optIncome += t.getAmountVnd();
+                        else if (t.getType() == Transaction.Type.EXPENSE) optExpense += t.getAmountVnd();
+                        else if (t.getType() == Transaction.Type.TRANSFER) optTransfer += t.getAmountVnd();
+                    }
+                }
+            }
+
+            if (tvMonthlyIncome != null) {
+                tvMonthlyIncome.setText("₫" + String.format("%,d", optIncome).replace(",", "."));
+            }
+            if (tvMonthlyExpense != null) {
+                tvMonthlyExpense.setText("₫" + String.format("%,d", optExpense).replace(",", "."));
+            }
+            if (tvMonthlyTransfer != null) {
+                tvMonthlyTransfer.setText("₫" + String.format("%,d", optTransfer).replace(",", "."));
+            }
         }
     }
 

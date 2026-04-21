@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="20dp"
+    android:layout_marginTop="12dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="@android:color/transparent">
+
+    <!-- Hero gradient background -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_debt_hero"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Net balance label -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SỐ DƯ RÒNG"
+            android:textColor="#CCFFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12" />
+
+        <!-- Net balance amount (can be set dynamically, placeholder 0) -->
+        <TextView
+            android:id="@+id/tv_net_balance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="₫0"
+            android:textColor="#FFFFFF"
+            android:textSize="36sp"
+            android:textStyle="bold"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tiền được nợ trừ tiền mình nợ"
+            android:textColor="#AAFFFFFF"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#30FFFFFF"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Stats row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:baselineAligned="false">
+
+            <!-- I OWE stat panel -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_debt_stat_panel"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginEnd="6dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="#FFCDD2"
+                        android:text=""
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MÌNH NỢ"
+                        android:textColor="#FFCDD2"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.08" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_total_i_owe"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₫0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
+
+            <!-- OWED TO ME stat panel -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_debt_stat_panel"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginStart="6dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="#C8E6C9"
+                        android:text=""
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ĐƯỢC NỢ"
+                        android:textColor="#C8E6C9"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.08" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_total_owed_to_me"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₫0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

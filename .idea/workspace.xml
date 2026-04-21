@@ -222,33 +222,28 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f55769a6-fd56-4461-a5db-104b39f830ca" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/AppDatabase.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/AppDatabase.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/CategoryAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/CategoryAdapter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/WalletAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/WalletAdapter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/Transaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/Transaction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/TransactionDao.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/TransactionDao.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/AccountResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/AccountResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/DashboardSummary.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/DashboardSummary.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/TransactionResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/TransactionResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/TransactionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/TransactionRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/DebtLoanAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/DebtLoanAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/AddDebtSheet.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/AddDebtSheet.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/DashboardFragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/DashboardFragment.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/NewTransactionFragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/NewTransactionFragment.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/WalletDetailSheet.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/WalletDetailSheet.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/AppViewModel.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/AppViewModel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/NewTransactionViewModel.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/NewTransactionViewModel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_new_transaction.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_new_transaction.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/bottom_sheet_wallet_detail.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/bottom_sheet_wallet_detail.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/fragment_dashboard.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/fragment_dashboard.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/fragment_wallet_management.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/fragment_wallet_management.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/header_dashboard.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/header_dashboard.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/item_transaction.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/item_transaction.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/item_wallet_card.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/item_wallet_card.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/menu/bottom_nav_menu.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/menu/bottom_nav_menu.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/DebtsLoansFragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/DebtsLoansFragment.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/bg_new_pill_grey.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/bg_new_pill_grey.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/bg_rounded_border.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/bg_rounded_border.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_debts.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_debts.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_login.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_login.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_signup.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_signup.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/bottom_sheet_add_debt.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/bottom_sheet_add_debt.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/fragment_debts.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/fragment_debts.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/header_debts.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/header_debts.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/item_debt.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/item_debt.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/res/values/themes.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/themes.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/TransactionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/TransactionService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -408,13 +403,13 @@
       <map>
         <entry key="vn.edu.usth.tip.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1776649464581" />
+            <CheckInfo lastCheckTimestamp="1776737885615" />
           </value>
         </entry>
         <entry />
         <entry key="vn.edu.usth.tip">
           <value>
-            <CheckInfo lastCheckTimestamp="1776649464581" />
+            <CheckInfo lastCheckTimestamp="1776737885603" />
           </value>
         </entry>
       </map>

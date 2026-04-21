@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#12131A"
+    android:background="@color/bg_screen"
     tools:context=".DebtsActivity">
 
     <!-- Main Scrollable Content -->
@@ -36,7 +36,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Debts &amp; loans"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
@@ -44,8 +44,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     app:cardCornerRadius="16dp"
-                    app:cardBackgroundColor="#1F223D"
-                    app:cardElevation="0dp">
+                    app:cardBackgroundColor="@color/surface_white"
+                    app:cardElevation="2dp">
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
@@ -56,7 +56,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="+"
-                            android:textColor="#8288D8"
+                            android:textColor="@color/purple_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
                         <TextView
@@ -64,7 +64,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
                             android:text="Add"
-                            android:textColor="#8288D8"
+                            android:textColor="@color/purple_primary"
                             android:textSize="13sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -94,9 +94,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:layout_margin="1.5dp"
-                        app:cardBackgroundColor="#1A191C"
-                        app:cardCornerRadius="14.5dp"
-                        app:cardElevation="0dp">
+                    app:cardBackgroundColor="@color/surface_white"
+                    app:cardCornerRadius="14.5dp"
+                    app:cardElevation="2dp">
                         
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -137,9 +137,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:layout_margin="1.5dp"
-                        app:cardBackgroundColor="#151E20"
+                        app:cardBackgroundColor="@color/surface_white"
                         app:cardCornerRadius="14.5dp"
-                        app:cardElevation="0dp">
+                        app:cardElevation="2dp">
                         
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -182,9 +182,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_margin="1dp"
-                    app:cardBackgroundColor="#1E191C"
+                    app:cardBackgroundColor="@color/surface_white"
                     app:cardCornerRadius="15dp"
-                    app:cardElevation="0dp">
+                    app:cardElevation="2dp">
                     
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -202,7 +202,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="Anh Nam"
-                                android:textColor="#FFFFFF"
+                                android:textColor="@color/text_primary"
                                 android:textSize="16sp"
                                 android:textStyle="bold" />
                                 
@@ -210,7 +210,7 @@
                             <androidx.cardview.widget.CardView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                app:cardBackgroundColor="#3D2929"
+                                app:cardBackgroundColor="#FFEBE9"
                                 app:cardCornerRadius="8dp"
                                 app:cardElevation="0dp">
                                 <TextView
@@ -229,7 +229,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Borrowed for repair"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
                             
                         <TextView
@@ -246,7 +246,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="Due: 15 Apr 2026"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
@@ -285,7 +285,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="Chị Hoa"
-                                android:textColor="#FFFFFF"
+                                android:textColor="@color/text_primary"
                                 android:textSize="16sp"
                                 android:textStyle="bold" />
                                 
@@ -312,7 +312,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Split dinner bill"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
                             
                         <TextView
@@ -329,7 +329,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="Due: 20 Apr 2026"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
@@ -368,7 +368,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="Bạn Tuấn"
-                                android:textColor="#FFFFFF"
+                                android:textColor="@color/text_primary"
                                 android:textSize="16sp"
                                 android:textStyle="bold" />
                                 
@@ -376,7 +376,7 @@
                             <androidx.cardview.widget.CardView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                app:cardBackgroundColor="#1C3833"
+                                app:cardBackgroundColor="#E6F4EA"
                                 app:cardCornerRadius="8dp"
                                 app:cardElevation="0dp">
                                 <TextView
@@ -395,7 +395,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Lent for phone"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
                             
                         <TextView
@@ -412,7 +412,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="Due: 30 Apr 2026"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
@@ -425,7 +425,7 @@
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:background="#161722"
+        android:background="@color/surface_white"
         android:orientation="horizontal"
         android:baselineAligned="false"
         android:elevation="24dp"
@@ -444,13 +444,13 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_compass"
-                app:tint="#8C8D99" />
+                app:tint="@color/text_secondary" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Home"
-                android:textColor="#8C8D99"
+                android:textColor="@color/text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
 
@@ -465,13 +465,13 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_sort_by_size"
-                app:tint="#8C8D99" />
+                app:tint="@color/text_secondary" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Stats"
-                android:textColor="#8C8D99"
+                android:textColor="@color/text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
         
@@ -492,13 +492,13 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_my_calendar"
-                app:tint="#8C8D99" />
+                app:tint="@color/text_secondary" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Goals"
-                android:textColor="#8C8D99"
+                android:textColor="@color/text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
 

@@ -1,7 +1,7 @@
 package vn.edu.usth.tip.adapters;
 
+import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +9,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.card.MaterialCardView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -29,6 +31,12 @@ public class DebtLoanAdapter extends RecyclerView.Adapter<DebtLoanAdapter.ViewHo
     private OnDebtClickListener listener;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
+    // Colors
+    private static final int COLOR_RED    = Color.parseColor("#E53935");
+    private static final int COLOR_GREEN  = Color.parseColor("#2E7D32");
+    private static final int COLOR_RED_BG = Color.parseColor("#FFEEED");
+    private static final int COLOR_GRN_BG = Color.parseColor("#E8F5E9");
+
     public void setOnDebtClickListener(OnDebtClickListener listener) {
         this.listener = listener;
     }
@@ -41,8 +49,8 @@ public class DebtLoanAdapter extends RecyclerView.Adapter<DebtLoanAdapter.ViewHo
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Assume layout item_debt.xml exists
-        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_debt, parent, false);
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_debt, parent, false);
         return new ViewHolder(v);
     }
 
@@ -50,38 +58,43 @@ public class DebtLoanAdapter extends RecyclerView.Adapter<DebtLoanAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         DebtLoan item = data.get(position);
 
-        // Hiển thị tên người giao dịch và lý do
+        // Person name and content
         holder.tvPersonName.setText(item.getPersonName());
         holder.tvReason.setText(item.getReason());
-
-        // Định dạng ngày hẹn
         holder.tvDueDate.setText("Đến hạn: " + dateFormat.format(new Date(item.getDueDate())));
 
-        // Định dạng tiền tệ: đ1,500,000
-        String formattedAmount = "đ" + String.format("%,d", item.getAmount()).replace(",", ".");
+        // Format amount: ₫1.500.000
+        String formattedAmount = "₫" + String.format("%,d", item.getAmount()).replace(",", ".");
         holder.tvAmount.setText(formattedAmount);
 
-        // Logic màu sắc và Tag (Type)
-        GradientDrawable tagBackground = (GradientDrawable) holder.tvTag.getBackground();
+        // Avatar initial: first letter of name
+        String name = item.getPersonName();
+        String initial = (name != null && !name.isEmpty())
+                ? String.valueOf(name.charAt(0)).toUpperCase()
+                : "?";
+        holder.tvAvatarInitial.setText(initial);
 
+        // Apply color scheme by type
         if (item.getType() == DebtLoan.TYPE_I_OWE) {
-            // Mình nợ
-            holder.tvTag.setText("I owe");
-            holder.tvTag.setTextColor(Color.parseColor("#FF7043")); // Đỏ cam
-            tagBackground.setStroke(2, Color.parseColor("#FF7043"));
-            holder.tvAmount.setTextColor(Color.parseColor("#FF7043"));
+            // I owe — red scheme
+            holder.tvAvatarInitial.setTextColor(COLOR_RED);
+            holder.cvAvatar.setCardBackgroundColor(COLOR_RED_BG);
+            holder.tvTag.setText("Mình nợ");
+            holder.tvTag.setTextColor(COLOR_RED);
+            holder.tvTag.setBackgroundResource(R.drawable.bg_debt_tag_red);
+            holder.tvAmount.setTextColor(COLOR_RED);
         } else {
-            // Cho vay
-            holder.tvTag.setText("Lent");
-            holder.tvTag.setTextColor(Color.parseColor("#26A69A")); // Xanh lục
-            tagBackground.setStroke(2, Color.parseColor("#26A69A"));
-            holder.tvAmount.setTextColor(Color.parseColor("#26A69A"));
+            // Lent — green scheme
+            holder.tvAvatarInitial.setTextColor(COLOR_GREEN);
+            holder.cvAvatar.setCardBackgroundColor(COLOR_GRN_BG);
+            holder.tvTag.setText("Cho vay");
+            holder.tvTag.setTextColor(COLOR_GREEN);
+            holder.tvTag.setBackgroundResource(R.drawable.bg_debt_tag_green);
+            holder.tvAmount.setTextColor(COLOR_GREEN);
         }
 
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onDebtClick(item);
-            }
+            if (listener != null) listener.onDebtClick(item);
         });
     }
 
@@ -96,15 +109,18 @@ public class DebtLoanAdapter extends RecyclerView.Adapter<DebtLoanAdapter.ViewHo
         TextView tvAmount;
         TextView tvTag;
         TextView tvDueDate;
+        TextView tvAvatarInitial;
+        MaterialCardView cvAvatar;
 
         ViewHolder(View v) {
             super(v);
-            // Giả định các ID này sẽ tồn tại trong item_debt.xml
-            tvPersonName = v.findViewById(R.id.tv_debt_person_name);
-            tvReason = v.findViewById(R.id.tv_debt_reason);
-            tvAmount = v.findViewById(R.id.tv_debt_amount);
-            tvTag = v.findViewById(R.id.tv_debt_tag);
-            tvDueDate = v.findViewById(R.id.tv_debt_due_date);
+            tvPersonName    = v.findViewById(R.id.tv_debt_person_name);
+            tvReason        = v.findViewById(R.id.tv_debt_reason);
+            tvAmount        = v.findViewById(R.id.tv_debt_amount);
+            tvTag           = v.findViewById(R.id.tv_debt_tag);
+            tvDueDate       = v.findViewById(R.id.tv_debt_due_date);
+            tvAvatarInitial = v.findViewById(R.id.tv_avatar_initial);
+            cvAvatar        = v.findViewById(R.id.cv_avatar);
         }
     }
 }

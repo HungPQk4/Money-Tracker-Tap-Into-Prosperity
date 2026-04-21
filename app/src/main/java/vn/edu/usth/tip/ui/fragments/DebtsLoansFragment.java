@@ -88,5 +88,20 @@ public class DebtsLoansFragment extends Fragment {
                 tvTotalOwedToMe.setText(viewModel.formatCurrency(total != null ? total : 0));
             });
         }
+
+        // Net balance = owed to me - i owe
+        TextView tvNetBalance = view.findViewById(R.id.tv_net_balance);
+        if (tvNetBalance != null) {
+            viewModel.getTotalOwedToMe().observe(getViewLifecycleOwner(), owedToMe -> {
+                Long iOwe = viewModel.getTotalIOwe().getValue();
+                long net = (owedToMe != null ? owedToMe : 0) - (iOwe != null ? iOwe : 0);
+                tvNetBalance.setText(viewModel.formatCurrency(net));
+            });
+            viewModel.getTotalIOwe().observe(getViewLifecycleOwner(), iOwe -> {
+                Long owedToMe = viewModel.getTotalOwedToMe().getValue();
+                long net = (owedToMe != null ? owedToMe : 0) - (iOwe != null ? iOwe : 0);
+                tvNetBalance.setText(viewModel.formatCurrency(net));
+            });
+        }
     }
 }
