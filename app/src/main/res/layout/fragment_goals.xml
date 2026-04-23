@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#12131A"
+    android:background="@color/bg_screen"
     android:clipToPadding="false"
     android:paddingBottom="100dp">
 
@@ -16,62 +16,61 @@
 
         <include layout="@layout/header_goals" />
 
-        <!-- AI Insight Card (Keep for visual flair) -->
+        <!-- Redesigned AI Insight Card for Light Theme -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            app:cardBackgroundColor="#1A1B36"
+            app:cardBackgroundColor="#F5F3FF"
             app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:cardMaxElevation="0dp">
+            app:cardElevation="0dp">
             
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingTop="16dp"
-                android:paddingBottom="20dp"
-                android:paddingHorizontal="20dp"
-                android:orientation="horizontal">
+                android:paddingBottom="16dp"
+                android:paddingHorizontal="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
                 
                 <androidx.cardview.widget.CardView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardBackgroundColor="#6A5AE0"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardBackgroundColor="#7B5CE7"
                     app:cardElevation="0dp">
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:text="AI"
+                        android:text="✨"
                         android:gravity="center"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:textSize="12sp"/>
+                        android:textSize="18sp"/>
                 </androidx.cardview.widget.CardView>
                 
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
                     android:orientation="vertical">
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Auto-save suggestion"
-                        android:textColor="#929AE9"
+                        android:text="Gợi ý thông minh"
+                        android:textColor="#5A4ACB"
                         android:textSize="14sp"
                         android:textStyle="bold" />
                         
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="Transfer ₫500K/week to reach your goals faster based on recent income."
-                        android:textColor="#A0A0B0"
+                        android:layout_marginTop="2dp"
+                        android:text="Trích thêm ₫500k mỗi tuần để đạt mục tiêu laptop sớm hơn 1 tháng."
+                        android:textColor="#6F767E"
                         android:textSize="12sp"
-                        android:lineSpacingExtra="4dp" />
+                        android:lineSpacingExtra="2dp" />
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -81,7 +80,7 @@
             android:id="@+id/rv_goals"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="16dp"
             android:nestedScrollingEnabled="false" />
 
     </LinearLayout>

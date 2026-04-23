@@ -26,6 +26,18 @@ public class CreateTransactionRequest {
     }
 
     // Getters and Setters
+    public UUID getUserId()             { return userId; }
+    public UUID getAccountId()          { return accountId; }
+    public UUID getCategoryId()         { return categoryId; }
+    public UUID getGoalId()             { return goalId; }
+    public BigDecimal getAmount()       { return amount; }
+    public String getType()             { return type; }
+    public String getNote()             { return note; }
+    public String getTransactionDate()  { return transactionDate; }
+    public String getReceiptUrl()       { return receiptUrl; }
+    public Boolean getIsRecurring()     { return isRecurring; }
+    public String getRecurInterval()    { return recurInterval; }
+
     public void setNote(String note) { this.note = note; }
     public void setGoalId(UUID goalId) { this.goalId = goalId; }
 }

@@ -18,6 +18,7 @@ public class DebtLoan {
     private long amount;
     private long dueDate; // Timestamp
     private int type;
+    private boolean isSynced = false;
 
     public DebtLoan(@NonNull String id, String personName, String reason, long amount, long dueDate, int type) {
         this.id = id;
@@ -26,6 +27,7 @@ public class DebtLoan {
         this.amount = amount;
         this.dueDate = dueDate;
         this.type = type;
+        this.isSynced = false;
     }
 
     @NonNull
@@ -35,4 +37,6 @@ public class DebtLoan {
     public long getAmount() { return amount; }
     public long getDueDate() { return dueDate; }
     public int getType() { return type; }
+    public boolean isSynced() { return isSynced; }
+    public void setSynced(boolean synced) { isSynced = synced; }
 }

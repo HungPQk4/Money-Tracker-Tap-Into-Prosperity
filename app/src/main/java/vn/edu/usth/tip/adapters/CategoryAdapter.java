@@ -49,17 +49,19 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
         if (cat.isAddButton()) {
             holder.tvIcon.setTextColor(Color.parseColor("#735BF2"));
             holder.tvName.setTextColor(Color.parseColor("#735BF2"));
-            holder.card.setCardBackgroundColor(Color.parseColor("#1A1B29"));
+            holder.card.setCardBackgroundColor(Color.parseColor("#ECE9FF"));
             holder.card.setCardElevation(0f);
         } else {
             if (position == selectedPosition) {
-                holder.card.setCardBackgroundColor(Color.parseColor("#2D2E45"));
+                holder.card.setCardBackgroundColor(Color.parseColor("#735BF2"));
                 holder.card.setCardElevation(4f);
                 holder.tvName.setTextColor(Color.WHITE);
+                holder.tvIcon.setTextColor(Color.WHITE);
             } else {
-                holder.card.setCardBackgroundColor(Color.parseColor("#1A1B29"));
-                holder.card.setCardElevation(0f);
-                holder.tvName.setTextColor(Color.parseColor("#8C8D99"));
+                holder.card.setCardBackgroundColor(Color.parseColor("#FFFFFF"));
+                holder.card.setCardElevation(2f);
+                holder.tvName.setTextColor(Color.parseColor("#6B6584"));
+                holder.tvIcon.setTextColor(Color.parseColor("#1A1730"));
             }
         }
 

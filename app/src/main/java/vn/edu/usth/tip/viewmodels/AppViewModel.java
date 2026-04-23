@@ -88,6 +88,9 @@ public class AppViewModel extends AndroidViewModel {
     // Dùng để quy định tab mặc định (Thu/Chi) khi mở form mới
     private Transaction.Type defaultNewTransactionType = Transaction.Type.EXPENSE;
 
+    private final MutableLiveData<Boolean> isSyncingTransactions = new MutableLiveData<>(false);
+    public LiveData<Boolean> getIsSyncingTransactions() { return isSyncingTransactions; }
+
     public AppViewModel(@NonNull Application application) {
         super(application);
         AppDatabase db = AppDatabase.getDatabase(application);
@@ -320,7 +323,7 @@ public class AppViewModel extends AndroidViewModel {
             debtsRepository.addOnline(debtLoan);
         });
     }
-    
+
     public void deleteDebtLoan(DebtLoan debtLoan) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             debtLoanDao.delete(debtLoan);
@@ -347,13 +350,23 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void syncTransactions(TransactionRepository.SyncCallback callback) {
-        transactionRepository.syncTransactions(callback);
+        isSyncingTransactions.postValue(true);
+        transactionRepository.syncTransactions(new TransactionRepository.SyncCallback() {
+            @Override public void onSuccess() {
+                isSyncingTransactions.postValue(false);
+                callback.onSuccess();
+            }
+            @Override public void onError(String msg) {
+                isSyncingTransactions.postValue(false);
+                callback.onError(msg);
+            }
+        });
     }
 
     public void syncAllData() {
         // Đồng bộ song song tất cả các mục
         transactionRepository.syncTransactions(new TransactionRepository.SyncCallback() {
-            @Override public void onSuccess() {} 
+            @Override public void onSuccess() {}
             @Override public void onError(String msg) {}
         });
         walletsRepository.sync(new WalletsRepository.SyncCallback() {

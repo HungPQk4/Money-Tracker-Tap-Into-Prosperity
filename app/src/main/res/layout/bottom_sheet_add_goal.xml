@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#161726"
+    android:background="@color/surface_white"
     android:orientation="vertical"
     android:padding="24dp">
 
@@ -12,15 +12,15 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="24dp"
-        android:background="#37384D" />
+        android:background="#E5E5F0" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:text="Thêm Mục Tiêu Mới"
-        android:textColor="@android:color/white"
-        android:textSize="20sp"
+        android:textColor="@color/text_primary"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
     <LinearLayout
@@ -29,14 +29,18 @@
         android:orientation="horizontal"
         android:layout_marginBottom="16dp">
         <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="60dp"
+            android:layout_width="70dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="12dp"
             android:hint="Icon"
-            app:hintTextColor="#6A5AE0"
-            app:boxStrokeColor="#6A5AE0"
-            app:boxBackgroundColor="#1C1C2A"
-            android:textColorHint="#8C8D99"
+            app:hintTextColor="#7B5CE7"
+            app:boxStrokeColor="#7B5CE7"
+            app:boxBackgroundColor="#F8F9FD"
+            android:textColorHint="#6F767E"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_goal_emoji"
@@ -44,24 +48,29 @@
                 android:layout_height="wrap_content"
                 android:text="🎯"
                 android:gravity="center"
-                android:textColor="#FFFFFF" />
+                android:textColor="@color/text_primary" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:hint="Tên mục tiêu (VD: Đổi điện thoại)"
-            app:hintTextColor="#6A5AE0"
-            app:boxStrokeColor="#6A5AE0"
-            app:boxBackgroundColor="#1C1C2A"
-            android:textColorHint="#8C8D99"
+            android:hint="Tên mục tiêu"
+            app:hintTextColor="#7B5CE7"
+            app:boxStrokeColor="#7B5CE7"
+            app:boxBackgroundColor="#F8F9FD"
+            android:textColorHint="#6F767E"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_goal_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#FFFFFF" />
+                android:paddingVertical="16dp"
+                android:textColor="@color/text_primary" />
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
@@ -70,10 +79,14 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:hint="Số tiền mục tiêu (VND)"
-        app:hintTextColor="#6A5AE0"
-        app:boxStrokeColor="#6A5AE0"
-        app:boxBackgroundColor="#1C1C2A"
-        android:textColorHint="#8C8D99"
+        app:hintTextColor="#7B5CE7"
+        app:boxStrokeColor="#7B5CE7"
+        app:boxBackgroundColor="#F8F9FD"
+        android:textColorHint="#6F767E"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_goal_target_amount"
@@ -81,7 +94,8 @@
             android:layout_height="wrap_content"
             android:inputType="number"
             android:textStyle="bold"
-            android:textColor="#FFFFFF" />
+            android:paddingVertical="16dp"
+            android:textColor="@color/text_primary" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -89,10 +103,14 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
         android:hint="Số tiền hiện có (VND)"
-        app:hintTextColor="#6A5AE0"
-        app:boxStrokeColor="#6A5AE0"
-        app:boxBackgroundColor="#1C1C2A"
-        android:textColorHint="#8C8D99"
+        app:hintTextColor="#7B5CE7"
+        app:boxStrokeColor="#7B5CE7"
+        app:boxBackgroundColor="#F8F9FD"
+        android:textColorHint="#6F767E"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_goal_saved_amount"
@@ -101,17 +119,20 @@
             android:inputType="number"
             android:text="0"
             android:textStyle="bold"
-            android:textColor="#FFFFFF" />
+            android:paddingVertical="16dp"
+            android:textColor="@color/text_primary" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_save_goal"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="56dp"
         android:text="Lưu Mục Tiêu"
         android:textColor="@android:color/white"
-        android:textSize="18sp"
+        android:textSize="17sp"
         android:textStyle="bold"
-        app:backgroundTint="#6A5AE0"
-        app:cornerRadius="16dp" />
+        app:backgroundTint="#7B5CE7"
+        app:cornerRadius="16dp"
+        android:elevation="0dp"
+        app:elevation="0dp" />
 </LinearLayout>

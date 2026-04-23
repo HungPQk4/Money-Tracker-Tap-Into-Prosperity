@@ -27,6 +27,7 @@ import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.text.SimpleDateFormat;
@@ -192,9 +193,9 @@ public class NewTransactionFragment extends Fragment {
         btnTypeIncome.setCardElevation(0);
         btnTypeTransfer.setCardElevation(0);
 
-        ((TextView)btnTypeExpense.getChildAt(0)).setTextColor(Color.parseColor("#8C8D99"));
-        ((TextView)btnTypeIncome.getChildAt(0)).setTextColor(Color.parseColor("#8C8D99"));
-        ((TextView)btnTypeTransfer.getChildAt(0)).setTextColor(Color.parseColor("#8C8D99"));
+        ((TextView)btnTypeExpense.getChildAt(0)).setTextColor(Color.parseColor("#6B6584"));
+        ((TextView)btnTypeIncome.getChildAt(0)).setTextColor(Color.parseColor("#6B6584"));
+        ((TextView)btnTypeTransfer.getChildAt(0)).setTextColor(Color.parseColor("#6B6584"));
 
         if (state.selectedType == Transaction.Type.EXPENSE) {
             btnTypeExpense.setCardBackgroundColor(Color.parseColor("#E76E60"));
@@ -212,14 +213,13 @@ public class NewTransactionFragment extends Fragment {
 
         if (state.note.isEmpty()) {
             tvNotePreview.setText("Thêm ghi chú...");
-            tvNotePreview.setTextColor(Color.parseColor("#8C8D99"));
+            tvNotePreview.setTextColor(Color.parseColor("#6B6584"));
         } else {
             tvNotePreview.setText(state.note);
-            tvNotePreview.setTextColor(Color.WHITE);
+            tvNotePreview.setTextColor(Color.parseColor("#1A1730"));
         }
 
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-        tvDatePreview.setText(sdf.format(state.timestampMs));
+        tvDatePreview.setText(formatDateDisplay(state.timestampMs));
 
         // Render wallet name
         if (tvWalletPreview != null) {
@@ -253,18 +253,41 @@ public class NewTransactionFragment extends Fragment {
         });
 
         view.findViewById(R.id.btn_select_date).setOnClickListener(v -> {
-            Calendar c = Calendar.getInstance();
-            NewTransactionViewModel.UiState state = newTxViewModel.getUiState().getValue();
-            if (state != null) c.setTimeInMillis(state.timestampMs);
+            MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
+                    .setTitleText("Chọn ngày giao dịch")
+                    .setSelection(newTxViewModel.getUiState().getValue().timestampMs)// Optional: ensure light theme
+                    .build();
 
-            new DatePickerDialog(requireContext(),
-                    (pickerView, year, month, dayOfMonth) -> {
-                        c.set(year, month, dayOfMonth);
-                        newTxViewModel.updateDate(c.getTimeInMillis());
-                    }, 
-                    c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)
-            ).show();
+            datePicker.addOnPositiveButtonClickListener(selection -> {
+                newTxViewModel.updateDate(selection);
+            });
+
+            datePicker.show(getChildFragmentManager(), "transaction_date_picker");
         });
+    }
+
+    private String formatDateDisplay(long timestampMs) {
+        Calendar target = Calendar.getInstance();
+        target.setTimeInMillis(timestampMs);
+
+        Calendar today = Calendar.getInstance();
+        Calendar yesterday = Calendar.getInstance();
+        yesterday.add(Calendar.DAY_OF_YEAR, -1);
+
+        if (isSameDay(target, today)) {
+            return "Hôm nay";
+        } else if (isSameDay(target, yesterday)) {
+            return "Hôm qua";
+        } else {
+            SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd/MM", new Locale("vi", "VN"));
+            String formatted = sdf.format(target.getTime());
+            return Character.toUpperCase(formatted.charAt(0)) + formatted.substring(1);
+        }
+    }
+
+    private boolean isSameDay(Calendar cal1, Calendar cal2) {
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+               cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR);
     }
 
     private void updateCategoryList(List<Category> categories, RecyclerView rv) {

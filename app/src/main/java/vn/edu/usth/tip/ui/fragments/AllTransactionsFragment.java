@@ -12,6 +12,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import vn.edu.usth.tip.repositories.TransactionRepository;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -38,6 +42,7 @@ public class AllTransactionsFragment extends Fragment {
 
     private TextView tvSummaryIncome, tvSummaryExpense;
     private View     emptyState;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     // Filter state
     private static final int FILTER_ALL      = 0;
@@ -73,6 +78,14 @@ public class AllTransactionsFragment extends Fragment {
         tvSummaryExpense = view.findViewById(R.id.tv_summary_expense);
         emptyState       = view.findViewById(R.id.layout_all_tx_empty);
 
+        swipeRefreshLayout = view.findViewById(R.id.swipe_refresh);
+        swipeRefreshLayout.setColorSchemeColors(0xFF7B5CE7);
+        swipeRefreshLayout.setOnRefreshListener(this::triggerSync);
+
+        viewModel.getIsSyncingTransactions().observe(getViewLifecycleOwner(), isSyncing -> {
+            swipeRefreshLayout.setRefreshing(Boolean.TRUE.equals(isSyncing));
+        });
+
         displayList = new ArrayList<>();
 
         adapter = new TransactionAdapter(displayList, tx -> {
@@ -81,8 +94,8 @@ public class AllTransactionsFragment extends Fragment {
                         @Override
                         public void onEdit(Transaction t) {
                             viewModel.setEditingTransaction(t);
-                            // Navigate using the same action we use in Dashboard if possible, 
-                            // but check if there's a specific nav action. 
+                            // Navigate using the same action we use in Dashboard if possible,
+                            // but check if there's a specific nav action.
                             // Assuming global action or simple R.id.newTransaction works:
                             Navigation.findNavController(requireView()).navigate(R.id.newTransactionFragment);
                         }
@@ -122,6 +135,25 @@ public class AllTransactionsFragment extends Fragment {
             else if (chipId == R.id.chip_transfer) currentFilter = FILTER_TRANSFER;
             else                                    currentFilter = FILTER_ALL;
             applyFilters();
+        });
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        triggerSync();
+    }
+
+    private void triggerSync() {
+        viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
+            @Override public void onSuccess() {
+                if (getContext() != null)
+                    Toast.makeText(getContext(), "Đã cập nhật giao dịch", Toast.LENGTH_SHORT).show();
+            }
+            @Override public void onError(String message) {
+                if (getContext() != null)
+                    Toast.makeText(getContext(), "Lỗi đồng bộ: " + message, Toast.LENGTH_SHORT).show();
+            }
         });
     }
 

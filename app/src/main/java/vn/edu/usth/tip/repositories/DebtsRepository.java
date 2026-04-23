@@ -31,36 +31,68 @@ public class DebtsRepository {
     }
 
     public void addOnline(DebtLoan d) {
-        UUID userId = UUID.fromString(tokenManager.getUserId());
-        FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
-            userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
-            (d.getType() == DebtLoan.TYPE_LENT) ? "LENT" : "BORROWED", 
-            sdf.format(new java.util.Date(d.getDueDate()))
-        );
-        req.setNote(d.getReason());
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                String userIdStr = tokenManager.getUserId();
+                if (userIdStr == null) return;
+                UUID userId = UUID.fromString(userIdStr);
 
-        financialApi.createDebt(req).enqueue(new Callback<DebtDto>() {
-            @Override public void onResponse(Call<DebtDto> call, Response<DebtDto> response) {}
-            @Override public void onFailure(Call<DebtDto> call, Throwable t) {}
+                FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
+                    userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
+                    (d.getType() == DebtLoan.TYPE_LENT) ? "LENT" : "BORROWED", 
+                    sdf.format(new java.util.Date(d.getDueDate()))
+                );
+                req.setNote(d.getReason());
+
+                financialApi.createDebt(req).enqueue(new Callback<DebtDto>() {
+                    @Override 
+                    public void onResponse(Call<DebtDto> call, Response<DebtDto> response) {
+                        if (response.isSuccessful()) {
+                            AppDatabase.databaseWriteExecutor.execute(() -> {
+                                d.setSynced(true);
+                                debtLoanDao.update(d);
+                            });
+                        }
+                    }
+                    @Override public void onFailure(Call<DebtDto> call, Throwable t) {}
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
     }
 
     public void updateOnline(DebtLoan d) {
-        UUID userId = UUID.fromString(tokenManager.getUserId());
-        FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
-            userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
-            (d.getType() == DebtLoan.TYPE_LENT) ? "LENT" : "BORROWED", 
-            sdf.format(new java.util.Date(d.getDueDate()))
-        );
-        req.setNote(d.getReason());
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                String userIdStr = tokenManager.getUserId();
+                if (userIdStr == null) return;
+                UUID userId = UUID.fromString(userIdStr);
 
-        try {
-            UUID id = UUID.fromString(d.getId());
-            financialApi.updateDebt(id, req).enqueue(new Callback<DebtDto>() {
-                @Override public void onResponse(Call<DebtDto> call, Response<DebtDto> response) {}
-                @Override public void onFailure(Call<DebtDto> call, Throwable t) {}
-            });
-        } catch (Exception ignored) {}
+                FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
+                    userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
+                    (d.getType() == DebtLoan.TYPE_LENT) ? "LENT" : "BORROWED", 
+                    sdf.format(new java.util.Date(d.getDueDate()))
+                );
+                req.setNote(d.getReason());
+
+                UUID id = UUID.fromString(d.getId());
+                financialApi.updateDebt(id, req).enqueue(new Callback<DebtDto>() {
+                    @Override 
+                    public void onResponse(Call<DebtDto> call, Response<DebtDto> response) {
+                        if (response.isSuccessful()) {
+                            AppDatabase.databaseWriteExecutor.execute(() -> {
+                                d.setSynced(true);
+                                debtLoanDao.update(d);
+                            });
+                        }
+                    }
+                    @Override public void onFailure(Call<DebtDto> call, Throwable t) {}
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public void deleteOnline(String debtId) {

@@ -31,7 +31,7 @@ public class WalletsRepository {
     public void addOnline(Wallet w) {
         UUID userId = UUID.fromString(tokenManager.getUserId());
         FinancialRequests.CreateAccountRequest req = new FinancialRequests.CreateAccountRequest(
-            userId, w.getName(), w.getType().name(), new java.math.BigDecimal(w.getBalanceVnd())
+                userId, w.getName(), w.getType().name(), new java.math.BigDecimal(w.getBalanceVnd())
         );
 
         financialApi.createAccount(req).enqueue(new Callback<AccountDto>() {
@@ -43,7 +43,7 @@ public class WalletsRepository {
     public void updateOnline(Wallet w) {
         UUID userId = UUID.fromString(tokenManager.getUserId());
         FinancialRequests.CreateAccountRequest req = new FinancialRequests.CreateAccountRequest(
-            userId, w.getName(), w.getType().name(), new java.math.BigDecimal(w.getBalanceVnd())
+                userId, w.getName(), w.getType().name(), new java.math.BigDecimal(w.getBalanceVnd())
         );
 
         try {
@@ -72,7 +72,13 @@ public class WalletsRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
                         for (AccountDto dto : response.body()) {
-                            walletDao.insert(convertToModel(dto));
+                            Wallet incoming = convertToModel(dto);
+                            // Xóa record cũ cùng tên nhưng ID giả (không phải UUID)
+                            Wallet existing = walletDao.findByNameSync(dto.getName());
+                            if (existing != null && !existing.getId().equals(incoming.getId())) {
+                                walletDao.delete(existing);
+                            }
+                            walletDao.insert(incoming);
                         }
                         callback.onSuccess();
                     });
@@ -89,15 +95,15 @@ public class WalletsRepository {
     private Wallet convertToModel(AccountDto dto) {
         Wallet.Type type = Wallet.Type.OTHER;
         try { type = Wallet.Type.valueOf(dto.getType()); } catch (Exception ignored) {}
-        
+
         return new Wallet(
-            dto.getId().toString(),
-            dto.getName(),
-            dto.getBalance().longValue(),
-            "💳", // Default icon
-            Color.BLUE, 
-            type,
-            true
+                dto.getId().toString(),
+                dto.getName(),
+                dto.getBalance().longValue(),
+                "💳", // Default icon
+                Color.BLUE,
+                type,
+                true
         );
     }
 

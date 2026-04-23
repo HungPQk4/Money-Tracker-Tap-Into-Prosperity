@@ -7,43 +7,58 @@
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
-    <TextView
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="Savings goals"
-        android:textColor="#FFFFFF"
-        android:textSize="24sp"
-        android:textStyle="bold" />
+        android:orientation="vertical">
 
-    <androidx.cardview.widget.CardView
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lập kế hoạch"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.1"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Mục tiêu tích lũy"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/btn_add_goal"
         android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        app:cardCornerRadius="16dp"
-        app:cardBackgroundColor="#1F223D"
-        app:cardElevation="0dp">
-        <LinearLayout
+        android:layout_height="36dp"
+        android:background="@drawable/bg_add_pill_purple"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:orientation="horizontal"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="12dp"
-            android:orientation="horizontal">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="+"
-                android:textColor="#8288D8"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="Goal"
-                android:textColor="#8288D8"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+            android:layout_height="wrap_content"
+            android:text="+"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="Thêm mới"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 </LinearLayout>

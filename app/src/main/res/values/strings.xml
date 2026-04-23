@@ -24,5 +24,8 @@
     <string name="error_password_mismatch">Mật khẩu không khớp</string>
     <string name="signup_success">Đăng ký thành công!</string>
     <string name="back">Quay lại</string>
-    <string name="desc_google_icon">Icon Google</string>
+    <string name="label_full_name">Họ và tên</string>
+    <string name="label_confirm_password">Xác nhận mật khẩu</string>
+    <string name="agree_terms">Tôi đồng ý với Điều khoản &amp; Chính sách</string>
+    <string name="desc_app_logo">Logo ứng dụng</string>
 </resources>

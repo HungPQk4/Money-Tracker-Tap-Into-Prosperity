@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="72dp"
     android:layout_margin="4dp"
-    app:cardBackgroundColor="#1A1B29"
+    app:cardBackgroundColor="#FFFFFF"
     app:cardCornerRadius="14dp"
     app:cardElevation="0dp"
     android:clickable="true"
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="Ăn uống"
-            android:textColor="#8C8D99"
+            android:textColor="#6B6584"
             android:textSize="10sp" />
     </LinearLayout>
 </androidx.cardview.widget.CardView>

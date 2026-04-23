@@ -29,7 +29,7 @@ import vn.edu.usth.tip.models.DebtLoanDao;
 import vn.edu.usth.tip.models.Goal;
 import vn.edu.usth.tip.models.GoalDao;
 
-@Database(entities = {Transaction.class, Category.class, Wallet.class, Budget.class, DebtLoan.class, Goal.class}, version = 6, exportSchema = false)
+@Database(entities = {Transaction.class, Category.class, Wallet.class, Budget.class, DebtLoan.class, Goal.class}, version = 7, exportSchema = false)
 @TypeConverters({Converters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -88,4 +88,3 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 }
-
