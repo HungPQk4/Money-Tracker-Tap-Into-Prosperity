@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#12131A"
+    android:background="@color/bg_screen"
     android:clipToPadding="false"
     android:paddingBottom="100dp">
 
@@ -22,9 +22,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            app:cardBackgroundColor="#1A1B29"
+            app:cardBackgroundColor="@color/surface_white"
             app:cardCornerRadius="20dp"
-            app:cardElevation="0dp">
+            app:cardElevation="2dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -36,7 +36,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tổng quan tháng này"
-                    android:textColor="#8C8D99"
+                    android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
                 <!-- Net row -->
@@ -56,7 +56,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Tổng ngân sách"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="11sp" />
                         <TextView
                             android:id="@+id/tv_total_budgeted"
@@ -64,7 +64,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="₫0"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="20sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -80,7 +80,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Đã chi"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="11sp" />
                         <TextView
                             android:id="@+id/tv_total_spent"
@@ -104,7 +104,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Còn lại"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="11sp" />
                         <TextView
                             android:id="@+id/tv_total_remaining"
@@ -127,7 +127,7 @@
                     android:layout_marginTop="16dp"
                     android:max="100"
                     android:progress="0"
-                    android:progressBackgroundTint="#2D3042"
+                    android:progressBackgroundTint="@color/border_color"
                     android:progressTint="#F2C94C" />
 
                 <LinearLayout
@@ -140,13 +140,13 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textColor="#8C8D99"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
                     <TextView
                         android:id="@+id/tv_active_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="#8C8D99"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
@@ -173,7 +173,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="Chưa có ngân sách nào"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -182,7 +182,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="Nhấn + New để tạo ngân sách đầu tiên"
-                android:textColor="#8C8D99"
+                android:textColor="@color/text_secondary"
                 android:textSize="14sp"
                 android:textAlignment="center" />
         </LinearLayout>
@@ -195,7 +195,7 @@
             android:layout_marginTop="28dp"
             android:layout_marginBottom="4dp"
             android:text="Ngân sách đang hoạt động"
-            android:textColor="#8C8D99"
+            android:textColor="@color/text_secondary"
             android:textSize="13sp"
             android:textStyle="bold"
             android:visibility="gone" />

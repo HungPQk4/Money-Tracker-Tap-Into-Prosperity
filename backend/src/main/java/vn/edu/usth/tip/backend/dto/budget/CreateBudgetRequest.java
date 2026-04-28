@@ -17,6 +17,8 @@ public class CreateBudgetRequest {
     @NotNull @Positive
     private BigDecimal amount;
 
+    private BigDecimal spentAmount = BigDecimal.ZERO;
+
     @NotNull private BudgetPeriod periodType;
     @NotNull private LocalDate periodStart;
     @NotNull private LocalDate periodEnd;

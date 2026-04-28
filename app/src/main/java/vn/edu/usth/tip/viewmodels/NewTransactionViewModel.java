@@ -6,7 +6,11 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import vn.edu.usth.tip.models.Category;
@@ -29,6 +33,10 @@ public class NewTransactionViewModel extends AndroidViewModel {
         // Selected account
         public String selectedAccountId = null;
         public String selectedAccountName = "Chọn ví...";
+
+        // Selected category
+        public String selectedCategoryId = null;
+        public String selectedCategoryName = "";
     }
 
     private final MutableLiveData<UiState> uiState = new MutableLiveData<>(new UiState());
@@ -62,6 +70,15 @@ public class NewTransactionViewModel extends AndroidViewModel {
         if (state != null) {
             state.selectedAccountId = account.getId();
             state.selectedAccountName = account.getName();
+            uiState.setValue(state);
+        }
+    }
+
+    public void selectCategory(Category category) {
+        UiState state = uiState.getValue();
+        if (state != null && category != null) {
+            state.selectedCategoryId = category.getId();
+            state.selectedCategoryName = category.getName();
             uiState.setValue(state);
         }
     }
@@ -156,7 +173,7 @@ public class NewTransactionViewModel extends AndroidViewModel {
             return;
         }
 
-        if (state.selectedAccountId == null || state.selectedAccountId.isEmpty()) {
+        if (state.selectedAccountName == null || state.selectedAccountName.equals("Chọn ví...")) {
             validationError.setValue("Vui lòng chọn ví");
             validationError.setValue(null);
             return;
@@ -164,21 +181,19 @@ public class NewTransactionViewModel extends AndroidViewModel {
 
         Transaction tx;
         if (state.editingTx != null) {
-            tx = new Transaction(
-                    state.editingTx.getId(),
-                    selectedCategory.getName(),
-                    selectedCategory.getName(),
-                    selectedCategory.getIcon(),
-                    state.selectedAccountName,
-                    amount,
-                    state.selectedType,
-                    state.timestampMs,
-                    state.note
-            );
+            tx = state.editingTx;
+            tx.setTitle(state.note.isEmpty() ? selectedCategory.getName() : state.note);
+            tx.setCategory(selectedCategory.getName());
+            tx.setIcon(selectedCategory.getIcon());
+            tx.setWalletName(state.selectedAccountName);
+            tx.setAmountVnd(amount);
+            tx.setType(state.selectedType);
+            tx.setTimestampMs(state.timestampMs);
+            tx.setNote(state.note);
         } else {
             tx = new Transaction(
                     UUID.randomUUID().toString(),
-                    selectedCategory.getName(),
+                    state.note.isEmpty() ? selectedCategory.getName() : state.note,
                     selectedCategory.getName(),
                     selectedCategory.getIcon(),
                     state.selectedAccountName,
@@ -188,8 +203,8 @@ public class NewTransactionViewModel extends AndroidViewModel {
                     state.note
             );
         }
-        // Embed the real account ID so the repository can use it
-        tx.setAccountId(state.selectedAccountId);
+
         transactionToSave.setValue(tx);
+        transactionToSave.setValue(null); // Reset after emitting
     }
 }

@@ -38,8 +38,16 @@ public class GoalsRepository {
         );
 
         financialApi.createGoal(req).enqueue(new Callback<GoalDto>() {
-            @Override public void onResponse(Call<GoalDto> call, Response<GoalDto> response) {}
-            @Override public void onFailure(Call<GoalDto> call, Throwable t) {}
+            @Override public void onResponse(Call<GoalDto> call, Response<GoalDto> response) {
+                if (!response.isSuccessful()) {
+                    android.util.Log.e("GOAL_SYNC", "Add error: " + response.code() + " " + response.message());
+                } else {
+                    android.util.Log.d("GOAL_SYNC", "Add success!");
+                }
+            }
+            @Override public void onFailure(Call<GoalDto> call, Throwable t) {
+                android.util.Log.e("GOAL_SYNC", "Add failure: " + t.getMessage());
+            }
         });
     }
 
@@ -53,10 +61,24 @@ public class GoalsRepository {
         try {
             UUID id = UUID.fromString(g.getId());
             financialApi.updateGoal(id, req).enqueue(new Callback<GoalDto>() {
-                @Override public void onResponse(Call<GoalDto> call, Response<GoalDto> response) {}
-                @Override public void onFailure(Call<GoalDto> call, Throwable t) {}
+                @Override public void onResponse(Call<GoalDto> call, Response<GoalDto> response) {
+                    if (!response.isSuccessful()) {
+                        android.util.Log.e("GOAL_SYNC", "Update error: " + response.code() + " " + response.message());
+                        if (response.code() == 404) {
+                            android.util.Log.d("GOAL_SYNC", "Fallback to addOnline...");
+                            addOnline(g);
+                        }
+                    } else {
+                        android.util.Log.d("GOAL_SYNC", "Update success!");
+                    }
+                }
+                @Override public void onFailure(Call<GoalDto> call, Throwable t) {
+                    android.util.Log.e("GOAL_SYNC", "Update failure: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("GOAL_SYNC", "Update UUID parse error: " + e.getMessage());
+        }
     }
 
     public void deleteOnline(String goalId) {
@@ -75,8 +97,23 @@ public class GoalsRepository {
             public void onResponse(@NonNull Call<List<GoalDto>> call, @NonNull Response<List<GoalDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
+                        List<Goal> localGoals = goalDao.getAllGoalsSync();
                         for (GoalDto dto : response.body()) {
-                            goalDao.insert(convertToModel(dto));
+                            Goal serverGoal = convertToModel(dto);
+                            
+                            // Check for conflicts: if a goal with the exact same name exists locally
+                            // but has a different ID (because the server generated a new UUID),
+                            // we delete the local one to prevent duplicates.
+                            for (Goal local : localGoals) {
+                                if (local.getName().trim().equalsIgnoreCase(serverGoal.getName().trim())) {
+                                    if (!local.getId().equals(serverGoal.getId())) {
+                                        goalDao.delete(local);
+                                    }
+                                    break;
+                                }
+                            }
+                            
+                            goalDao.insert(serverGoal);
                         }
                         callback.onSuccess();
                     });

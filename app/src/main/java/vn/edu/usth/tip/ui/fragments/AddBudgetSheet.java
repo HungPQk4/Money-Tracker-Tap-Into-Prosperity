@@ -36,6 +36,9 @@ public class AddBudgetSheet extends BottomSheetDialogFragment {
     private String selectedEmoji = "💰";
     private String selectedColor = "#735BF2";
     private boolean periodMonth  = true;  // true = month, false = week
+    private TextInputEditText etName, etCategory, etAmount, etSpent;
+    private TextView tvEmoji;
+    private CardView cardPickEmoji;
 
     @Nullable
     @Override
@@ -45,19 +48,60 @@ public class AddBudgetSheet extends BottomSheetDialogFragment {
         return inflater.inflate(R.layout.bottom_sheet_add_budget, container, false);
     }
 
+    private Budget existingBudget;
+
+    public void setExistingBudget(Budget budget) {
+        this.existingBudget = budget;
+    }
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         viewModel = new ViewModelProvider(requireActivity()).get(AppViewModel.class);
 
-        TextInputEditText etName     = view.findViewById(R.id.et_budget_name);
-        TextInputEditText etAmount   = view.findViewById(R.id.et_budget_amount);
-        TextInputEditText etCategory = view.findViewById(R.id.et_budget_category);
-        TextView          tvEmoji    = view.findViewById(R.id.tv_selected_emoji);
-        CardView          cardEmoji  = view.findViewById(R.id.card_pick_emoji);
+        etName     = view.findViewById(R.id.et_budget_name);
+        etCategory = view.findViewById(R.id.et_budget_category);
+        etAmount   = view.findViewById(R.id.et_budget_amount);
+        etSpent    = view.findViewById(R.id.et_budget_spent);
+        tvEmoji    = view.findViewById(R.id.tv_selected_emoji);
+        cardPickEmoji  = view.findViewById(R.id.card_pick_emoji);
+        TextView          tvTitle    = view.findViewById(R.id.tv_sheet_title);
+        TextView          tvBtnSave  = view.findViewById(R.id.tv_btn_save);
+        CardView          btnDelete  = view.findViewById(R.id.btn_delete_budget);
+
+        // ── Period Buttons ────────────────────────────────────────────
+        CardView btnMonth = view.findViewById(R.id.btn_period_month);
+        CardView btnWeek  = view.findViewById(R.id.btn_period_week);
+        TextView tvMonth  = view.findViewById(R.id.tv_period_month);
+        TextView tvWeek   = view.findViewById(R.id.tv_period_week);
+
+        if (existingBudget != null) {
+            tvTitle.setText("Cập nhật ngân sách");
+            tvBtnSave.setText("Lưu thay đổi");
+            btnDelete.setVisibility(View.VISIBLE);
+
+            etName.setText(existingBudget.getName());
+            etCategory.setText(existingBudget.getCategoryName());
+            etAmount.setText(String.valueOf(existingBudget.getLimitAmount()));
+            etSpent.setText(String.valueOf(existingBudget.getSpentAmount()));
+            selectedEmoji = existingBudget.getEmoji();
+            selectedColor = existingBudget.getColor();
+            tvEmoji.setText(selectedEmoji);
+            
+            long duration = existingBudget.getPeriodEndMs() - existingBudget.getPeriodStartMs();
+            if (duration < 15L * 86400000L) { // Nếu dưới 15 ngày thì là tuần
+                periodMonth = false;
+                btnWeek.setCardBackgroundColor(Color.parseColor("#735BF2"));
+                btnMonth.setCardBackgroundColor(Color.parseColor("#2A2B3D"));
+                tvWeek.setTextColor(Color.WHITE);
+                tvMonth.setTextColor(Color.parseColor("#8C8D99"));
+            } else {
+                periodMonth = true;
+            }
+        }
 
         // ── Emoji Picker ──────────────────────────────────────────────
-        cardEmoji.setOnClickListener(v -> {
+        cardPickEmoji.setOnClickListener(v -> {
             String[] options = EMOJIS;
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                     .setTitle("Chọn biểu tượng")
@@ -71,12 +115,6 @@ public class AddBudgetSheet extends BottomSheetDialogFragment {
         // ── Color Chips ───────────────────────────────────────────────
         LinearLayout llColors = view.findViewById(R.id.ll_color_chips);
         buildColorChips(llColors);
-
-        // ── Period Buttons ────────────────────────────────────────────
-        CardView btnMonth = view.findViewById(R.id.btn_period_month);
-        CardView btnWeek  = view.findViewById(R.id.btn_period_week);
-        TextView tvMonth  = view.findViewById(R.id.tv_period_month);
-        TextView tvWeek   = view.findViewById(R.id.tv_period_week);
 
         btnMonth.setOnClickListener(v -> {
             periodMonth = true;
@@ -94,10 +132,25 @@ public class AddBudgetSheet extends BottomSheetDialogFragment {
             tvMonth.setTextColor(Color.parseColor("#8C8D99"));
         });
 
+        // ── Delete ────────────────────────────────────────────────────
+        btnDelete.setOnClickListener(v -> {
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Xoá ngân sách")
+                    .setMessage("Bạn có chắc muốn xoá ngân sách này?")
+                    .setPositiveButton("Xoá", (dialog, which) -> {
+                        viewModel.deleteBudget(existingBudget);
+                        Toast.makeText(requireContext(), "✅ Đã xoá ngân sách", Toast.LENGTH_SHORT).show();
+                        dismiss();
+                    })
+                    .setNegativeButton("Hủy", null)
+                    .show();
+        });
+
         // ── Save ──────────────────────────────────────────────────────
         view.findViewById(R.id.btn_save_budget).setOnClickListener(v -> {
             String name     = etName.getText()     != null ? etName.getText().toString().trim()     : "";
             String amountStr= etAmount.getText()   != null ? etAmount.getText().toString().trim()   : "";
+            String spentStr = etSpent.getText()    != null ? etSpent.getText().toString().trim()    : "";
             String category = etCategory.getText() != null ? etCategory.getText().toString().trim() : "";
 
             if (name.isEmpty()) {
@@ -110,7 +163,11 @@ public class AddBudgetSheet extends BottomSheetDialogFragment {
             }
 
             long amount;
-            try { amount = Long.parseLong(amountStr); }
+            long spent = 0;
+            try { 
+                amount = Long.parseLong(amountStr); 
+                if (!spentStr.isEmpty()) spent = Long.parseLong(spentStr);
+            }
             catch (Exception e) {
                 Toast.makeText(requireContext(), "Số tiền không hợp lệ", Toast.LENGTH_SHORT).show();
                 return;
@@ -136,20 +193,33 @@ public class AddBudgetSheet extends BottomSheetDialogFragment {
                 periodEnd = c.getTimeInMillis();
             }
 
-            Budget budget = new Budget(
-                    UUID.randomUUID().toString(),
-                    name,
-                    selectedEmoji,
-                    selectedColor,
-                    category,
-                    amount,
-                    periodStart,
-                    periodEnd,
-                    now
-            );
-
-            viewModel.addBudget(budget);
-            Toast.makeText(requireContext(), "✅ Đã tạo ngân sách: " + name, Toast.LENGTH_SHORT).show();
+            if (existingBudget != null) {
+                existingBudget.setName(name);
+                existingBudget.setLimitAmount(amount);
+                existingBudget.setSpentAmount(spent);
+                existingBudget.setCategoryName(category);
+                existingBudget.setEmoji(selectedEmoji);
+                existingBudget.setColor(selectedColor);
+                existingBudget.setPeriodStartMs(periodStart);
+                existingBudget.setPeriodEndMs(periodEnd);
+                viewModel.updateBudget(existingBudget);
+                Toast.makeText(requireContext(), "✅ Đã cập nhật ngân sách", Toast.LENGTH_SHORT).show();
+            } else {
+                Budget budget = new Budget(
+                        UUID.randomUUID().toString(),
+                        name,
+                        selectedEmoji,
+                        selectedColor,
+                        category,
+                        amount,
+                        spent,
+                        periodStart,
+                        periodEnd,
+                        now
+                );
+                viewModel.addBudget(budget);
+                Toast.makeText(requireContext(), "✅ Đã tạo ngân sách: " + name, Toast.LENGTH_SHORT).show();
+            }
             dismiss();
         });
     }

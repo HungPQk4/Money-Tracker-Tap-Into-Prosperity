@@ -19,12 +19,13 @@ public class Budget {
     private String color;        // Màu hex (vd: #F2C94C)
     private String categoryName; // Tên danh mục giao dịch cần theo dõi (match vs Transaction.category)
     private long   limitAmount;  // Giới hạn ngân sách (VNĐ)
+    private long   spentAmount;  // Số tiền đã chi (nhập tay)
     private long   periodStartMs;// Thời điểm bắt đầu (epoch ms)
     private long   periodEndMs;  // Thời điểm kết thúc (epoch ms)
     private long   createdMs;    // Thời điểm tạo
 
     public Budget(@NonNull String id, String name, String emoji, String color,
-                  String categoryName, long limitAmount,
+                  String categoryName, long limitAmount, long spentAmount,
                   long periodStartMs, long periodEndMs, long createdMs) {
         this.id            = id;
         this.name          = name;
@@ -32,6 +33,7 @@ public class Budget {
         this.color         = color;
         this.categoryName  = categoryName;
         this.limitAmount   = limitAmount;
+        this.spentAmount   = spentAmount;
         this.periodStartMs = periodStartMs;
         this.periodEndMs   = periodEndMs;
         this.createdMs     = createdMs;
@@ -44,6 +46,7 @@ public class Budget {
     public String getColor()                 { return color; }
     public String getCategoryName()          { return categoryName; }
     public long   getLimitAmount()           { return limitAmount; }
+    public long   getSpentAmount()           { return spentAmount; }
     public long   getPeriodStartMs()         { return periodStartMs; }
     public long   getPeriodEndMs()           { return periodEndMs; }
     public long   getCreatedMs()             { return createdMs; }
@@ -55,6 +58,7 @@ public class Budget {
     public void setColor(String color)       { this.color = color; }
     public void setCategoryName(String n)    { this.categoryName = n; }
     public void setLimitAmount(long a)       { this.limitAmount = a; }
+    public void setSpentAmount(long a)       { this.spentAmount = a; }
     public void setPeriodStartMs(long t)     { this.periodStartMs = t; }
     public void setPeriodEndMs(long t)       { this.periodEndMs = t; }
     public void setCreatedMs(long t)         { this.createdMs = t; }

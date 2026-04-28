@@ -39,7 +39,7 @@ public class DebtsRepository {
 
                 FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
                     userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
-                    (d.getType() == DebtLoan.TYPE_LENT) ? "LENT" : "BORROWED", 
+                    (d.getType() == DebtLoan.TYPE_LENT) ? "lend" : "borrow", 
                     sdf.format(new java.util.Date(d.getDueDate()))
                 );
                 req.setNote(d.getReason());
@@ -71,24 +71,32 @@ public class DebtsRepository {
 
                 FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
                     userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
-                    (d.getType() == DebtLoan.TYPE_LENT) ? "LENT" : "BORROWED", 
+                    (d.getType() == DebtLoan.TYPE_LENT) ? "lend" : "borrow", 
                     sdf.format(new java.util.Date(d.getDueDate()))
                 );
                 req.setNote(d.getReason());
 
-                UUID id = UUID.fromString(d.getId());
-                financialApi.updateDebt(id, req).enqueue(new Callback<DebtDto>() {
-                    @Override 
-                    public void onResponse(Call<DebtDto> call, Response<DebtDto> response) {
-                        if (response.isSuccessful()) {
-                            AppDatabase.databaseWriteExecutor.execute(() -> {
-                                d.setSynced(true);
-                                debtLoanDao.update(d);
-                            });
+                try {
+                    UUID id = UUID.fromString(d.getId());
+                    financialApi.updateDebt(id, req).enqueue(new Callback<DebtDto>() {
+                        @Override public void onResponse(Call<DebtDto> call, Response<DebtDto> response) {
+                            if (!response.isSuccessful()) {
+                                android.util.Log.e("DEBT_SYNC", "Update error: " + response.code() + " " + response.message());
+                                if (response.code() == 404) {
+                                    android.util.Log.d("DEBT_SYNC", "Fallback to addOnline...");
+                                    addOnline(d);
+                                }
+                            } else {
+                                android.util.Log.d("DEBT_SYNC", "Update success!");
+                            }
                         }
-                    }
-                    @Override public void onFailure(Call<DebtDto> call, Throwable t) {}
-                });
+                        @Override public void onFailure(Call<DebtDto> call, Throwable t) {
+                            android.util.Log.e("DEBT_SYNC", "Update failure: " + t.getMessage());
+                        }
+                    });
+                } catch (Exception e) {
+                    android.util.Log.e("DEBT_SYNC", "Update UUID parse error: " + e.getMessage());
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -106,23 +114,59 @@ public class DebtsRepository {
     }
 
     public void sync(SyncCallback callback) {
-        financialApi.getAllDebts().enqueue(new Callback<List<DebtDto>>() {
-            @Override
-            public void onResponse(@NonNull Call<List<DebtDto>> call, @NonNull Response<List<DebtDto>> response) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                // 1. Đẩy các khoản vay/nợ chưa đồng bộ lên server trước
+                List<DebtLoan> unsynced = debtLoanDao.getUnsyncedDebtsSync();
+                String userIdStr = tokenManager.getUserId();
+                if (userIdStr != null && unsynced != null && !unsynced.isEmpty()) {
+                    UUID userId = UUID.fromString(userIdStr);
+                    for (DebtLoan d : unsynced) {
+                        FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
+                            userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
+                            (d.getType() == DebtLoan.TYPE_LENT) ? "lend" : "borrow", 
+                            sdf.format(new java.util.Date(d.getDueDate()))
+                        );
+                        req.setNote(d.getReason());
+                        
+                        try {
+                            Response<DebtDto> res = financialApi.createDebt(req).execute();
+                            if (res.isSuccessful() && res.body() != null) {
+                                // Xóa bản ghi cũ (ID sinh ở máy) để tránh bị nhân đôi dữ liệu
+                                debtLoanDao.delete(d);
+                                // Thay bằng bản ghi mới (ID chuẩn từ PostgreSQL server)
+                                debtLoanDao.insert(convertToModel(res.body()));
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // 2. Kéo tất cả dữ liệu từ server về Room
+            financialApi.getAllDebts().enqueue(new Callback<List<DebtDto>>() {
+                @Override
+                public void onResponse(@NonNull Call<List<DebtDto>> call, @NonNull Response<List<DebtDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
+                        // Xóa sạch dữ liệu đã sync cũ (tránh rác nếu có khoản nợ bị xóa ở thiết bị khác)
+                        debtLoanDao.deleteSyncedDebts();
                         for (DebtDto dto : response.body()) {
                             debtLoanDao.insert(convertToModel(dto));
                         }
-                        callback.onSuccess();
+                        new android.os.Handler(android.os.Looper.getMainLooper()).post(callback::onSuccess);
                     });
-                } else callback.onError("Error: " + response.code());
+                } else {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Error: " + response.code()));
+                }
             }
 
             @Override
             public void onFailure(@NonNull Call<List<DebtDto>> call, @NonNull Throwable t) {
-                callback.onError(t.getMessage());
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(t.getMessage()));
             }
+            });
         });
     }
 
@@ -132,16 +176,18 @@ public class DebtsRepository {
             if (dto.getDueDate() != null) dueDate = sdf.parse(dto.getDueDate()).getTime();
         } catch (Exception ignored) {}
 
-        int type = "LENT".equalsIgnoreCase(dto.getType()) ? DebtLoan.TYPE_LENT : DebtLoan.TYPE_I_OWE;
+        int type = "lend".equalsIgnoreCase(dto.getType()) ? DebtLoan.TYPE_LENT : DebtLoan.TYPE_I_OWE;
 
-        return new DebtLoan(
+        DebtLoan model = new DebtLoan(
             dto.getId().toString(),
-            dto.getDebtorName(),
+            dto.getContactName(),
             dto.getNote(),
             dto.getAmount().longValue(),
             dueDate,
             type
         );
+        model.setSynced(true);
+        return model;
     }
 
     public interface SyncCallback { void onSuccess(); void onError(String msg); }

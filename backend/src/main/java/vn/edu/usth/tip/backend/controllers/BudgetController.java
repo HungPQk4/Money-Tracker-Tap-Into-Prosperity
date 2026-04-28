@@ -29,6 +29,16 @@ public class BudgetController {
         return ResponseEntity.ok(budgetService.getBudgetsByUser(userId));
     }
 
+    @GetMapping
+    public ResponseEntity<List<BudgetResponse>> getAllBudgets() {
+        return ResponseEntity.ok(budgetService.getAllBudgets());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BudgetResponse> updateBudget(@PathVariable UUID id, @Valid @RequestBody CreateBudgetRequest req) {
+        return ResponseEntity.ok(budgetService.updateBudget(id, req));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBudget(@PathVariable UUID id) {
         budgetService.deleteBudget(id);

@@ -3,6 +3,7 @@ package vn.edu.usth.tip.backend.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.dashboard.DashboardSummaryDto;
 import vn.edu.usth.tip.backend.dto.transaction.TransactionResponse;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
@@ -32,6 +33,7 @@ public class DashboardService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
     }
 
+    @Transactional(readOnly = true)
     public DashboardSummaryDto getDashboardSummary() {
         User user = getCurrentUser();
 
@@ -53,6 +55,7 @@ public class DashboardService {
         return new DashboardSummaryDto(netWorth, totalIncome, totalExpense, totalTransfer);
     }
 
+    @Transactional(readOnly = true)
     public List<TransactionResponse> getRecentTransactions(String period) {
         User user = getCurrentUser();
         LocalDate now = LocalDate.now();
@@ -68,7 +71,7 @@ public class DashboardService {
         }
 
         List<Transaction> transactions = transactionRepository
-                .findByUserIdAndTransactionDateBetweenOrderByTransactionDateDesc(user.getId(), startDate, now);
+                .findByUser_IdAndTransactionDateBetweenOrderByTransactionDateDesc(user.getId(), startDate, now);
 
         return transactions.stream().map(this::mapToResponse).collect(Collectors.toList());
     }

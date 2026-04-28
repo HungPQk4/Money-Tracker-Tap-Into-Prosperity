@@ -71,8 +71,20 @@ public class CategoriesRepository {
             public void onResponse(@NonNull Call<List<CategoryDto>> call, @NonNull Response<List<CategoryDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
+                        List<Category> localCategories = categoryDao.getAllCategoriesSync();
                         for (CategoryDto dto : response.body()) {
-                            categoryDao.insert(convertToModel(dto));
+                            Category serverCategory = convertToModel(dto);
+
+                            // Xóa các category ở local có cùng tên (thường là do fake UUID sinh ra lúc offline)
+                            for (Category local : localCategories) {
+                                if (local.getName().trim().equalsIgnoreCase(serverCategory.getName().trim())) {
+                                    if (!local.getId().equals(serverCategory.getId())) {
+                                        categoryDao.deleteById(local.getId());
+                                    }
+                                }
+                            }
+
+                            categoryDao.insert(serverCategory);
                         }
                         callback.onSuccess();
                     });
@@ -90,7 +102,11 @@ public class CategoriesRepository {
         return new Category(
             dto.getId().toString(),
             dto.getName(),
-            dto.getIcon() != null ? dto.getIcon() : "📂"
+            dto.getIcon() != null ? dto.getIcon() : "📂",
+            dto.getColorHex() != null ? dto.getColorHex() : "#6C5CE7",
+            dto.getType() != null ? dto.getType() : "expense",
+            true,  // is_system = true (tất cả dữ liệu từ server đều là system)
+            false  // is_add_button = false
         );
     }
 

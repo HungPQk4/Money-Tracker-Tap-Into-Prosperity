@@ -29,6 +29,11 @@ public class DebtController {
         return ResponseEntity.ok(debtService.getDebtsByUser(userId));
     }
 
+    @GetMapping
+    public ResponseEntity<List<DebtResponse>> getAllDebts() {
+        return ResponseEntity.ok(debtService.getAllDebts());
+    }
+
     @PatchMapping("/{id}/settle")
     public ResponseEntity<DebtResponse> settleDebt(@PathVariable UUID id) {
         return ResponseEntity.ok(debtService.settleDebt(id));

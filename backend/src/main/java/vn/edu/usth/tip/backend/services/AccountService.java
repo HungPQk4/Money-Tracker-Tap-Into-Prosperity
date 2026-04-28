@@ -27,6 +27,7 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
     }
 
+    @Transactional(readOnly = true)
     public List<AccountResponse> getAllAccounts() {
         User user = getCurrentUser();
         List<Account> accounts = accountRepository.findByUserId(user.getId());

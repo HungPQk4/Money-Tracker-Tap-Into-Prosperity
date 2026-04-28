@@ -110,7 +110,9 @@ public class NewTransactionFragment extends Fragment {
         });
 
         view.findViewById(R.id.btn_save_transaction).setOnClickListener(v -> {
-            newTxViewModel.validateAndSave(categoryAdapter != null ? categoryAdapter.getSelectedCategory() : null);
+            newTxViewModel.validateAndSave(
+                    categoryAdapter != null ? categoryAdapter.getSelectedCategory() : null
+            );
         });
 
         // Observe ViewModel State
@@ -128,7 +130,7 @@ public class NewTransactionFragment extends Fragment {
                     Toast.makeText(requireContext(), "Đã cập nhật giao dịch", Toast.LENGTH_SHORT).show();
                 } else {
                     appViewModel.addTransaction(tx);
-                    Toast.makeText(requireContext(), "Đã thêm giao dịch", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Đã lưu giao dịch", Toast.LENGTH_SHORT).show();
                 }
                 appViewModel.clearEditingTransaction();
                 Navigation.findNavController(requireView()).navigateUp();
@@ -184,11 +186,11 @@ public class NewTransactionFragment extends Fragment {
             tvAmount.setText("0");
         }
 
-        // Reset all 
+        // Reset all
         btnTypeExpense.setCardBackgroundColor(Color.TRANSPARENT);
         btnTypeIncome.setCardBackgroundColor(Color.TRANSPARENT);
         btnTypeTransfer.setCardBackgroundColor(Color.TRANSPARENT);
-        
+
         btnTypeExpense.setCardElevation(0);
         btnTypeIncome.setCardElevation(0);
         btnTypeTransfer.setCardElevation(0);
@@ -230,7 +232,7 @@ public class NewTransactionFragment extends Fragment {
     private void setupNoteAndDate(View view) {
         view.findViewById(R.id.btn_edit_note).setOnClickListener(v -> {
             EditText input = new EditText(requireContext());
-            input.setTextColor(Color.BLACK); 
+            input.setTextColor(Color.BLACK);
             input.setHint("Nhập nội dung ghi chú");
             NewTransactionViewModel.UiState state = newTxViewModel.getUiState().getValue();
             if (state != null && !state.note.isEmpty()) input.setText(state.note);
@@ -287,14 +289,16 @@ public class NewTransactionFragment extends Fragment {
 
     private boolean isSameDay(Calendar cal1, Calendar cal2) {
         return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-               cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR);
+                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR);
     }
 
     private void updateCategoryList(List<Category> categories, RecyclerView rv) {
         if (categoryAdapter == null) {
             categoryAdapter = new CategoryAdapter(categories, new CategoryAdapter.OnCategoryClickListener() {
                 @Override
-                public void onCategoryClick(Category category) {} // Purely visual selection handled by adapter
+                public void onCategoryClick(Category category) {
+                    newTxViewModel.selectCategory(category);
+                }
                 @Override
                 public void onAddCategoryClick() {
                     AddCategorySheet sheet = AddCategorySheet.newInstance(cat -> {
@@ -312,8 +316,8 @@ public class NewTransactionFragment extends Fragment {
     }
 
     private void setupNumpad(View view) {
-        int[] keys = {R.id.key_0, R.id.key_1, R.id.key_2, R.id.key_3, R.id.key_4, 
-                      R.id.key_5, R.id.key_6, R.id.key_7, R.id.key_8, R.id.key_9};
+        int[] keys = {R.id.key_0, R.id.key_1, R.id.key_2, R.id.key_3, R.id.key_4,
+                R.id.key_5, R.id.key_6, R.id.key_7, R.id.key_8, R.id.key_9};
         for (int id : keys) {
             TextView key = view.findViewById(id);
             if (key != null) {

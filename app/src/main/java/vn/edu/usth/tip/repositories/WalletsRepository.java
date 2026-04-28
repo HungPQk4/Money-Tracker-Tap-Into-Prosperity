@@ -28,10 +28,21 @@ public class WalletsRepository {
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 
+    private String mapTypeToNeon(Wallet.Type type) {
+        if (type == null) return "cash";
+        switch (type) {
+            case CASH:       return "cash";
+            case BANK:       return "bank";
+            case EWALLET:    return "e_wallet";
+            case INVESTMENT: return "investment";
+            default:         return "cash";
+        }
+    }
+
     public void addOnline(Wallet w) {
         UUID userId = UUID.fromString(tokenManager.getUserId());
         FinancialRequests.CreateAccountRequest req = new FinancialRequests.CreateAccountRequest(
-                userId, w.getName(), w.getType().name(), new java.math.BigDecimal(w.getBalanceVnd())
+                userId, w.getName(), mapTypeToNeon(w.getType()), new java.math.BigDecimal(w.getBalanceVnd())
         );
 
         financialApi.createAccount(req).enqueue(new Callback<AccountDto>() {
@@ -43,7 +54,7 @@ public class WalletsRepository {
     public void updateOnline(Wallet w) {
         UUID userId = UUID.fromString(tokenManager.getUserId());
         FinancialRequests.CreateAccountRequest req = new FinancialRequests.CreateAccountRequest(
-                userId, w.getName(), w.getType().name(), new java.math.BigDecimal(w.getBalanceVnd())
+                userId, w.getName(), mapTypeToNeon(w.getType()), new java.math.BigDecimal(w.getBalanceVnd())
         );
 
         try {
@@ -94,7 +105,11 @@ public class WalletsRepository {
 
     private Wallet convertToModel(AccountDto dto) {
         Wallet.Type type = Wallet.Type.OTHER;
-        try { type = Wallet.Type.valueOf(dto.getType()); } catch (Exception ignored) {}
+        if (dto.getType() != null) {
+            String typeStr = dto.getType().toUpperCase();
+            if (typeStr.equals("E_WALLET")) typeStr = "EWALLET";
+            try { type = Wallet.Type.valueOf(typeStr); } catch (Exception ignored) {}
+        }
 
         return new Wallet(
                 dto.getId().toString(),

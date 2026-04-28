@@ -29,6 +29,11 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.getCategoriesByUser(userId));
     }
 
+    @GetMapping
+    public ResponseEntity<List<CategoryResponse>> getAllCategories() {
+        return ResponseEntity.ok(categoryService.getAllCategories());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) {
         categoryService.deleteCategory(id);

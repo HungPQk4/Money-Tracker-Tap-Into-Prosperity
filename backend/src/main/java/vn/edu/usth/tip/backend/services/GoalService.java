@@ -1,7 +1,9 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.goal.CreateGoalRequest;
 import vn.edu.usth.tip.backend.dto.goal.GoalResponse;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
@@ -38,9 +40,18 @@ public class GoalService {
         return toResponse(goalRepository.save(goal));
     }
 
+    @Transactional(readOnly = true)
     public List<GoalResponse> getGoalsByUser(UUID userId) {
         return goalRepository.findByUserId(userId).stream()
                 .map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<GoalResponse> getAllGoals() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        return getGoalsByUser(user.getId());
     }
 
     public GoalResponse updateProgress(UUID id, BigDecimal amount) {

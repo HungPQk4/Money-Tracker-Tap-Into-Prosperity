@@ -5,6 +5,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -20,14 +21,14 @@ import vn.edu.usth.tip.viewmodels.AppViewModel.BudgetWithSpent;
 
 public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetViewHolder> {
 
-    public interface OnBudgetLongClickListener {
-        void onLongClick(BudgetWithSpent item);
+    public interface OnBudgetClickListener {
+        void onClick(BudgetWithSpent item);
     }
 
     private List<BudgetWithSpent> data = new ArrayList<>();
-    private final OnBudgetLongClickListener listener;
+    private final OnBudgetClickListener listener;
 
-    public BudgetAdapter(OnBudgetLongClickListener listener) {
+    public BudgetAdapter(OnBudgetClickListener listener) {
         this.listener = listener;
     }
 
@@ -48,9 +49,8 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
     public void onBindViewHolder(@NonNull BudgetViewHolder h, int position) {
         BudgetWithSpent item = data.get(position);
         h.bind(item);
-        h.itemView.setOnLongClickListener(v -> {
-            if (listener != null) listener.onLongClick(item);
-            return true;
+        h.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onClick(item);
         });
     }
 
@@ -62,7 +62,7 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
 
         private final TextView    tvEmoji, tvName, tvCategory, tvPercent;
         private final TextView    tvSpent, tvLimit, tvDaysLeft;
-        private final ProgressBar progressBar;
+        private final CardView    cvProgressFill, cvProgressEmpty;
         private final CardView    cardEmojiBg;
 
         BudgetViewHolder(@NonNull View itemView) {
@@ -74,14 +74,19 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
             tvSpent     = itemView.findViewById(R.id.tv_budget_spent);
             tvLimit     = itemView.findViewById(R.id.tv_budget_limit);
             tvDaysLeft  = itemView.findViewById(R.id.tv_budget_days_left);
-            progressBar = itemView.findViewById(R.id.progress_budget);
+            cvProgressFill = itemView.findViewById(R.id.cv_progress_fill);
+            cvProgressEmpty= itemView.findViewById(R.id.cv_progress_empty);
             cardEmojiBg = itemView.findViewById(R.id.card_budget_emoji);
         }
 
         void bind(BudgetWithSpent item) {
             long spent   = item.spentAmount;
             long limit   = item.budget.getLimitAmount();
-            int  percent = limit > 0 ? (int) Math.min(100, spent * 100L / limit) : 0;
+            
+            if (limit == 0) limit = 1;
+            float percentFloat = (spent * 100.0f) / limit;
+            
+            int percentInt = (int) Math.min(100, percentFloat); // Used for progress bar and color logic
 
             // Color: đỏ nếu ≥ 90%, vàng nếu ≥ 70%, xanh bình thường
             String hexColor = item.budget.getColor();
@@ -91,8 +96,8 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
             } catch (Exception e) {
                 accentColor = 0xFF735BF2;
             }
-            if (percent >= 90) accentColor = 0xFFE76E60;
-            else if (percent >= 70) accentColor = 0xFFF2C94C;
+            if (percentInt >= 90) accentColor = 0xFFE76E60;
+            else if (percentInt >= 70) accentColor = 0xFFF2C94C;
 
             // Emoji bg
             GradientDrawable bg = new GradientDrawable();
@@ -107,13 +112,37 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
             String cat = item.budget.getCategoryName();
             tvCategory.setText(cat != null && !cat.isEmpty() ? cat : "Tất cả");
 
-            tvPercent.setText(percent + "%");
+            String percentText;
+            if (percentFloat == 0f || percentFloat >= 100f || percentFloat == (int) percentFloat) {
+                percentText = String.format(java.util.Locale.US, "%d%%", (int) percentFloat);
+            } else if (percentFloat < 0.01f) {
+                percentText = "<0.01%";
+            } else if (percentFloat < 1f) {
+                percentText = String.format(java.util.Locale.US, "%.2f%%", percentFloat);
+            } else {
+                percentText = String.format(java.util.Locale.US, "%.1f%%", percentFloat);
+            }
+
+            tvPercent.setText(percentText);
             tvPercent.setTextColor(accentColor);
 
-            // Progress bar
-            progressBar.setProgress(percent);
-            progressBar.getProgressDrawable().setColorFilter(
-                    accentColor, android.graphics.PorterDuff.Mode.SRC_IN);
+            // Progress bar via layout weights
+            LinearLayout.LayoutParams fillParams = (LinearLayout.LayoutParams) cvProgressFill.getLayoutParams();
+            fillParams.weight = percentInt;
+            cvProgressFill.setLayoutParams(fillParams);
+            cvProgressFill.setCardBackgroundColor(accentColor);
+
+            LinearLayout.LayoutParams emptyParams = (LinearLayout.LayoutParams) cvProgressEmpty.getLayoutParams();
+            emptyParams.weight = 100 - percentInt;
+            cvProgressEmpty.setLayoutParams(emptyParams);
+
+            if (percentInt == 0) {
+                cvProgressFill.setVisibility(View.GONE);
+                ((ViewGroup.MarginLayoutParams) cvProgressEmpty.getLayoutParams()).setMarginStart(0);
+            } else {
+                cvProgressFill.setVisibility(View.VISIBLE);
+                ((ViewGroup.MarginLayoutParams) cvProgressEmpty.getLayoutParams()).setMarginStart(-6); // Dùng lại margin âm
+            }
 
             // Số tiền
             tvSpent.setText("₫" + formatVnd(spent));
@@ -127,7 +156,7 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
             tvDaysLeft.setText(days + " ngày còn lại");
 
             // Status warning
-            if (percent >= 100) {
+            if (percentInt >= 100) {
                 tvDaysLeft.setText("⚠ Vượt ngân sách!");
                 tvDaysLeft.setTextColor(0xFFE76E60);
             } else {

@@ -5,8 +5,10 @@ import java.util.UUID;
 
 public class TransactionDto {
     private UUID id;
-    private AccountDto account;
-    private CategoryDto category;
+    private UUID accountId;
+    private String accountName;
+    private UUID categoryId;
+    private String categoryName;
     private BigDecimal amount;
     private String type; // INCOME, EXPENSE, TRANSFER
     private String note;
@@ -14,22 +16,12 @@ public class TransactionDto {
 
     // Getters
     public UUID getId() { return id; }
-    public AccountDto getAccount() { return account; }
-    public CategoryDto getCategory() { return category; }
+    public UUID getAccountId() { return accountId; }
+    public String getAccountName() { return accountName; }
+    public UUID getCategoryId() { return categoryId; }
+    public String getCategoryName() { return categoryName; }
     public BigDecimal getAmount() { return amount; }
     public String getType() { return type; }
     public String getNote() { return note; }
     public String getTransactionDate() { return transactionDate; }
-
-    public static class AccountDto {
-        private String name;
-        public String getName() { return name; }
-    }
-
-    public static class CategoryDto {
-        private String name;
-        private String icon; // Icon emoji
-        public String getName() { return name; }
-        public String getIcon() { return icon; }
-    }
 }

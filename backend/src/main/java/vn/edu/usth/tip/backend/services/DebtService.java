@@ -1,7 +1,9 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.debt.CreateDebtRequest;
 import vn.edu.usth.tip.backend.dto.debt.DebtResponse;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
@@ -39,9 +41,18 @@ public class DebtService {
         return toResponse(debtRepository.save(debt));
     }
 
+    @Transactional(readOnly = true)
     public List<DebtResponse> getDebtsByUser(UUID userId) {
         return debtRepository.findByUserId(userId).stream()
                 .map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DebtResponse> getAllDebts() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        return getDebtsByUser(user.getId());
     }
 
     public DebtResponse settleDebt(UUID id) {

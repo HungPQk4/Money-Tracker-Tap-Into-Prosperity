@@ -24,4 +24,7 @@ public interface BudgetDao {
 
     @Query("SELECT * FROM budgets ORDER BY createdMs DESC")
     LiveData<List<Budget>> getAllBudgets();
+
+    @Query("SELECT * FROM budgets")
+    List<Budget> getAllBudgetsSync();
 }

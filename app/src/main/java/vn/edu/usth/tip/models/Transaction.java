@@ -24,10 +24,13 @@ public class Transaction {
     private Type   type;
     private long   timestampMs; // epoch milliseconds
     private String note;        // Ghi chú giao dịch
-    private boolean isSynced = true; // Mặc định là true cho dữ liệu từ API, false cho tạo mới cục bộ
+    private boolean isSynced = false; // Mặc định là false cho tạo mới cục bộ
 
     @Ignore // Không lưu vào Room, chỉ dùng khi gửi lên API
     private String accountId;
+
+    @Ignore // Không lưu vào Room, chỉ dùng khi gửi lên API
+    private String categoryId;
 
     public Transaction(@NonNull String id, String title, String category,
                        String icon, String walletName,
@@ -41,7 +44,7 @@ public class Transaction {
         this.type        = type;
         this.timestampMs = timestampMs;
         this.note        = note;
-        this.isSynced    = true; 
+        this.isSynced    = false;
     }
 
     /** Trả về chuỗi số tiền có dấu, vd: "-₫75.000" hoặc "+₫18.000.000" */
@@ -86,4 +89,6 @@ public class Transaction {
     public void setSynced(boolean synced) { isSynced = synced; }
     public void setAccountId(String accountId) { this.accountId = accountId; }
     public String getAccountId() { return accountId; }
+    public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+    public String getCategoryId() { return categoryId; }
 }

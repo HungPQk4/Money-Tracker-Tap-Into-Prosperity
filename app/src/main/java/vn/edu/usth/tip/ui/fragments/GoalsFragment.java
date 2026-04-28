@@ -56,15 +56,9 @@ public class GoalsFragment extends Fragment {
             rvGoals.setAdapter(adapter);
 
             adapter.setOnGoalClickListener(goal -> {
-                new MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Cập nhật mục tiêu?")
-                        .setMessage("Đánh dấu mục tiêu '" + goal.getName() + "' là đã hoàn thành và xoá khỏi hệ thống?")
-                        .setPositiveButton("Hoàn thành", (dialog, which) -> {
-                            viewModel.deleteGoal(goal);
-                            Toast.makeText(requireContext(), "Chúc mừng bạn đã hoàn tất mục tiêu!", Toast.LENGTH_SHORT).show();
-                        })
-                        .setNegativeButton("Hủy", null)
-                        .show();
+                AddGoalSheet sheet = new AddGoalSheet();
+                sheet.setGoal(goal);
+                sheet.show(getChildFragmentManager(), "edit_goal");
             });
         }
 

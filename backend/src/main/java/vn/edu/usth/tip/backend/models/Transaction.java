@@ -67,8 +67,13 @@ public class Transaction {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = OffsetDateTime.now();
-        updatedAt = OffsetDateTime.now();
+        // Chỉ set createdAt nếu chưa có — để API sync giữ nguyên thời gian gốc của client
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = OffsetDateTime.now();
+        }
     }
 
     @PreUpdate

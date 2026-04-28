@@ -35,14 +35,22 @@ public class FinancialDtos {
 
     public static class BudgetDto {
         private UUID id;
-        private CategoryDto category;
+        private UUID userId;
+        private UUID categoryId;
+        private String categoryName;
         private BigDecimal amount;
+        private BigDecimal spentAmount;
+        private String periodType;
         private String periodStart;
         private String periodEnd;
 
         public UUID getId() { return id; }
-        public CategoryDto getCategory() { return category; }
+        public UUID getUserId() { return userId; }
+        public UUID getCategoryId() { return categoryId; }
+        public String getCategoryName() { return categoryName; }
         public BigDecimal getAmount() { return amount; }
+        public BigDecimal getSpentAmount() { return spentAmount; }
+        public String getPeriodType() { return periodType; }
         public String getPeriodStart() { return periodStart; }
         public String getPeriodEnd() { return periodEnd; }
     }
@@ -63,14 +71,14 @@ public class FinancialDtos {
 
     public static class DebtDto {
         private UUID id;
-        private String debtorName;
+        private String contactName;
         private BigDecimal amount;
         private String type; // LENT, BORROWED
         private String dueDate;
         private String note;
 
         public UUID getId() { return id; }
-        public String getDebtorName() { return debtorName; }
+        public String getContactName() { return contactName; }
         public BigDecimal getAmount() { return amount; }
         public String getType() { return type; }
         public String getDueDate() { return dueDate; }

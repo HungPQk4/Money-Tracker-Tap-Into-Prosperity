@@ -58,10 +58,20 @@ public class GoalAdapter extends RecyclerView.Adapter<GoalAdapter.ViewHolder> {
         long target = item.getTargetAmount();
         long saved = item.getSavedAmount();
         if (target == 0) target = 1; // Prevent division by zero
-        int percent = (int) ((saved * 100.0f) / target);
-        if (percent > 100) percent = 100;
+        float percentFloat = (saved * 100.0f) / target;
+        if (percentFloat > 100f) percentFloat = 100f;
 
-        holder.tvPercent.setText(percent + "%");
+        String percentText;
+        if (percentFloat == 0f || percentFloat >= 100f || percentFloat == (int) percentFloat) {
+            percentText = String.format(Locale.US, "%d%%", (int) percentFloat);
+        } else if (percentFloat < 0.01f) {
+            percentText = "<0.01%";
+        } else if (percentFloat < 1f) {
+            percentText = String.format(Locale.US, "%.2f%%", percentFloat);
+        } else {
+            percentText = String.format(Locale.US, "%.1f%%", percentFloat);
+        }
+        holder.tvPercent.setText(percentText);
         
         String savedStr = "đ" + String.format("%,d", saved).replace(",", ".");
         String targetStr = "of đ" + String.format("%,d", target).replace(",", ".");
@@ -87,10 +97,16 @@ public class GoalAdapter extends RecyclerView.Adapter<GoalAdapter.ViewHolder> {
         }
 
         // Set weight of progress bar
-        LinearLayout.LayoutParams paramsFill = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, percent);
+        float visualFill = percentFloat;
+        // Đảm bảo thanh trạng thái có hiển thị ít nhất một chút màu nếu đã có tiền
+        if (saved > 0 && visualFill < 1.5f) {
+            visualFill = 1.5f;
+        }
+        
+        LinearLayout.LayoutParams paramsFill = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, visualFill);
         holder.cvProgressFill.setLayoutParams(paramsFill);
         
-        LinearLayout.LayoutParams paramsEmpty = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 100 - percent);
+        LinearLayout.LayoutParams paramsEmpty = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 100f - visualFill);
         // Match the -6dp marginStart from original layout to overlap slightly if needed, or remove it.
         paramsEmpty.setMarginStart((int) (-6 * holder.itemView.getContext().getResources().getDisplayMetrics().density));
         holder.cvProgressEmpty.setLayoutParams(paramsEmpty);

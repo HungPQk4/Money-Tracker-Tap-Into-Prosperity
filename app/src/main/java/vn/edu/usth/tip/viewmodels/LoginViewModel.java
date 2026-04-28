@@ -44,6 +44,14 @@ public class LoginViewModel extends AndroidViewModel {
     public void saveAuthData(AuthResponse response) {
         tokenManager.saveAuthData(response.getToken(), response.getFullName(), response.getUserId().toString());
     }
+
+    public boolean isLoggedIn() {
+        return tokenManager.getToken() != null && tokenManager.getUserId() != null;
+    }
+
+    public String getCurrentUserId() {
+        return tokenManager.getUserId();
+    }
     public void setLoading(boolean loading) {
         isLoading.setValue(loading);
     }

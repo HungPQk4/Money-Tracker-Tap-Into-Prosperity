@@ -30,6 +30,11 @@ public class GoalController {
         return ResponseEntity.ok(goalService.getGoalsByUser(userId));
     }
 
+    @GetMapping
+    public ResponseEntity<List<GoalResponse>> getAllGoals() {
+        return ResponseEntity.ok(goalService.getAllGoals());
+    }
+
     @PatchMapping("/{id}/progress")
     public ResponseEntity<GoalResponse> updateProgress(@PathVariable UUID id,
                                                         @RequestParam BigDecimal amount) {

@@ -1,7 +1,9 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.category.CategoryResponse;
 import vn.edu.usth.tip.backend.dto.category.CreateCategoryRequest;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
@@ -41,9 +43,18 @@ public class CategoryService {
         return toResponse(categoryRepository.save(category));
     }
 
+    @Transactional(readOnly = true)
     public List<CategoryResponse> getCategoriesByUser(UUID userId) {
         return categoryRepository.findByUserId(userId).stream()
                 .map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryResponse> getAllCategories() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        return getCategoriesByUser(user.getId());
     }
 
     public void deleteCategory(UUID id) {

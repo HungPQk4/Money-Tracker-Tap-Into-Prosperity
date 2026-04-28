@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#12131A"
+    android:background="@color/bg_screen"
     tools:context=".BudgetsActivity">
 
     <!-- Main Scrollable Content -->
@@ -36,7 +36,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Budgets"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
@@ -76,9 +76,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                app:cardBackgroundColor="#1A1B29"
+                app:cardBackgroundColor="@color/surface_white"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -102,7 +102,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Total budgeted"
-                                android:textColor="#8C8D99"
+                                android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
                             <LinearLayout
                                 android:layout_width="wrap_content"
@@ -114,7 +114,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="₫"
-                                    android:textColor="#FFFFFF"
+                                    android:textColor="@color/text_primary"
                                     android:textSize="16sp"
                                     android:textStyle="bold" />
                                 <TextView
@@ -122,7 +122,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginStart="2dp"
                                     android:text="8,000,000"
-                                    android:textColor="#FFFFFF"
+                                    android:textColor="@color/text_primary"
                                     android:textSize="22sp"
                                     android:textStyle="bold" />
                             </LinearLayout>
@@ -137,7 +137,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Remaining"
-                                android:textColor="#8C8D99"
+                                android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
                             <LinearLayout
                                 android:layout_width="wrap_content"
@@ -182,7 +182,7 @@
                             android:layout_width="0dp"
                             android:layout_weight="41"
                             android:layout_height="match_parent"
-                            app:cardBackgroundColor="#2D3042"
+                            app:cardBackgroundColor="@color/border_color"
                             app:cardCornerRadius="3dp"
                             app:cardElevation="0dp"
                             android:layout_marginStart="-6dp"/>
@@ -194,7 +194,7 @@
                         android:layout_marginTop="12dp"
                         android:gravity="end"
                         android:text="59% used • 18 days left"
-                        android:textColor="#8C8D99"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -206,9 +206,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="#1A1B29"
+                app:cardBackgroundColor="@color/surface_white"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -242,7 +242,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Food"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
                             
@@ -250,7 +250,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="64%"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="13sp" />
                     </LinearLayout>
 
@@ -272,7 +272,7 @@
                             android:layout_width="0dp"
                             android:layout_weight="36"
                             android:layout_height="match_parent"
-                            app:cardBackgroundColor="#2D3042"
+                            app:cardBackgroundColor="@color/border_color"
                             app:cardCornerRadius="3dp"
                             app:cardElevation="0dp"
                             android:layout_marginStart="-6dp"/>
@@ -297,7 +297,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
                             android:text="of ₫5,000,000"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -308,9 +308,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:cardBackgroundColor="#1A1B29"
+                app:cardBackgroundColor="@color/surface_white"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -344,7 +344,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Transport"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
                             
@@ -352,7 +352,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="59%"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="13sp" />
                     </LinearLayout>
 
@@ -374,7 +374,7 @@
                             android:layout_width="0dp"
                             android:layout_weight="41"
                             android:layout_height="match_parent"
-                            app:cardBackgroundColor="#2D3042"
+                            app:cardBackgroundColor="@color/border_color"
                             app:cardCornerRadius="3dp"
                             app:cardElevation="0dp"
                             android:layout_marginStart="-6dp"/>
@@ -399,7 +399,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
                             android:text="of ₫1,500,000"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -410,9 +410,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:cardBackgroundColor="#1A1B29"
+                app:cardBackgroundColor="@color/surface_white"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -446,7 +446,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Shopping"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
                             
@@ -454,7 +454,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="32%"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="13sp" />
                     </LinearLayout>
 
@@ -476,7 +476,7 @@
                             android:layout_width="0dp"
                             android:layout_weight="68"
                             android:layout_height="match_parent"
-                            app:cardBackgroundColor="#2D3042"
+                            app:cardBackgroundColor="@color/border_color"
                             app:cardCornerRadius="3dp"
                             app:cardElevation="0dp"
                             android:layout_marginStart="-6dp"/>
@@ -501,7 +501,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
                             android:text="of ₫1,000,000"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -512,9 +512,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:cardBackgroundColor="#1A1B29"
+                app:cardBackgroundColor="@color/surface_white"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -548,7 +548,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Entertainment"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
                             
@@ -556,7 +556,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="70%"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/text_primary"
                             android:textSize="13sp" />
                     </LinearLayout>
 
@@ -578,7 +578,7 @@
                             android:layout_width="0dp"
                             android:layout_weight="30"
                             android:layout_height="match_parent"
-                            app:cardBackgroundColor="#2D3042"
+                            app:cardBackgroundColor="@color/border_color"
                             app:cardCornerRadius="3dp"
                             app:cardElevation="0dp"
                             android:layout_marginStart="-6dp"/>
@@ -603,7 +603,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
                             android:text="of ₫500,000"
-                            android:textColor="#8C8D99"
+                            android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -616,7 +616,7 @@
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:background="#161722"
+        android:background="@color/surface_white"
         android:orientation="horizontal"
         android:baselineAligned="false"
         android:elevation="24dp"
@@ -635,13 +635,13 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_compass"
-                app:tint="#8C8D99" />
+                app:tint="@color/text_secondary" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Home"
-                android:textColor="#8C8D99"
+                android:textColor="@color/text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
 
@@ -656,13 +656,13 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_sort_by_size"
-                app:tint="#8C8D99" />
+                app:tint="@color/text_secondary" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Stats"
-                android:textColor="#8C8D99"
+                android:textColor="@color/text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
         
@@ -706,13 +706,13 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_info_details"
-                app:tint="#8C8D99" />
+                app:tint="@color/text_secondary" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Profile"
-                android:textColor="#8C8D99"
+                android:textColor="@color/text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>

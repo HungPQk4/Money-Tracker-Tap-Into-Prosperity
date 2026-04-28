@@ -25,4 +25,7 @@ public interface GoalDao {
     @Query("SELECT * FROM goals ORDER BY targetDateMs ASC")
     LiveData<List<Goal>> getAllGoalsSorted();
     
+    @Query("SELECT * FROM goals")
+    List<Goal> getAllGoalsSync();
+    
 }

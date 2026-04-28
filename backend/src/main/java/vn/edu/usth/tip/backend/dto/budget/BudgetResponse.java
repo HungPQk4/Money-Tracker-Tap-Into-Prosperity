@@ -15,6 +15,7 @@ public class BudgetResponse {
     private UUID categoryId;
     private String categoryName;
     private BigDecimal amount;
+    private BigDecimal spentAmount;
     private BudgetPeriod periodType;
     private LocalDate periodStart;
     private LocalDate periodEnd;

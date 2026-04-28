@@ -16,6 +16,9 @@ public interface WalletDao {
     @Query("SELECT * FROM wallets")
     LiveData<List<Wallet>> getAllWallets();
 
+    @Query("SELECT * FROM wallets")
+    List<Wallet> getAllWalletsSync();
+
     @Query("SELECT * FROM wallets WHERE name = :name LIMIT 1")
     Wallet findByNameSync(String name);
 

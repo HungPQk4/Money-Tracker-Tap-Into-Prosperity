@@ -60,13 +60,9 @@ public class BudgetsFragment extends Fragment {
 
         // RecyclerView
         budgetAdapter = new BudgetAdapter(item -> {
-            // Long-press: hỏi xóa
-            new MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Xóa ngân sách")
-                    .setMessage("Xóa \"" + item.budget.getName() + "\"?")
-                    .setPositiveButton("Xóa", (d, w) -> viewModel.deleteBudget(item.budget))
-                    .setNegativeButton("Hủy", null)
-                    .show();
+            AddBudgetSheet sheet = new AddBudgetSheet();
+            sheet.setExistingBudget(item.budget);
+            sheet.show(getChildFragmentManager(), "edit_budget");
         });
 
         RecyclerView rv = view.findViewById(R.id.rv_budgets);
@@ -106,18 +102,33 @@ public class BudgetsFragment extends Fragment {
             totalSpent    += b.spentAmount;
         }
         long remaining = totalBudgeted - totalSpent;
-        int  pct       = totalBudgeted > 0 ? (int) Math.min(100, totalSpent * 100L / totalBudgeted) : 0;
+
+        if (totalBudgeted == 0) totalBudgeted = 1;
+        float pctFloat = (totalSpent * 100.0f) / totalBudgeted;
+        int pctInt = (int) Math.min(100, pctFloat);
 
         tvTotalBudgeted.setText("₫" + fmtVnd(totalBudgeted));
         tvTotalSpent.setText("₫"    + fmtVnd(totalSpent));
         tvTotalRemaining.setText("₫" + fmtVnd(Math.max(0, remaining)));
 
-        progressOverall.setProgress(pct);
-        tvOverallPercent.setText(pct + "% đã chi");
+        progressOverall.setProgress(pctInt);
+
+        String percentText;
+        if (pctFloat == 0f || pctFloat >= 100f || pctFloat == (int) pctFloat) {
+            percentText = String.format(java.util.Locale.US, "%d%% đã chi", (int) pctFloat);
+        } else if (pctFloat < 0.01f) {
+            percentText = "<0.01% đã chi";
+        } else if (pctFloat < 1f) {
+            percentText = String.format(java.util.Locale.US, "%.2f%% đã chi", pctFloat);
+        } else {
+            percentText = String.format(java.util.Locale.US, "%.1f%% đã chi", pctFloat);
+        }
+        tvOverallPercent.setText(percentText);
+        
         tvActiveCount.setText(list.size() + " ngân sách");
 
         // Color remaining
-        if (pct >= 90) {
+        if (pctInt >= 90) {
             tvTotalRemaining.setTextColor(0xFFE76E60);
         } else {
             tvTotalRemaining.setTextColor(0xFF2DD3A1);

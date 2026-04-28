@@ -39,14 +39,16 @@ public class FinancialRequests {
         private UUID userId;
         private UUID categoryId;
         private BigDecimal amount;
+        private BigDecimal spentAmount;
         private String periodType; // MONTHLY, WEEKLY
         private String periodStart;
         private String periodEnd;
 
-        public CreateBudgetRequest(UUID userId, UUID categoryId, BigDecimal amount, String periodType, String periodStart, String periodEnd) {
+        public CreateBudgetRequest(UUID userId, UUID categoryId, BigDecimal amount, BigDecimal spentAmount, String periodType, String periodStart, String periodEnd) {
             this.userId = userId;
             this.categoryId = categoryId;
             this.amount = amount;
+            this.spentAmount = spentAmount;
             this.periodType = periodType;
             this.periodStart = periodStart;
             this.periodEnd = periodEnd;
@@ -71,15 +73,15 @@ public class FinancialRequests {
 
     public static class CreateDebtRequest {
         private UUID userId;
-        private String debtorName;
+        private String contactName;
         private BigDecimal amount;
         private String type;
         private String dueDate;
         private String note;
 
-        public CreateDebtRequest(UUID userId, String debtorName, BigDecimal amount, String type, String dueDate) {
+        public CreateDebtRequest(UUID userId, String contactName, BigDecimal amount, String type, String dueDate) {
             this.userId = userId;
-            this.debtorName = debtorName;
+            this.contactName = contactName;
             this.amount = amount;
             this.type = type;
             this.dueDate = dueDate;

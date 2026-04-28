@@ -116,6 +116,14 @@ public class DashboardFragment extends BaseFragment {
             updateOptimisticDashboard(view);
         });
 
+        viewModel.getTotalIOwe().observe(getViewLifecycleOwner(), total -> {
+            updateOptimisticDashboard(view);
+        });
+
+        viewModel.getTotalOwedToMe().observe(getViewLifecycleOwner(), total -> {
+            updateOptimisticDashboard(view);
+        });
+
         // ── Observe Summary từ API (Thu chi tháng) ─────────────
         dashboardViewModel.getSummaryData().observe(getViewLifecycleOwner(), summary -> {
             if (summary == null) return;

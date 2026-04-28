@@ -147,12 +147,18 @@ public class AllTransactionsFragment extends Fragment {
     private void triggerSync() {
         viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
             @Override public void onSuccess() {
-                if (getContext() != null)
-                    Toast.makeText(getContext(), "Đã cập nhật giao dịch", Toast.LENGTH_SHORT).show();
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Đã cập nhật giao dịch", Toast.LENGTH_SHORT).show();
+                    });
+                }
             }
             @Override public void onError(String message) {
-                if (getContext() != null)
-                    Toast.makeText(getContext(), "Lỗi đồng bộ: " + message, Toast.LENGTH_SHORT).show();
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Lỗi đồng bộ: " + message, Toast.LENGTH_SHORT).show();
+                    });
+                }
             }
         });
     }

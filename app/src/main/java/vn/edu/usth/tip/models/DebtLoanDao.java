@@ -26,6 +26,12 @@ public interface DebtLoanDao {
     @Query("SELECT * FROM debt_loans ORDER BY dueDate ASC")
     LiveData<List<DebtLoan>> getAllSortedByDueDate();
 
+    @Query("SELECT * FROM debt_loans WHERE isSynced = 0")
+    List<DebtLoan> getUnsyncedDebtsSync();
+
+    @Query("DELETE FROM debt_loans WHERE isSynced = 1")
+    void deleteSyncedDebts();
+
     // Tính tổng tiền 'I OWE' (những mục mình nợ)
     @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_I_OWE)
     LiveData<Long> getTotalIOwe();

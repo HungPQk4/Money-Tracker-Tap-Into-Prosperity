@@ -30,6 +30,9 @@ public class Budget {
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "spent_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal spentAmount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "period_type", nullable = false, length = 10)
     private BudgetPeriod periodType;
