@@ -46,8 +46,26 @@ public class WalletsRepository {
         );
 
         financialApi.createAccount(req).enqueue(new Callback<AccountDto>() {
-            @Override public void onResponse(Call<AccountDto> call, Response<AccountDto> response) {}
-            @Override public void onFailure(Call<AccountDto> call, Throwable t) {}
+            @Override public void onResponse(Call<AccountDto> call, Response<AccountDto> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    android.util.Log.d("WALLET_SYNC", "Wallet created: " + response.body().getId());
+                    // Update local wallet ID with server UUID
+                    AppDatabase.databaseWriteExecutor.execute(() -> {
+                        try {
+                            walletDao.delete(w);
+                            w.setId(response.body().getId().toString());
+                            walletDao.insert(w);
+                        } catch (Exception ignored) {}
+                    });
+                } else {
+                    String errBody = "";
+                    try { if (response.errorBody() != null) errBody = response.errorBody().string(); } catch (Exception ignored) {}
+                    android.util.Log.e("WALLET_SYNC", "Add error: " + response.code() + " body=" + errBody);
+                }
+            }
+            @Override public void onFailure(Call<AccountDto> call, Throwable t) {
+                android.util.Log.e("WALLET_SYNC", "Add failed: " + t.getMessage());
+            }
         });
     }
 

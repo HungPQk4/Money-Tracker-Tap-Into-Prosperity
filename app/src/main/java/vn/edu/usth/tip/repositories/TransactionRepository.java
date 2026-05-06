@@ -22,6 +22,7 @@ import vn.edu.usth.tip.models.WalletDao;
 import vn.edu.usth.tip.network.RetrofitClient;
 import vn.edu.usth.tip.network.TransactionApi;
 import vn.edu.usth.tip.network.requests.CreateTransactionRequest;
+import vn.edu.usth.tip.network.requests.SyncBatchRequest;
 import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
 import vn.edu.usth.tip.network.responses.FinancialDtos.AccountDto;
@@ -189,13 +190,8 @@ public class TransactionRepository {
     // =========================================================================
 
     public void syncTransactions(SyncCallback callback) {
-        // ÉP APP RESET TOÀN BỘ VỀ CHƯA SYNC (isSynced = 0)
+        // Bước 1: Push dữ liệu cũ chưa sync lên Neon trước
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            try {
-                transactionDao.resetSyncStatus();
-            } catch (Exception ignored) {}
-
-            // Bước 1: Push dữ liệu cũ chưa sync lên Neon trước
             pushUnsyncedToServer(new PushCallback() {
                 @Override
                 public void onComplete(int saved, int skipped, String error) {
@@ -234,12 +230,20 @@ public class TransactionRepository {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
                 String userIdStr = tokenManager.getUserId();
-                if (userIdStr == null) return;
+                if (userIdStr == null) {
+                    android.util.Log.e("TX_SYNC", "addTransactionOnline: userId is null");
+                    return;
+                }
                 UUID userId = UUID.fromString(userIdStr);
 
                 UUID accountId  = resolveAccountId(tx);
                 UUID categoryId = resolveCategoryId(tx);
-                if (accountId == null || categoryId == null) return;
+                if (accountId == null || categoryId == null) {
+                    android.util.Log.e("TX_SYNC", "addTransactionOnline: accountId=" + accountId
+                            + " categoryId=" + categoryId + " walletName=" + tx.getWalletName()
+                            + " category=" + tx.getCategory());
+                    return;
+                }
 
                 CreateTransactionRequest req = new CreateTransactionRequest(
                         userId, accountId, categoryId,
@@ -250,22 +254,35 @@ public class TransactionRepository {
 
                 req.setNote(tx.getNote());
 
+                android.util.Log.d("TX_SYNC", "POST /transactions: userId=" + userId
+                        + " accountId=" + accountId + " categoryId=" + categoryId
+                        + " amount=" + Math.abs(tx.getAmountVnd())
+                        + " type=" + tx.getType().name().toLowerCase()
+                        + " date=" + dateFormat.format(new Date(tx.getTimestampMs())));
+
                 transactionApi.createTransaction(req).enqueue(new Callback<TransactionDto>() {
                     @Override
                     public void onResponse(Call<TransactionDto> call, Response<TransactionDto> response) {
                         if (response.isSuccessful() && response.body() != null) {
+                            android.util.Log.d("TX_SYNC", "Transaction created on server: " + response.body().getId());
                             AppDatabase.databaseWriteExecutor.execute(() -> {
                                 try {
                                     transactionDao.delete(tx);
                                     transactionDao.insert(convertToModel(response.body()));
                                 } catch (Exception ignored) {}
                             });
+                        } else {
+                            String errBody = "";
+                            try { if (response.errorBody() != null) errBody = response.errorBody().string(); } catch (Exception ignored) {}
+                            android.util.Log.e("TX_SYNC", "Create error: " + response.code() + " " + response.message() + " body=" + errBody);
                         }
                     }
-                    @Override public void onFailure(Call<TransactionDto> call, Throwable t) {}
+                    @Override public void onFailure(Call<TransactionDto> call, Throwable t) {
+                        android.util.Log.e("TX_SYNC", "Create failed: " + t.getMessage(), t);
+                    }
                 });
             } catch (Exception e) {
-                e.printStackTrace();
+                android.util.Log.e("TX_SYNC", "addTransactionOnline exception", e);
             }
         });
     }
@@ -358,28 +375,85 @@ public class TransactionRepository {
         });
     }
 
-    /** Resolve UUID account: ưu tiên accountId field, fallback lookup tên ví.
-     * Nếu ví có ID local (không phải UUID), sync lên Neon ngay lập tức. */
+    /**
+     * Resolve UUID thật (trên Neon) cho account (wallet) theo tên.
+     * Luôn fetch server accounts trước để đảm bảo UUID khớp server.
+     */
     private UUID resolveAccountId(Transaction tx) {
-        String aid = tx.getAccountId();
-        if (aid != null && !aid.isEmpty()) {
-            try { return UUID.fromString(aid); } catch (IllegalArgumentException ignored) {}
-        }
+        String walletName = tx.getWalletName();
+        if (walletName == null || walletName.isEmpty()) walletName = "Ví chính";
+        
+        android.util.Log.d("TX_SYNC", "Resolving accountId for: '" + walletName + "'");
 
-        Wallet wallet = walletDao.findByNameSync(tx.getWalletName());
-        if (wallet == null) {
-            List<Wallet> all = walletDao.getAllWalletsSync();
-            if (all != null && !all.isEmpty()) wallet = all.get(0);
-        }
-        if (wallet == null) return null;
-
-        // Kiểm tra xem ID có phải UUID không
+        java.util.Map<String, UUID> serverAccountMap = new java.util.HashMap<>();
+        boolean fetchSuccess = false;
         try {
-            return UUID.fromString(wallet.getId());
-        } catch (IllegalArgumentException e) {
-            // ID local → Sync lên Neon
-            return syncWalletToNeon(wallet);
+            Response<List<AccountDto>> resp = financialApi.getAllAccounts().execute();
+            if (resp.isSuccessful() && resp.body() != null) {
+                fetchSuccess = true;
+                for (AccountDto dto : resp.body()) {
+                    serverAccountMap.put(dto.getName().trim().toLowerCase(), dto.getId());
+
+                    Wallet local = walletDao.findByNameNoCase(dto.getName());
+                    if (local != null && !local.getId().equals(dto.getId().toString())) {
+                        walletDao.deleteById(local.getId());
+                    }
+                    
+                    Wallet.Type wType = Wallet.Type.CASH;
+                    if (dto.getType() != null) {
+                        String t = dto.getType().toLowerCase();
+                        if (t.equals("bank")) wType = Wallet.Type.BANK;
+                        else if (t.equals("e_wallet")) wType = Wallet.Type.EWALLET;
+                        else if (t.equals("investment")) wType = Wallet.Type.INVESTMENT;
+                    }
+
+                    walletDao.insert(new Wallet(
+                            dto.getId().toString(),
+                            dto.getName(),
+                            dto.getBalance() != null ? dto.getBalance().longValue() : 0,
+                            "💳",
+                            android.graphics.Color.parseColor("#4A90E2"),
+                            wType,
+                            true
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e("TX_SYNC", "Server account fetch error: " + e.getMessage());
         }
+
+        String key = walletName.trim().toLowerCase();
+        if (fetchSuccess) {
+            if (serverAccountMap.containsKey(key)) {
+                return serverAccountMap.get(key);
+            }
+        } else {
+            return null;
+        }
+
+        Wallet localWallet = walletDao.findByNameNoCase(walletName);
+        if (localWallet != null) {
+            UUID created = syncWalletToNeon(localWallet);
+            if (created != null) return created;
+        } else {
+            Wallet newWallet = new Wallet(
+                    java.util.UUID.randomUUID().toString(),
+                    walletName, 0, "💳", android.graphics.Color.parseColor("#4A90E2"), Wallet.Type.CASH, true
+            );
+            UUID created = syncWalletToNeon(newWallet);
+            if (created != null) return created;
+        }
+
+        List<Wallet> all = walletDao.getAllWalletsSync();
+        if (all != null) {
+            for (Wallet w : all) {
+                try {
+                    UUID uuid = UUID.fromString(w.getId());
+                    if (serverAccountMap.containsValue(uuid)) return uuid;
+                } catch (Exception ignored) {}
+            }
+        }
+        return null;
     }
 
     private UUID syncWalletToNeon(Wallet wallet) {
@@ -403,39 +477,106 @@ public class TransactionRepository {
             Response<AccountDto> resp = financialApi.createAccount(req).execute();
             if (resp.isSuccessful() && resp.body() != null) {
                 AccountDto dto = resp.body();
-                // Xóa bản local cũ, insert bản mới có UUID từ Neon
                 walletDao.delete(wallet);
                 wallet.setId(dto.getId().toString());
                 walletDao.insert(wallet);
                 return dto.getId();
             }
         } catch (Exception e) {
-            android.util.Log.e("SYNC", "Failed to sync wallet: " + wallet.getName(), e);
+            android.util.Log.e("TX_SYNC", "Failed to sync wallet: " + wallet.getName(), e);
         }
         return null;
     }
 
-    /** Resolve UUID category: ưu tiên categoryId field, fallback lookup tên danh mục.
-     * Nếu category có ID local (không phải UUID), sync lên Neon ngay lập tức. */
+    /**
+     * Resolve UUID thật (trên Neon) cho category theo tên.
+     * Luôn fetch server categories trước để đảm bảo UUID khớp server.
+     */
     private UUID resolveCategoryId(Transaction tx) {
-        String cid = tx.getCategoryId();
-        if (cid != null && !cid.isEmpty()) {
-            try { return UUID.fromString(cid); } catch (IllegalArgumentException ignored) {}
-        }
+        String categoryName = tx.getCategory();
+        if (categoryName == null || categoryName.isEmpty()) categoryName = "Khác";
 
-        Category category = categoryDao.findByNameSync(tx.getCategory());
-        if (category == null) {
-            List<Category> all = categoryDao.getAllCategoriesSync();
-            if (all != null && !all.isEmpty()) category = all.get(0);
-        }
-        if (category == null) return null;
+        android.util.Log.d("TX_SYNC", "Resolving categoryId for: '" + categoryName + "'");
 
+        String txType = tx.getType() == Transaction.Type.INCOME ? "income" : "expense";
+        java.util.Map<String, UUID> serverCategoryMap = new java.util.HashMap<>();
+        boolean fetchSuccess = false;
         try {
-            return UUID.fromString(category.getId());
-        } catch (IllegalArgumentException e) {
-            // ID local → Sync lên Neon
-            return syncCategoryToNeon(category);
+            Response<List<CategoryDto>> resp = financialApi.getAllCategories().execute();
+            if (resp.isSuccessful() && resp.body() != null) {
+                fetchSuccess = true;
+                List<Category> localCategories = categoryDao.getAllCategoriesSync();
+                for (CategoryDto dto : resp.body()) {
+                    if (dto.getType() != null && dto.getType().equalsIgnoreCase(txType)) {
+                        serverCategoryMap.put(dto.getName().trim().toLowerCase(), dto.getId());
+                    }
+
+                    for (Category local : localCategories) {
+                        String localType = local.getType() != null ? local.getType().trim() : "expense";
+                        String dtoType = dto.getType() != null ? dto.getType().trim() : "expense";
+                        if (local.getName().trim().equalsIgnoreCase(dto.getName().trim()) &&
+                            localType.equalsIgnoreCase(dtoType)) {
+                            if (!local.getId().equals(dto.getId().toString())) {
+                                categoryDao.deleteById(local.getId());
+                            }
+                        }
+                    }
+                    categoryDao.insert(new Category(
+                            dto.getId().toString(),
+                            dto.getName(),
+                            dto.getIcon() != null ? dto.getIcon() : "📂",
+                            dto.getColorHex() != null ? dto.getColorHex() : "#6C5CE7",
+                            dto.getType() != null ? dto.getType() : "expense",
+                            true, false
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e("TX_SYNC", "Server category fetch error: " + e.getMessage());
         }
+
+        String key = categoryName.trim().toLowerCase();
+        if (fetchSuccess) {
+            if (serverCategoryMap.containsKey(key)) {
+                return serverCategoryMap.get(key);
+            }
+        } else {
+            return null;
+        }
+
+        // Can't easily use findByNameNoCase here since it ignores type, search list manually
+        Category localCategory = null;
+        List<Category> locals = categoryDao.getAllCategoriesSync();
+        if (locals != null) {
+            for (Category c : locals) {
+                if (c.getName().trim().equalsIgnoreCase(categoryName.trim()) && c.getType().trim().equalsIgnoreCase(txType)) {
+                    localCategory = c; break;
+                }
+            }
+        }
+        
+        if (localCategory != null) {
+            UUID created = syncCategoryToNeon(localCategory);
+            if (created != null) return created;
+        } else {
+            Category newCat = new Category(
+                    java.util.UUID.randomUUID().toString(),
+                    categoryName, "📂", "#6C5CE7", txType, false, false
+            );
+            UUID created = syncCategoryToNeon(newCat);
+            if (created != null) return created;
+        }
+
+        List<Category> all = categoryDao.getAllCategoriesSync();
+        if (all != null) {
+            for (Category c : all) {
+                try {
+                    UUID uuid = UUID.fromString(c.getId());
+                    if (serverCategoryMap.containsValue(uuid)) return uuid;
+                } catch (Exception ignored) {}
+            }
+        }
+        return null;
     }
 
     private UUID syncCategoryToNeon(Category category) {
@@ -446,7 +587,7 @@ public class TransactionRepository {
 
             FinancialRequests.CreateCategoryRequest req = new FinancialRequests.CreateCategoryRequest(
                     userId, category.getName(),
-                    category.getType() != null ? category.getType() : "expense",
+                    category.getType() != null ? category.getType().toLowerCase() : "expense",
                     category.getIcon(),
                     category.getColorHex() != null ? category.getColorHex() : "#735BF2"
             );
@@ -454,14 +595,13 @@ public class TransactionRepository {
             Response<CategoryDto> resp = financialApi.createCategory(req).execute();
             if (resp.isSuccessful() && resp.body() != null) {
                 CategoryDto dto = resp.body();
-                // Xóa bản local cũ, insert bản mới có UUID từ Neon
                 categoryDao.delete(category);
                 category.setId(dto.getId().toString());
                 categoryDao.insert(category);
                 return dto.getId();
             }
         } catch (Exception e) {
-            android.util.Log.e("SYNC", "Failed to sync category: " + category.getName(), e);
+            android.util.Log.e("TX_SYNC", "Failed to sync category: " + category.getName(), e);
         }
         return null;
     }

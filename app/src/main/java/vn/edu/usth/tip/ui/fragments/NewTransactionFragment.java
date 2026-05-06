@@ -42,6 +42,7 @@ public class NewTransactionFragment extends Fragment {
     private AppViewModel appViewModel;
     private NewTransactionViewModel newTxViewModel;
     private CategoryAdapter categoryAdapter;
+    private Transaction.Type currentCategoryType = null;
 
     // View references
     private TextView tvAmount;
@@ -102,11 +103,7 @@ public class NewTransactionFragment extends Fragment {
         RecyclerView rvCategories = view.findViewById(R.id.rv_categories);
         rvCategories.setLayoutManager(new GridLayoutManager(requireContext(), 4));
         appViewModel.getCategories().observe(getViewLifecycleOwner(), categories -> {
-            boolean isEditInit = categoryAdapter == null && appViewModel.getEditingTransaction() != null;
-            updateCategoryList(categories, rvCategories);
-            if (isEditInit) {
-                categoryAdapter.selectCategoryByName(appViewModel.getEditingTransaction().getCategory());
-            }
+            refreshCategories();
         });
 
         view.findViewById(R.id.btn_save_transaction).setOnClickListener(v -> {
@@ -226,6 +223,46 @@ public class NewTransactionFragment extends Fragment {
         // Render wallet name
         if (tvWalletPreview != null) {
             tvWalletPreview.setText(state.selectedAccountName);
+        }
+
+        if (currentCategoryType != state.selectedType) {
+            currentCategoryType = state.selectedType;
+            refreshCategories();
+        }
+    }
+
+    private void refreshCategories() {
+        if (getView() == null) return;
+        RecyclerView rvCategories = getView().findViewById(R.id.rv_categories);
+        if (rvCategories == null) return;
+
+        List<Category> allCategories = appViewModel.getCategories().getValue();
+        if (allCategories == null) return;
+
+        NewTransactionViewModel.UiState state = newTxViewModel.getUiState().getValue();
+        if (state == null) return;
+
+        String targetType = "";
+        if (state.selectedType == Transaction.Type.EXPENSE) targetType = "expense";
+        else if (state.selectedType == Transaction.Type.INCOME) targetType = "income";
+        // If transfer, maybe we still show expense or specific? Let's just match exact or show all if empty.
+
+        java.util.List<Category> filtered = new java.util.ArrayList<>();
+        for (Category c : allCategories) {
+            if (c.isAddButton()) {
+                filtered.add(c);
+            } else {
+                String cType = c.getType() != null ? c.getType().toLowerCase() : "expense";
+                if (targetType.isEmpty() || cType.equals(targetType)) {
+                    filtered.add(c);
+                }
+            }
+        }
+
+        boolean isEditInit = categoryAdapter == null && appViewModel.getEditingTransaction() != null;
+        updateCategoryList(filtered, rvCategories);
+        if (isEditInit) {
+            categoryAdapter.selectCategoryByName(appViewModel.getEditingTransaction().getCategory());
         }
     }
 

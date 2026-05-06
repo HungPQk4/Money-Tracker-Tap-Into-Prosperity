@@ -190,6 +190,9 @@ public class NewTransactionViewModel extends AndroidViewModel {
             tx.setType(state.selectedType);
             tx.setTimestampMs(state.timestampMs);
             tx.setNote(state.note);
+            // Set IDs for direct UUID resolution (avoids fragile name-based lookups)
+            if (state.selectedAccountId != null) tx.setAccountId(state.selectedAccountId);
+            if (state.selectedCategoryId != null) tx.setCategoryId(state.selectedCategoryId);
         } else {
             tx = new Transaction(
                     UUID.randomUUID().toString(),
@@ -202,6 +205,9 @@ public class NewTransactionViewModel extends AndroidViewModel {
                     state.timestampMs,
                     state.note
             );
+            // Set IDs for direct UUID resolution (avoids fragile name-based lookups)
+            if (state.selectedAccountId != null) tx.setAccountId(state.selectedAccountId);
+            if (state.selectedCategoryId != null) tx.setCategoryId(state.selectedCategoryId);
         }
 
         transactionToSave.setValue(tx);

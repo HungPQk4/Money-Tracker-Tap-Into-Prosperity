@@ -72,6 +72,14 @@ public class BudgetsFragment extends Fragment {
         // Observer
         viewModel.getBudgetState().observe(getViewLifecycleOwner(), this::renderBudgets);
 
+        // Back button
+        View btnBack = view.findViewById(R.id.btn_back);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v ->
+                    androidx.navigation.Navigation.findNavController(v).popBackStack()
+            );
+        }
+
         // Header button: Add Budget
         View btnNew = view.findViewById(R.id.btn_new_budget);
         if (btnNew != null) {

@@ -401,6 +401,7 @@
 
             <!-- Action 4 -->
             <androidx.cardview.widget.CardView
+                android:id="@+id/btn_budgets"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"

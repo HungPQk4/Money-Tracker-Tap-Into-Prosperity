@@ -39,6 +39,14 @@ public class GoalsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         viewModel = new ViewModelProvider(requireActivity()).get(AppViewModel.class);
 
+        // Back button
+        View btnBack = view.findViewById(R.id.btn_back);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v ->
+                    androidx.navigation.Navigation.findNavController(v).popBackStack()
+            );
+        }
+
         // Header Add Goal Button
         View btnAddGoal = view.findViewById(R.id.btn_add_goal);
         if (btnAddGoal != null) {

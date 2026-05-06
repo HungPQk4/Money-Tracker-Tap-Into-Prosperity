@@ -136,9 +136,7 @@ public class AppViewModel extends AndroidViewModel {
 
         // Tự động khôi phục danh mục nếu bị trống (Self-healing)
         categoriesLiveData.observeForever(categories -> {
-            if (categories == null || categories.isEmpty()) {
-                initializeDefaultCategories();
-            }
+            initializeDefaultCategories();
         });
 
         // Sync dữ liệu từ server ngay khi khởi động
@@ -148,29 +146,18 @@ public class AppViewModel extends AndroidViewModel {
     private void initializeDefaultCategories() {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             List<Category> current = categoryDao.getAllCategoriesSync();
-            if (current == null || current.isEmpty()) {
-                List<Category> list = new ArrayList<>();
-                list.add(new Category(UUID.randomUUID().toString(), "Ăn uống",   "🍜"));
-                list.add(new Category(UUID.randomUUID().toString(), "Di chuyển", "🛵"));
-                list.add(new Category(UUID.randomUUID().toString(), "Mua sắm",   "🛒"));
-                list.add(new Category(UUID.randomUUID().toString(), "Giải trí",  "🎬"));
-                list.add(new Category(UUID.randomUUID().toString(), "Sức khỏe",  "💊"));
-                list.add(new Category(UUID.randomUUID().toString(), "Hóa đơn",   "⚡"));
-                list.add(new Category(UUID.randomUUID().toString(), "Gia đình",  "❤️"));
-                list.add(new Category(UUID.randomUUID().toString(), "Thêm", "+", true));
-                categoryDao.insertAll(list);
-            } else {
-                // Migrate các category cũ có ID không phải UUID
-                for (Category cat : current) {
-                    try {
-                        UUID.fromString(cat.getId());
-                    } catch (IllegalArgumentException e) {
-                        // ID cũ không hợp lệ → xóa rồi insert lại với UUID mới
-                        categoryDao.deleteById(cat.getId());
-                        cat.setId(UUID.randomUUID().toString());
-                        categoryDao.insert(cat);
+            boolean hasAddBtn = false;
+            if (current != null) {
+                for (Category c : current) {
+                    if (c.isAddButton()) {
+                        hasAddBtn = true;
+                        break;
                     }
                 }
+            }
+            if (!hasAddBtn) {
+                // Chỉ đảm bảo nút "Thêm" cục bộ luôn tồn tại
+                categoryDao.insert(new Category(UUID.randomUUID().toString(), "Thêm", "+", "#DFE6E9", "expense", true, true));
             }
         });
     }
@@ -396,14 +383,36 @@ public class AppViewModel extends AndroidViewModel {
     public void addBudget(Budget b) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             budgetDao.insert(b);
-            budgetsRepository.addOnline(b);
+        });
+        // Sync categories trước để đảm bảo có UUID thật trên server, rồi mới push budget
+        categoriesRepository.sync(new CategoriesRepository.SyncCallback() {
+            @Override
+            public void onSuccess() {
+                budgetsRepository.addOnline(b);
+            }
+
+            @Override
+            public void onError(String msg) {
+                // Dù sync lỗi, vẫn thử push budget (resolveCategoryId sẽ tự xử lý fallback)
+                budgetsRepository.addOnline(b);
+            }
         });
     }
 
     public void updateBudget(Budget b) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             budgetDao.update(b);
-            budgetsRepository.updateOnline(b);
+        });
+        categoriesRepository.sync(new CategoriesRepository.SyncCallback() {
+            @Override
+            public void onSuccess() {
+                budgetsRepository.updateOnline(b);
+            }
+
+            @Override
+            public void onError(String msg) {
+                budgetsRepository.updateOnline(b);
+            }
         });
     }
 

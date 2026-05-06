@@ -22,6 +22,9 @@ public interface WalletDao {
     @Query("SELECT * FROM wallets WHERE name = :name LIMIT 1")
     Wallet findByNameSync(String name);
 
+    @Query("SELECT * FROM wallets WHERE name COLLATE NOCASE = :name LIMIT 1")
+    Wallet findByNameNoCase(String name);
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(Wallet wallet);
 
@@ -33,4 +36,7 @@ public interface WalletDao {
 
     @Delete
     void delete(Wallet wallet);
+
+    @Query("DELETE FROM wallets WHERE id = :id")
+    void deleteById(String id);
 }

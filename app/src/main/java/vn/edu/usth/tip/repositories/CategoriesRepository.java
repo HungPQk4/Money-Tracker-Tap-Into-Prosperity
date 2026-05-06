@@ -30,20 +30,44 @@ public class CategoriesRepository {
 
     public void addOnline(Category c) {
         UUID userId = UUID.fromString(tokenManager.getUserId());
+        // Backend enum CategoryType uses lowercase: "income", "expense"
+        String type = (c.getType() != null) ? c.getType().toLowerCase() : "expense";
+        String colorHex = (c.getColorHex() != null) ? c.getColorHex() : "#6C5CE7";
         FinancialRequests.CreateCategoryRequest req = new FinancialRequests.CreateCategoryRequest(
-            userId, c.getName(), "EXPENSE", c.getIcon(), "#6C5CE7"
+            userId, c.getName(), type, c.getIcon(), colorHex
         );
 
         financialApi.createCategory(req).enqueue(new Callback<CategoryDto>() {
-            @Override public void onResponse(Call<CategoryDto> call, Response<CategoryDto> response) {}
-            @Override public void onFailure(Call<CategoryDto> call, Throwable t) {}
+            @Override public void onResponse(Call<CategoryDto> call, Response<CategoryDto> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    android.util.Log.d("CAT_SYNC", "Category created on server: " + response.body().getId());
+                    // Update local category ID with server UUID
+                    AppDatabase.databaseWriteExecutor.execute(() -> {
+                        try {
+                            categoryDao.deleteById(c.getId());
+                            c.setId(response.body().getId().toString());
+                            categoryDao.insert(c);
+                        } catch (Exception ignored) {}
+                    });
+                } else {
+                    String errBody = "";
+                    try { if (response.errorBody() != null) errBody = response.errorBody().string(); } catch (Exception ignored) {}
+                    android.util.Log.e("CAT_SYNC", "Add error: " + response.code() + " body=" + errBody);
+                }
+            }
+            @Override public void onFailure(Call<CategoryDto> call, Throwable t) {
+                android.util.Log.e("CAT_SYNC", "Add failed: " + t.getMessage());
+            }
         });
     }
 
     public void updateOnline(Category c) {
         UUID userId = UUID.fromString(tokenManager.getUserId());
+        // Backend enum CategoryType uses lowercase: "income", "expense"
+        String type = (c.getType() != null) ? c.getType().toLowerCase() : "expense";
+        String colorHex = (c.getColorHex() != null) ? c.getColorHex() : "#6C5CE7";
         FinancialRequests.CreateCategoryRequest req = new FinancialRequests.CreateCategoryRequest(
-            userId, c.getName(), "EXPENSE", c.getIcon(), "#6C5CE7"
+            userId, c.getName(), type, c.getIcon(), colorHex
         );
 
         try {
@@ -72,20 +96,66 @@ public class CategoriesRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
                         List<Category> localCategories = categoryDao.getAllCategoriesSync();
-                        for (CategoryDto dto : response.body()) {
+                        List<CategoryDto> serverCategories = new java.util.ArrayList<>(response.body());
+
+                        // 1. Đẩy các danh mục tạo offline lên server
+                        for (Category local : localCategories) {
+                            if (local.isAddButton()) continue;
+                            boolean foundOnServer = false;
+                            for (CategoryDto dto : serverCategories) {
+                                String localType = local.getType() != null ? local.getType().trim() : "expense";
+                                String dtoType = dto.getType() != null ? dto.getType().trim() : "expense";
+                                if (local.getName().trim().equalsIgnoreCase(dto.getName().trim()) &&
+                                    localType.equalsIgnoreCase(dtoType)) {
+                                    foundOnServer = true;
+                                    break;
+                                }
+                            }
+                            if (!foundOnServer) {
+                                try {
+                                    String userId = tokenManager.getUserId();
+                                    if (userId != null) {
+                                        vn.edu.usth.tip.network.requests.FinancialRequests.CreateCategoryRequest req = 
+                                            new vn.edu.usth.tip.network.requests.FinancialRequests.CreateCategoryRequest(
+                                                UUID.fromString(userId),
+                                                local.getName(),
+                                                local.getType() != null ? local.getType() : "expense",
+                                                local.getIcon(),
+                                                local.getColorHex()
+                                        );
+                                        retrofit2.Response<CategoryDto> res = financialApi.createCategory(req).execute();
+                                        if (res.isSuccessful() && res.body() != null) {
+                                            serverCategories.add(res.body());
+                                        }
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+                        }
+
+                        // 2. Kéo dữ liệu từ server về và dọn dẹp duplicate
+                        List<Category> toInsert = new java.util.ArrayList<>();
+                        for (CategoryDto dto : serverCategories) {
                             Category serverCategory = convertToModel(dto);
 
                             // Xóa các category ở local có cùng tên (thường là do fake UUID sinh ra lúc offline)
                             for (Category local : localCategories) {
-                                if (local.getName().trim().equalsIgnoreCase(serverCategory.getName().trim())) {
+                                String localType = local.getType() != null ? local.getType().trim() : "expense";
+                                String serverType = serverCategory.getType() != null ? serverCategory.getType().trim() : "expense";
+                                if (local.getName().trim().equalsIgnoreCase(serverCategory.getName().trim()) &&
+                                    localType.equalsIgnoreCase(serverType)) {
                                     if (!local.getId().equals(serverCategory.getId())) {
                                         categoryDao.deleteById(local.getId());
                                     }
                                 }
                             }
 
-                            categoryDao.insert(serverCategory);
+                            toInsert.add(serverCategory);
                         }
+                        
+                        if (!toInsert.isEmpty()) {
+                            categoryDao.insertAll(toInsert);
+                        }
+                        
                         callback.onSuccess();
                     });
                 } else callback.onError("Error: " + response.code());
