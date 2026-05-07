@@ -26,7 +26,7 @@ import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.models.Wallet;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 
-public class ExtractInvoiceFragment extends Fragment {
+public class  ExtractInvoiceFragment extends Fragment {
 
     private AppViewModel appViewModel;
 
