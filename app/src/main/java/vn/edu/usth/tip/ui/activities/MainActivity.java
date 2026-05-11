@@ -201,7 +201,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateBottomBarVisibility(int destId) {
-        boolean hide = destId == R.id.newTransactionFragment;
+        boolean hide = destId == R.id.newTransactionFragment
+                    || destId == R.id.scanReceiptFragment;
         if (hide) {
             float slideY = bottomAppBar.getHeight() > 0
                     ? bottomAppBar.getHeight()

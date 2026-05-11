@@ -106,15 +106,18 @@ public class BudgetsFragment extends Fragment {
 
         // Calculate totals
         long totalBudgeted = 0, totalSpent = 0;
+        long now = System.currentTimeMillis();
+        int  activeCount = 0;
         for (BudgetWithSpent b : list) {
             totalBudgeted += b.budget.getLimitAmount();
             totalSpent    += b.spentAmount;
+            if (b.budget.getPeriodEndMs() >= now) activeCount++;
         }
         long remaining = totalBudgeted - totalSpent;
 
-        if (totalBudgeted == 0) totalBudgeted = 1;
-        float pctFloat = (totalSpent * 100.0f) / totalBudgeted;
-        int pctInt = (int) Math.min(100, pctFloat);
+        // Tách guard khỏi biến hiển thị — tránh hiện ₫1 khi limitAmount = 0
+        float pctFloat = totalBudgeted > 0 ? (totalSpent * 100.0f) / totalBudgeted : 0f;
+        int   pctInt   = (int) Math.min(100, pctFloat);
 
         tvTotalBudgeted.setText("₫" + fmtVnd(totalBudgeted));
         tvTotalSpent.setText("₫"    + fmtVnd(totalSpent));
@@ -133,8 +136,9 @@ public class BudgetsFragment extends Fragment {
             percentText = String.format(java.util.Locale.US, "%.1f%% đã chi", pctFloat);
         }
         tvOverallPercent.setText(percentText);
-        
-        tvActiveCount.setText(list.size() + " ngân sách");
+
+        // Chỉ đếm budget còn hiệu lực — tránh hiện sai "X đang hoạt động"
+        tvActiveCount.setText(activeCount + " đang hoạt động");
 
         // Color remaining
         if (pctInt >= 90) {

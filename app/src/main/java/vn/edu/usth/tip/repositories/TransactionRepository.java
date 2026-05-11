@@ -96,8 +96,18 @@ public class TransactionRepository {
                 // ── 2. Map sang SyncItem, resolve accountId & categoryId ──────
                 List<SyncBatchRequest.SyncItem> items     = new ArrayList<>();
                 List<Transaction>               skippedTx = new ArrayList<>();
+                // Track các tx đã map thành công — dùng lại khi ghép kết quả server,
+                // tránh gọi resolveAccountId/resolveCategoryId lần 2 (mỗi lần = HTTP call).
+                List<Transaction>               syncedTx  = new ArrayList<>();
 
                 for (Transaction tx : unsynced) {
+                    long rawAmount = tx.getAmountVnd();
+                    if (rawAmount == 0) {
+                        android.util.Log.w("SYNC", "Skip tx id=" + tx.getId() + ": amount = 0");
+                        skippedTx.add(tx);
+                        continue;
+                    }
+
                     UUID accountId  = resolveAccountId(tx);
                     UUID categoryId = resolveCategoryId(tx);
 
@@ -105,22 +115,11 @@ public class TransactionRepository {
                         android.util.Log.w("SYNC", "Skip tx id=" + tx.getId()
                                 + " accountId=" + tx.getAccountId()
                                 + " category=" + tx.getCategory());
-                        skippedTx.add(tx); // thiếu account/category → bỏ qua
-                        continue;
-                    }
-
-                    // Chuyển timestampMs → ISO-8601 string giữ offset múi giờ địa phương
-                    String createdAtStr = isoFormat.format(new Date(tx.getTimestampMs()));
-
-                    // QUAN TRỌNG: amount LUÔN gửi giá trị dương (abs).
-                    // type="expense"/"income"/"transfer" đã xác định chiều hướng.
-                    // Nếu gửi số âm → server từ chối do CHECK(amount > 0) trên Neon.
-                    long rawAmount = tx.getAmountVnd();
-                    if (rawAmount == 0) {
-                        android.util.Log.w("SYNC", "Skip tx id=" + tx.getId() + ": amount = 0");
                         skippedTx.add(tx);
                         continue;
                     }
+
+                    String createdAtStr = isoFormat.format(new Date(tx.getTimestampMs()));
                     java.math.BigDecimal positiveAmount = new java.math.BigDecimal(Math.abs(rawAmount));
 
                     SyncBatchRequest.SyncItem item = new SyncBatchRequest.SyncItem(
@@ -133,7 +132,7 @@ public class TransactionRepository {
                             createdAtStr
                     );
                     items.add(item);
-
+                    syncedTx.add(tx);
                 }
 
                 if (items.isEmpty()) {
@@ -155,22 +154,16 @@ public class TransactionRepository {
                 SyncBatchResponse result = response.body();
 
                 // ── 4. Cập nhật Room: xóa bản nháp, insert bản từ server ──────
+                // syncedTx[i] tương ứng 1-1 với savedTransactions[i] — không cần resolve lại.
                 if (result.getSavedTransactions() != null) {
-                    // Map theo thứ tự: items[i] tương ứng unsynced[j] (đã bỏ skipped)
-                    int serverIdx = 0;
-                    int localIdx  = 0;
-                    for (Transaction tx : unsynced) {
-                        UUID accountId  = resolveAccountId(tx);
-                        UUID categoryId = resolveCategoryId(tx);
-                        if (accountId == null || categoryId == null) continue; // bản đã skip
-
-                        if (serverIdx < result.getSavedTransactions().size()) {
-                            TransactionDto dto = result.getSavedTransactions().get(serverIdx++);
-                            try {
-                                transactionDao.delete(tx);
-                                transactionDao.insert(convertToModel(dto));
-                            } catch (Exception ignored) {}
-                        }
+                    int count = Math.min(syncedTx.size(), result.getSavedTransactions().size());
+                    for (int i = 0; i < count; i++) {
+                        TransactionDto dto = result.getSavedTransactions().get(i);
+                        Transaction    tx  = syncedTx.get(i);
+                        try {
+                            transactionDao.delete(tx);
+                            transactionDao.insert(convertToModel(dto));
+                        } catch (Exception ignored) {}
                     }
                 }
 
@@ -229,9 +222,15 @@ public class TransactionRepository {
     public void addTransactionOnline(Transaction tx) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
+                // Mark synced=true BEFORE sending to prevent pushUnsyncedToServer()
+                // from picking up the same transaction and double-sending it.
+                tx.setSynced(true);
+                transactionDao.update(tx);
+
                 String userIdStr = tokenManager.getUserId();
                 if (userIdStr == null) {
                     android.util.Log.e("TX_SYNC", "addTransactionOnline: userId is null");
+                    revertToUnsynced(tx);
                     return;
                 }
                 UUID userId = UUID.fromString(userIdStr);
@@ -242,12 +241,13 @@ public class TransactionRepository {
                     android.util.Log.e("TX_SYNC", "addTransactionOnline: accountId=" + accountId
                             + " categoryId=" + categoryId + " walletName=" + tx.getWalletName()
                             + " category=" + tx.getCategory());
+                    revertToUnsynced(tx);
                     return;
                 }
 
                 CreateTransactionRequest req = new CreateTransactionRequest(
                         userId, accountId, categoryId,
-                        new java.math.BigDecimal(Math.abs(tx.getAmountVnd())), // abs() — type xác định chiều
+                        new java.math.BigDecimal(Math.abs(tx.getAmountVnd())),
                         tx.getType().name().toLowerCase(),
                         dateFormat.format(new Date(tx.getTimestampMs()))
                 );
@@ -275,15 +275,25 @@ public class TransactionRepository {
                             String errBody = "";
                             try { if (response.errorBody() != null) errBody = response.errorBody().string(); } catch (Exception ignored) {}
                             android.util.Log.e("TX_SYNC", "Create error: " + response.code() + " " + response.message() + " body=" + errBody);
+                            revertToUnsynced(tx);
                         }
                     }
                     @Override public void onFailure(Call<TransactionDto> call, Throwable t) {
                         android.util.Log.e("TX_SYNC", "Create failed: " + t.getMessage(), t);
+                        revertToUnsynced(tx);
                     }
                 });
             } catch (Exception e) {
                 android.util.Log.e("TX_SYNC", "addTransactionOnline exception", e);
+                revertToUnsynced(tx);
             }
+        });
+    }
+
+    private void revertToUnsynced(Transaction tx) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            tx.setSynced(false);
+            transactionDao.update(tx);
         });
     }
 
@@ -346,8 +356,22 @@ public class TransactionRepository {
     private void saveToLocal(List<TransactionDto> dtos, SyncCallback callback) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
-                java.util.Set<String> serverIds = new java.util.HashSet<>();
+                // Dedup server list: nếu server trả về 2 record cùng nội dung (do double-send
+                // trước khi fix), chỉ giữ record đầu tiên theo composite key.
+                java.util.Map<String, TransactionDto> deduped = new java.util.LinkedHashMap<>();
                 for (TransactionDto dto : dtos) {
+                    String key = (dto.getTransactionDate() != null ? dto.getTransactionDate() : "") + "|"
+                            + (dto.getAmount() != null ? dto.getAmount().toPlainString() : "0") + "|"
+                            + (dto.getType() != null ? dto.getType().toString().toLowerCase() : "") + "|"
+                            + (dto.getAccountName() != null ? dto.getAccountName().toLowerCase() : "") + "|"
+                            + (dto.getCategoryName() != null ? dto.getCategoryName().toLowerCase() : "") + "|"
+                            + (dto.getNote() != null ? dto.getNote().toLowerCase() : "");
+                    deduped.putIfAbsent(key, dto);
+                }
+                List<TransactionDto> uniqueDtos = new ArrayList<>(deduped.values());
+
+                java.util.Set<String> serverIds = new java.util.HashSet<>();
+                for (TransactionDto dto : uniqueDtos) {
                     if (dto.getId() != null) serverIds.add(dto.getId().toString());
                 }
 
@@ -361,8 +385,8 @@ public class TransactionRepository {
                     }
                 }
 
-                // Upsert từng record từ server
-                for (TransactionDto dto : dtos) {
+                // Upsert các record đã dedup từ server
+                for (TransactionDto dto : uniqueDtos) {
                     try {
                         transactionDao.insert(convertToModel(dto));
                     } catch (Exception ignored) {}

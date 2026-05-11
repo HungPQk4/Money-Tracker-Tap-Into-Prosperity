@@ -40,14 +40,14 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Chào buổi sáng ⛅️"
+                        android:text="Pro Financial Management 💼"
                         android:textColor="#BDBDBD"
                         android:textSize="14sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Minh Tuấn"
+                        android:text="Money Tracker"
                         android:textColor="#FFFFFF"
                         android:textSize="22sp"
                         android:textStyle="bold" />

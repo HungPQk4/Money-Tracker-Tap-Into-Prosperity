@@ -152,6 +152,10 @@ public class DashboardFragment extends BaseFragment {
             updateOptimisticDashboard(view);
         });
 
+        // ── Greeting ──────────────────────────────────────────────────
+        TextView tvGreeting = view.findViewById(R.id.tv_greeting);
+        if (tvGreeting != null) tvGreeting.setText(buildGreeting());
+
         // ── Header buttons ────────────────────────────────────────────
         View btnNotification = view.findViewById(R.id.btn_notification);
         if (btnNotification != null) {
@@ -264,9 +268,10 @@ public class DashboardFragment extends BaseFragment {
                     if (transactions != null) {
                         for (Transaction t : transactions) {
                             if (!t.isSynced() && t.getWalletName() != null && t.getWalletName().equals(acc.getName())) {
-                                if (t.getType() == Transaction.Type.INCOME)   balance += t.getAmountVnd();
-                                else if (t.getType() == Transaction.Type.EXPENSE) balance -= t.getAmountVnd();
-                                else if (t.getType() == Transaction.Type.TRANSFER) balance -= t.getAmountVnd();
+                                if (t.getType() == Transaction.Type.INCOME)        balance += t.getAmountVnd();
+                                else if (t.getType() == Transaction.Type.EXPENSE)  balance -= t.getAmountVnd();
+                                // TRANSFER: net effect trên tổng tài sản = 0 (trừ ví này, cộng ví kia)
+                                // Không điều chỉnh ở đây vì chỉ biết 1 walletName.
                             }
                         }
                     }
@@ -401,6 +406,15 @@ public class DashboardFragment extends BaseFragment {
             }
         };
         currentTxLiveData.observe(getViewLifecycleOwner(), txObserver);
+    }
+
+    private static String buildGreeting() {
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (hour >= 5  && hour < 12) return "Bắt đầu ngày tài chính thật sáng suốt ✨";
+        if (hour >= 12 && hour < 14) return "Kiểm tra chi tiêu buổi sáng của bạn 📊";
+        if (hour >= 14 && hour < 18) return "Quản lý tài chính thông minh 💼";
+        if (hour >= 18 && hour < 22) return "Tổng kết tài chính hôm nay 🌆";
+        return "Lên kế hoạch tài chính cho ngày mai 🌙";
     }
 
     private void clearTime(Calendar c) {

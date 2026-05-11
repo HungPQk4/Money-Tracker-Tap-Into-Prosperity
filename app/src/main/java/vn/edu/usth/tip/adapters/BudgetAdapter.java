@@ -136,12 +136,14 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
             emptyParams.weight = 100 - percentInt;
             cvProgressEmpty.setLayoutParams(emptyParams);
 
+            float density = itemView.getContext().getResources().getDisplayMetrics().density;
+            int overlapPx = (int) (-6 * density); // -6dp → px đúng mật độ màn hình
             if (percentInt == 0) {
                 cvProgressFill.setVisibility(View.GONE);
                 ((ViewGroup.MarginLayoutParams) cvProgressEmpty.getLayoutParams()).setMarginStart(0);
             } else {
                 cvProgressFill.setVisibility(View.VISIBLE);
-                ((ViewGroup.MarginLayoutParams) cvProgressEmpty.getLayoutParams()).setMarginStart(-6); // Dùng lại margin âm
+                ((ViewGroup.MarginLayoutParams) cvProgressEmpty.getLayoutParams()).setMarginStart(overlapPx);
             }
 
             // Số tiền
@@ -149,17 +151,18 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
             tvSpent.setTextColor(accentColor);
             tvLimit.setText("/ ₫" + formatVnd(limit));
 
-            // Days left
+            // Days left — 3 trạng thái riêng biệt
             long now  = System.currentTimeMillis();
             long end  = item.budget.getPeriodEndMs();
-            long days = Math.max(0, (end - now) / 86_400_000L);
-            tvDaysLeft.setText(days + " ngày còn lại");
-
-            // Status warning
+            long days = (end - now) / 86_400_000L;
             if (percentInt >= 100) {
                 tvDaysLeft.setText("⚠ Vượt ngân sách!");
                 tvDaysLeft.setTextColor(0xFFE76E60);
+            } else if (days <= 0) {
+                tvDaysLeft.setText("Đã kết thúc");
+                tvDaysLeft.setTextColor(0xFF8C8D99);
             } else {
+                tvDaysLeft.setText(days + " ngày còn lại");
                 tvDaysLeft.setTextColor(0xFF8C8D99);
             }
         }

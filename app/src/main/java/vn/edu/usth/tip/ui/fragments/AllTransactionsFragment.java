@@ -173,9 +173,10 @@ public class AllTransactionsFragment extends Fragment {
             if (currentFilter == FILTER_TRANSFER) typeOk = tx.getType() == Transaction.Type.TRANSFER;
 
             boolean searchOk = currentQuery.isEmpty()
-                    || tx.getTitle().toLowerCase().contains(currentQuery)
-                    || tx.getCategory().toLowerCase().contains(currentQuery)
-                    || tx.getWalletName().toLowerCase().contains(currentQuery);
+                    || matches(tx.getTitle(), currentQuery)
+                    || matches(tx.getCategory(), currentQuery)
+                    || matches(tx.getWalletName(), currentQuery)
+                    || matches(tx.getNote(), currentQuery);
 
             if (typeOk && searchOk) result.add(tx);
         }
@@ -193,6 +194,10 @@ public class AllTransactionsFragment extends Fragment {
         }
         tvSummaryIncome.setText(formatVnd(totalIncome));
         tvSummaryExpense.setText(formatVnd(totalExpense));
+    }
+
+    private static boolean matches(String field, String query) {
+        return field != null && field.toLowerCase().contains(query);
     }
 
     private String formatVnd(long amount) {

@@ -228,20 +228,20 @@ public class AppViewModel extends AndroidViewModel {
 
         List<BudgetWithSpent> result = new ArrayList<>();
         for (Budget budget : budgets) {
-            long spent = 0;
+            // Base = server-calculated spent (ground truth cho các giao dịch đã sync).
+            // Chỉ cộng thêm giao dịch CHƯA sync để tránh double-count.
+            long spent = budget.getSpentAmount();
             for (Transaction t : txs) {
-                if (t.getType() != Transaction.Type.EXPENSE)
-                    continue;
-                if (t.getTimestampMs() < budget.getPeriodStartMs())
-                    continue;
-                if (t.getTimestampMs() > budget.getPeriodEndMs())
-                    continue;
+                if (t.isSynced()) continue;
+                if (t.getType() != Transaction.Type.EXPENSE) continue;
+                if (t.getTimestampMs() < budget.getPeriodStartMs()) continue;
+                if (t.getTimestampMs() > budget.getPeriodEndMs()) continue;
                 String cat = t.getCategory();
                 if (cat != null && cat.equalsIgnoreCase(budget.getCategoryName())) {
                     spent += t.getAmountVnd();
                 }
             }
-            result.add(new BudgetWithSpent(budget, budget.getSpentAmount() + spent));
+            result.add(new BudgetWithSpent(budget, spent));
         }
         budgetStateLiveData.postValue(result);
     }
