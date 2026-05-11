@@ -19,6 +19,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.List;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.utils.AnimUtils;
 import vn.edu.usth.tip.adapters.BudgetAdapter;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 import vn.edu.usth.tip.viewmodels.AppViewModel.BudgetWithSpent;
@@ -83,10 +84,10 @@ public class BudgetsFragment extends Fragment {
         // Header button: Add Budget
         View btnNew = view.findViewById(R.id.btn_new_budget);
         if (btnNew != null) {
-            btnNew.setOnClickListener(v -> {
+            btnNew.setOnClickListener(v -> AnimUtils.bounceClick(v, () -> {
                 AddBudgetSheet sheet = new AddBudgetSheet();
                 sheet.show(getChildFragmentManager(), "add_budget");
-            });
+            }));
         }
     }
 

@@ -1,10 +1,17 @@
 package vn.edu.usth.tip.ui.activities;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.utils.AnimUtils;
 import vn.edu.usth.tip.utils.TokenManager;
 import vn.edu.usth.tip.viewmodels.AccountViewModel;
 
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
+import android.widget.LinearLayout;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,16 +20,22 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
+import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.bottomappbar.BottomAppBar;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class MainActivity extends AppCompatActivity {
 
     private NavController navController;
     private AccountViewModel accountViewModel;
+
+    private BottomAppBar bottomAppBar;
+    private FloatingActionButton fab;
+    private LinearLayout navHome, navStats, navGoals, navWallet;
+    private LinearLayout activeTab = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,81 +44,210 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.nav_host_fragment);
+        if (navHostFragment == null) return;
+        navController = navHostFragment.getNavController();
+
+        bottomAppBar = findViewById(R.id.bottomAppBar);
+        fab = findViewById(R.id.fab);
+
+        applyWindowInsets();
+        setupBottomNav();
+        setupFab();
+        setupSessionExpiry();
+    }
+
+    /**
+     * Inset handling đúng cách cho edge-to-edge:
+     * - Root: chừa khoảng cho status bar trên + cutout 2 bên, KHÔNG chừa dưới.
+     * - BottomAppBar: tự cao 68dp + chiều cao gesture bar, padding bottom = gesture bar.
+     *   → Bar trắng tràn xuống đáy màn hình, icon/label/FAB nằm phía trên gesture bar.
+     */
+    private void applyWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(bars.left, bars.top, bars.right, 0);
             return insets;
         });
 
-        // ── Setup Jetpack Navigation ──────────────────────────────────────
-        NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.nav_host_fragment);
+        BottomAppBar bar = findViewById(R.id.bottomAppBar);
+        final int baseHeightPx = (int) (68 * getResources().getDisplayMetrics().density);
 
-        if (navHostFragment == null) return;
+        ViewCompat.setOnApplyWindowInsetsListener(bar, (v, insets) -> {
+            Insets nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            ViewGroup.LayoutParams lp = v.getLayoutParams();
+            lp.height = baseHeightPx + nav.bottom;
+            v.setLayoutParams(lp);
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(),
+                    v.getPaddingRight(), nav.bottom);
+            return insets;
+        });
+    }
 
-        navController = navHostFragment.getNavController();
-        BottomNavigationView bottomNav = findViewById(R.id.bottomNavigationView);
+    private void setupBottomNav() {
+        navHome   = findViewById(R.id.navHome);
+        navStats  = findViewById(R.id.navStats);
+        navGoals  = findViewById(R.id.navGoals);
+        navWallet = findViewById(R.id.navWallet);
 
-        // Link bottom nav with nav controller (top-level destinations)
-        NavigationUI.setupWithNavController(bottomNav, navController);
+        NavOptions tabOptions = new NavOptions.Builder()
+                .setLaunchSingleTop(true)
+                .setPopUpTo(navController.getGraph().getStartDestinationId(), false)
+                .build();
 
-        // Disable the empty placeholder item in the center (FAB space)
-        bottomNav.getMenu().findItem(R.id.placeholder).setEnabled(false);
-
-        // Override item selected: Goals tab shows a dropdown
-        bottomNav.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-
-            if (id == R.id.placeholder) {
-                return false;
-            }
-
-            if (id == R.id.goalsFragment) {
-                android.view.ContextThemeWrapper wrapper = new android.view.ContextThemeWrapper(this, R.style.DarkPopupMenuStyle);
-                android.widget.PopupMenu popup = new android.widget.PopupMenu(
-                        wrapper,
-                        bottomNav.findViewById(R.id.goalsFragment)
-                );
-                popup.getMenuInflater().inflate(R.menu.menu_goals_dropdown, popup.getMenu());
-                popup.setOnMenuItemClickListener(menuItem ->
-                        NavigationUI.onNavDestinationSelected(menuItem, navController)
-                );
-                popup.show();
-                return false;
-            }
-
-            return NavigationUI.onNavDestinationSelected(item, navController);
+        navHome.setOnClickListener(v ->
+                navController.navigate(R.id.dashboardFragment, null, tabOptions));
+        navStats.setOnClickListener(v ->
+                navController.navigate(R.id.analyticsFragment, null, tabOptions));
+        navWallet.setOnClickListener(v ->
+                navController.navigate(R.id.walletManagementFragment, null, tabOptions));
+        navGoals.setOnClickListener(v -> {
+            android.view.ContextThemeWrapper wrapper =
+                    new android.view.ContextThemeWrapper(this, R.style.LightPopupMenuStyle);
+            android.widget.PopupMenu popup = new android.widget.PopupMenu(wrapper, navGoals);
+            popup.getMenuInflater().inflate(R.menu.menu_goals_dropdown, popup.getMenu());
+            popup.setOnMenuItemClickListener(item ->
+                    NavigationUI.onNavDestinationSelected(item, navController));
+            popup.show();
         });
 
-        // ── Floating Action Button → New Transaction ──────────────────────
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(v -> navController.navigate(R.id.newTransactionFragment));
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            int destId = destination.getId();
+            updateNavSelection(destId);
+            updateBottomBarVisibility(destId);
+        });
+    }
 
-        // ── Lắng nghe token hết hạn → tự động logout ─────────────────────
+    private void updateNavSelection(int destId) {
+        boolean homeActive   = destId == R.id.dashboardFragment;
+        boolean statsActive  = destId == R.id.analyticsFragment;
+        boolean goalsActive  = destId == R.id.goalsFragment
+                            || destId == R.id.budgetsFragment
+                            || destId == R.id.debtsFragment;
+        boolean walletActive = destId == R.id.walletManagementFragment
+                            || destId == R.id.profileFragment;
+
+        LinearLayout newActive = homeActive   ? navHome
+                               : statsActive  ? navStats
+                               : goalsActive  ? navGoals
+                               : walletActive ? navWallet
+                               : null;
+
+        if (newActive != null && newActive != activeTab) {
+            if (activeTab != null) deactivateTab(activeTab);
+            activateTab(newActive);
+            activeTab = newActive;
+        }
+
+        navHome.setActivated(homeActive);
+        navStats.setActivated(statsActive);
+        navGoals.setActivated(goalsActive);
+        navWallet.setActivated(walletActive);
+    }
+
+    private void activateTab(LinearLayout tab) {
+        tab.animate().cancel();
+        View icon = tab.getChildAt(0);
+        if (icon != null) icon.animate().cancel();
+
+        // Toàn bộ tab nhảy lên 7dp rồi spring về
+        tab.animate()
+                .translationY(dpToPx(-7f))
+                .setDuration(180)
+                .setInterpolator(new OvershootInterpolator(2.5f))
+                .withEndAction(() -> tab.animate()
+                        .translationY(0f)
+                        .setDuration(220)
+                        .setInterpolator(new DecelerateInterpolator(1.5f))
+                        .start())
+                .start();
+
+        // Icon: bounce scale mạnh với overshoot
+        if (icon != null) {
+            icon.animate()
+                    .scaleX(1.4f).scaleY(1.4f)
+                    .setDuration(160)
+                    .setInterpolator(new OvershootInterpolator(4f))
+                    .withEndAction(() -> icon.animate()
+                            .scaleX(1f).scaleY(1f)
+                            .setDuration(140)
+                            .setInterpolator(new DecelerateInterpolator())
+                            .start())
+                    .start();
+        }
+    }
+
+    private void deactivateTab(LinearLayout tab) {
+        tab.animate().cancel();
+        View icon = tab.getChildAt(0);
+        if (icon != null) {
+            icon.animate().cancel();
+            icon.animate()
+                    .scaleX(1f).scaleY(1f)
+                    .setDuration(120)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
+        }
+        tab.animate()
+                .translationY(0f)
+                .setDuration(120)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+    }
+
+    private float dpToPx(float dp) {
+        return dp * getResources().getDisplayMetrics().density;
+    }
+
+    private void updateBottomBarVisibility(int destId) {
+        boolean hide = destId == R.id.newTransactionFragment;
+        if (hide) {
+            float slideY = bottomAppBar.getHeight() > 0
+                    ? bottomAppBar.getHeight()
+                    : dpToPx(68f);
+            bottomAppBar.animate()
+                    .translationY(slideY)
+                    .setDuration(230)
+                    .setInterpolator(new AccelerateInterpolator(1.5f))
+                    .withEndAction(() -> {
+                        bottomAppBar.setVisibility(View.GONE);
+                        bottomAppBar.setTranslationY(0);
+                    })
+                    .start();
+            fab.hide();
+        } else if (bottomAppBar.getVisibility() != View.VISIBLE) {
+            bottomAppBar.setTranslationY(dpToPx(68f));
+            bottomAppBar.setVisibility(View.VISIBLE);
+            bottomAppBar.animate()
+                    .translationY(0)
+                    .setDuration(400)
+                    .setInterpolator(new OvershootInterpolator(1.5f))
+                    .start();
+            fab.show();
+        }
+    }
+
+    private void setupFab() {
+        fab.setOnClickListener(v ->
+                AnimUtils.bounceClick(v, () -> navController.navigate(R.id.newTransactionFragment)));
+    }
+
+    private void setupSessionExpiry() {
         accountViewModel = new ViewModelProvider(this).get(AccountViewModel.class);
         accountViewModel.getSessionExpired().observe(this, expired -> {
-            if (expired != null && expired) {
-                // Xóa token đã lưu
-                new TokenManager(this).clear();
-
-                // Reset cờ để tránh trigger nhiều lần
-                accountViewModel.clearSessionExpired();
-
-                // Thông báo cho user
-                android.widget.Toast.makeText(
-                        this,
-                        "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
-                        android.widget.Toast.LENGTH_LONG
-                ).show();
-
-                // Chuyển về màn hình Login và xóa toàn bộ back stack
-                navController.navigate(R.id.action_global_loginFragment,
-                        null,
-                        new androidx.navigation.NavOptions.Builder()
-                                .setPopUpTo(navController.getGraph().getStartDestinationId(), true)
-                                .build()
-                );
-            }
+            if (expired == null || !expired) return;
+            new TokenManager(this).clear();
+            accountViewModel.clearSessionExpired();
+            android.widget.Toast.makeText(
+                    this,
+                    "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+                    android.widget.Toast.LENGTH_LONG
+            ).show();
+            navController.navigate(R.id.action_global_loginFragment, null,
+                    new NavOptions.Builder()
+                            .setPopUpTo(navController.getGraph().getStartDestinationId(), true)
+                            .build());
         });
     }
 }

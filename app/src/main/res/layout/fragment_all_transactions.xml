@@ -4,14 +4,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F0F1A">
+    android:background="#F5F7FA">
 
     <!-- ── AppBar ── -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        app:elevation="0dp">
+        android:background="#FFFFFF"
+        app:elevation="2dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar_all_tx"
@@ -32,7 +32,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:padding="8dp"
                     android:src="@android:drawable/ic_menu_revert"
-                    app:tint="#FFFFFF" />
+                    app:tint="#1F2937" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -40,7 +40,7 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:text="Tất cả giao dịch"
-                    android:textColor="#FFFFFF"
+                    android:textColor="#1F2937"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
@@ -48,7 +48,7 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
-                    app:cardBackgroundColor="#1E1E35"
+                    app:cardBackgroundColor="#EDE9FE"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp">
                     <TextView
@@ -58,7 +58,7 @@
                         android:gravity="center"
                         android:paddingHorizontal="14dp"
                         android:text="Tháng 4 ▾"
-                        android:textColor="#A78BFA"
+                        android:textColor="#735BF2"
                         android:textSize="13sp"
                         android:textStyle="bold" />
                 </androidx.cardview.widget.CardView>
@@ -87,7 +87,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="▲  Thu nhập"
-                    android:textColor="#22C55E"
+                    android:textColor="#16A34A"
                     android:textSize="12sp" />
                 <TextView
                     android:id="@+id/tv_summary_income"
@@ -95,7 +95,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="₫0"
-                    android:textColor="#FFFFFF"
+                    android:textColor="#1F2937"
                     android:textSize="16sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -104,7 +104,7 @@
             <View
                 android:layout_width="1dp"
                 android:layout_height="match_parent"
-                android:background="#2D2D50" />
+                android:background="#E5E7EB" />
 
             <!-- Expense total -->
             <LinearLayout
@@ -117,7 +117,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="▼  Chi tiêu"
-                    android:textColor="#EF4444"
+                    android:textColor="#DC2626"
                     android:textSize="12sp" />
                 <TextView
                     android:id="@+id/tv_summary_expense"
@@ -125,7 +125,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="₫0"
-                    android:textColor="#FFFFFF"
+                    android:textColor="#1F2937"
                     android:textSize="16sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -137,16 +137,16 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
             android:layout_marginBottom="10dp"
-            app:boxBackgroundColor="#1C1C2E"
+            app:boxBackgroundColor="#FFFFFF"
             app:boxCornerRadiusBottomEnd="14dp"
             app:boxCornerRadiusBottomStart="14dp"
             app:boxCornerRadiusTopEnd="14dp"
             app:boxCornerRadiusTopStart="14dp"
-            app:boxStrokeColor="#3D3D6A"
+            app:boxStrokeColor="#D1D5DB"
             app:boxStrokeWidth="1dp"
-            app:hintTextColor="#9CA3AF"
+            app:hintTextColor="#6B7280"
             app:startIconDrawable="@android:drawable/ic_menu_search"
-            app:startIconTint="#9CA3AF"
+            app:startIconTint="#6B7280"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -155,8 +155,8 @@
                 android:layout_height="48dp"
                 android:background="@android:color/transparent"
                 android:hint="Tìm giao dịch..."
-                android:textColor="#FFFFFF"
-                android:textColorHint="#4B5563"
+                android:textColor="#1F2937"
+                android:textColorHint="#9CA3AF"
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -188,9 +188,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:text="Thu nhập"
-                android:textColor="#6EE7A0"
-                app:chipBackgroundColor="#1C2A20"
-                app:chipStrokeColor="#22C55E"
+                android:textColor="#15803D"
+                app:chipBackgroundColor="#DCFCE7"
+                app:chipStrokeColor="#16A34A"
                 app:chipStrokeWidth="1dp"
                 app:checkedIconVisible="false"
                 style="@style/Widget.MaterialComponents.Chip.Filter" />
@@ -201,8 +201,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:text="Chi tiêu"
-                android:textColor="#FCA5A5"
-                app:chipBackgroundColor="#2D1C1C"
+                android:textColor="#DC2626"
+                app:chipBackgroundColor="#FEE2E2"
                 app:chipStrokeColor="#EF4444"
                 app:chipStrokeWidth="1dp"
                 app:checkedIconVisible="false"
@@ -214,9 +214,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:text="Chuyển khoản"
-                android:textColor="#C4B5FD"
-                app:chipBackgroundColor="#1C1C2A"
-                app:chipStrokeColor="#A78BFA"
+                android:textColor="#7C3AED"
+                app:chipBackgroundColor="#EDE9FE"
+                app:chipStrokeColor="#7C3AED"
                 app:chipStrokeWidth="1dp"
                 app:checkedIconVisible="false"
                 style="@style/Widget.MaterialComponents.Chip.Filter" />
@@ -265,7 +265,7 @@
             android:layout_marginTop="16dp"
             android:gravity="center"
             android:text="Không tìm thấy giao dịch nào"
-            android:textColor="#FFFFFF"
+            android:textColor="#1F2937"
             android:textSize="17sp"
             android:textStyle="bold" />
 

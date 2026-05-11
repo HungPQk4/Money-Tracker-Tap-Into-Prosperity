@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.utils.AnimUtils;
 import vn.edu.usth.tip.adapters.GoalAdapter;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 
@@ -50,10 +51,10 @@ public class GoalsFragment extends Fragment {
         // Header Add Goal Button
         View btnAddGoal = view.findViewById(R.id.btn_add_goal);
         if (btnAddGoal != null) {
-            btnAddGoal.setOnClickListener(v -> {
+            btnAddGoal.setOnClickListener(v -> AnimUtils.bounceClick(v, () -> {
                 AddGoalSheet sheet = new AddGoalSheet();
                 sheet.show(getChildFragmentManager(), "add_goal");
-            });
+            }));
         }
 
         // Setup RecyclerView

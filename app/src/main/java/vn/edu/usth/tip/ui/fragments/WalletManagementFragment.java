@@ -6,6 +6,7 @@ import vn.edu.usth.tip.viewmodels.AccountViewModel;
 import vn.edu.usth.tip.network.responses.AccountResponse;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.utils.AnimUtils;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -25,17 +26,21 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class WalletManagementFragment extends Fragment
         implements WalletAdapter.WalletActionListener {
 
+    private enum SortOrder { DEFAULT, NAME_ASC, NAME_DESC, BALANCE_DESC, BALANCE_ASC }
+
     private AccountViewModel accountViewModel;
     private WalletAdapter adapter;
     private List<Wallet> currentWallets = new ArrayList<>();
+    private SortOrder currentSort = SortOrder.DEFAULT;
 
     private View emptyState;
-    private TextView tvSummaryTotal, tvSummaryCount;
+    private TextView tvSummaryTotal, tvSummaryCount, tvSort;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -54,9 +59,11 @@ public class WalletManagementFragment extends Fragment
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        emptyState      = view.findViewById(R.id.layout_empty_state);
-        tvSummaryTotal  = view.findViewById(R.id.tv_summary_total);
-        tvSummaryCount  = view.findViewById(R.id.tv_summary_count);
+        emptyState     = view.findViewById(R.id.layout_empty_state);
+        tvSummaryTotal = view.findViewById(R.id.tv_summary_total);
+        tvSummaryCount = view.findViewById(R.id.tv_summary_count);
+        tvSort         = view.findViewById(R.id.tv_sort_wallets);
+        tvSort.setOnClickListener(this::showSortMenu);
         
         TextView tvSummaryIncluded = view.findViewById(R.id.tv_summary_included);
 
@@ -110,7 +117,7 @@ public class WalletManagementFragment extends Fragment
             }
 
             currentWallets = newWallets;
-            adapter.updateData(currentWallets);
+            adapter.updateData(applySorted(currentWallets));
             
             // Update Summary
             tvSummaryCount.setText(currentWallets.size() + " ví");
@@ -180,10 +187,10 @@ public class WalletManagementFragment extends Fragment
 
         // FAB
         ExtendedFloatingActionButton fab = view.findViewById(R.id.fab_add_wallet);
-        fab.setOnClickListener(v -> openAddWalletSheet());
+        fab.setOnClickListener(v -> AnimUtils.bounceClick(v, this::openAddWalletSheet));
 
         view.findViewById(R.id.btn_empty_add)
-                .setOnClickListener(v -> openAddWalletSheet());
+                .setOnClickListener(v -> AnimUtils.bounceClick(v, this::openAddWalletSheet));
 
         view.findViewById(R.id.btn_back)
                 .setOnClickListener(v -> Navigation.findNavController(v).navigateUp());
@@ -266,6 +273,61 @@ public class WalletManagementFragment extends Fragment
         req.setColorHex(String.format("#%06X", (0xFFFFFF & wallet.getColor())));
         
         accountViewModel.updateAccount(wallet.getId(), req);
+    }
+
+    private List<Wallet> applySorted(List<Wallet> source) {
+        List<Wallet> copy = new ArrayList<>(source);
+        switch (currentSort) {
+            case NAME_ASC:
+                Collections.sort(copy, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+                break;
+            case NAME_DESC:
+                Collections.sort(copy, (a, b) -> b.getName().compareToIgnoreCase(a.getName()));
+                break;
+            case BALANCE_DESC:
+                Collections.sort(copy, (a, b) -> Long.compare(b.getBalanceVnd(), a.getBalanceVnd()));
+                break;
+            case BALANCE_ASC:
+                Collections.sort(copy, (a, b) -> Long.compare(a.getBalanceVnd(), b.getBalanceVnd()));
+                break;
+            default:
+                break;
+        }
+        return copy;
+    }
+
+    private void showSortMenu(android.view.View anchor) {
+        android.view.ContextThemeWrapper wrapper =
+                new android.view.ContextThemeWrapper(requireContext(), R.style.LightPopupMenuStyle);
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(wrapper, anchor);
+        popup.inflate(R.menu.menu_wallet_sort);
+
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.sort_default)           currentSort = SortOrder.DEFAULT;
+            else if (id == R.id.sort_name_asc)     currentSort = SortOrder.NAME_ASC;
+            else if (id == R.id.sort_name_desc)    currentSort = SortOrder.NAME_DESC;
+            else if (id == R.id.sort_balance_desc) currentSort = SortOrder.BALANCE_DESC;
+            else if (id == R.id.sort_balance_asc)  currentSort = SortOrder.BALANCE_ASC;
+            else return false;
+
+            updateSortLabel();
+            adapter.updateData(applySorted(currentWallets));
+            return true;
+        });
+        popup.show();
+    }
+
+    private void updateSortLabel() {
+        String label;
+        switch (currentSort) {
+            case NAME_ASC:      label = "Tên A→Z ▴";    break;
+            case NAME_DESC:     label = "Tên Z→A ▾";    break;
+            case BALANCE_DESC:  label = "Cao nhất ▾";   break;
+            case BALANCE_ASC:   label = "Thấp nhất ▴";  break;
+            default:            label = "Sắp xếp";      break;
+        }
+        tvSort.setText(label);
     }
 
     private void openAddWalletSheet() {

@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.utils.AnimUtils;
 import androidx.lifecycle.ViewModelProvider;
 
 public class DashboardFragment extends BaseFragment {
@@ -170,32 +171,32 @@ public class DashboardFragment extends BaseFragment {
         // ── Quick Actions ─────────────────────────────────────────────
         View btnAddExpense = view.findViewById(R.id.btn_add_expense);
         if (btnAddExpense != null) {
-            btnAddExpense.setOnClickListener(v -> {
+            btnAddExpense.setOnClickListener(v -> AnimUtils.bounceClick(v, () -> {
                 viewModel.setDefaultNewTransactionType(Transaction.Type.EXPENSE);
                 Navigation.findNavController(v).navigate(R.id.action_dashboard_to_newTransaction);
-            });
+            }));
         }
 
         View btnAddIncome = view.findViewById(R.id.btn_add_income);
         if (btnAddIncome != null) {
-            btnAddIncome.setOnClickListener(v -> {
+            btnAddIncome.setOnClickListener(v -> AnimUtils.bounceClick(v, () -> {
                 viewModel.setDefaultNewTransactionType(Transaction.Type.INCOME);
                 Navigation.findNavController(v).navigate(R.id.action_dashboard_to_newTransaction);
-            });
+            }));
         }
 
         View btnScanReceipt = view.findViewById(R.id.btn_scan_receipt);
         if (btnScanReceipt != null) {
             btnScanReceipt.setOnClickListener(v ->
-                    Navigation.findNavController(v).navigate(R.id.action_dashboard_to_scanReceipt)
-            );
+                    AnimUtils.bounceClick(v, () ->
+                            Navigation.findNavController(v).navigate(R.id.action_dashboard_to_scanReceipt)));
         }
 
         View btnBudgets = view.findViewById(R.id.btn_budgets);
         if (btnBudgets != null) {
             btnBudgets.setOnClickListener(v ->
-                    Navigation.findNavController(v).navigate(R.id.action_dashboard_to_budgets)
-            );
+                    AnimUtils.bounceClick(v, () ->
+                            Navigation.findNavController(v).navigate(R.id.action_dashboard_to_budgets)));
         }
 
         // ── Filter Tabs ───────────────────────────────────────────────
@@ -203,9 +204,9 @@ public class DashboardFragment extends BaseFragment {
         tabWeek  = view.findViewById(R.id.tab_week);
         tabMonth = view.findViewById(R.id.tab_month);
 
-        tabToday.setOnClickListener(v -> selectTab(TAB_TODAY));
-        tabWeek.setOnClickListener(v  -> selectTab(TAB_WEEK));
-        tabMonth.setOnClickListener(v -> selectTab(TAB_MONTH));
+        tabToday.setOnClickListener(v -> AnimUtils.bounceClick(v, () -> selectTab(TAB_TODAY)));
+        tabWeek.setOnClickListener(v  -> AnimUtils.bounceClick(v, () -> selectTab(TAB_WEEK)));
+        tabMonth.setOnClickListener(v -> AnimUtils.bounceClick(v, () -> selectTab(TAB_MONTH)));
 
         selectTab(TAB_TODAY);
 
@@ -213,14 +214,14 @@ public class DashboardFragment extends BaseFragment {
         View tvSeeAll = view.findViewById(R.id.tv_see_all);
         if (tvSeeAll != null) {
             tvSeeAll.setOnClickListener(v ->
-                    Navigation.findNavController(v).navigate(R.id.action_dashboard_to_allTransactions)
-            );
+                    AnimUtils.bounceClick(v, () ->
+                            Navigation.findNavController(v).navigate(R.id.action_dashboard_to_allTransactions)));
         }
         View btnSeeAll = view.findViewById(R.id.btn_see_all_transactions);
         if (btnSeeAll != null) {
             btnSeeAll.setOnClickListener(v ->
-                    Navigation.findNavController(v).navigate(R.id.action_dashboard_to_allTransactions)
-            );
+                    AnimUtils.bounceClick(v, () ->
+                            Navigation.findNavController(v).navigate(R.id.action_dashboard_to_allTransactions)));
         }
 
         // ── Sync API ngầm ─────────────────────────────

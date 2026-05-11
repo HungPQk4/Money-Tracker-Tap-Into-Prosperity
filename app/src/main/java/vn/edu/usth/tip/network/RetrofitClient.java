@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import vn.edu.usth.tip.utils.TokenManager;
 
 public class RetrofitClient {
-    private static final String BASE_URL = "http://127.0.0.1:8080/api/";
+    private static final String BASE_URL = "https://aviation-skincare-undertone.ngrok-free.dev/api/";
     private static Retrofit retrofit = null;
 
     public static <T> T createService(Class<T> serviceClass, TokenManager tokenManager) {
@@ -23,6 +23,8 @@ public class RetrofitClient {
             Request original = chain.request();
             Request.Builder builder = original.newBuilder();
 
+            builder.header("ngrok-skip-browser-warning", "true");
+
             if (tokenManager != null && tokenManager.getToken() != null) {
                 builder.header("Authorization", "Bearer " + tokenManager.getToken());
             }
@@ -33,7 +35,7 @@ public class RetrofitClient {
             if ((response.code() == 401 || response.code() == 403) && tokenManager != null) {
                 tokenManager.clear();
             }
-            
+
             return response;
         });
 
@@ -51,7 +53,13 @@ public class RetrofitClient {
         if (retrofit == null) {
             HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
             logging.setLevel(HttpLoggingInterceptor.Level.BODY);
-            OkHttpClient client = new OkHttpClient.Builder().addInterceptor(logging).build();
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .addInterceptor(logging)
+                    .addInterceptor(chain -> chain.proceed(
+                            chain.request().newBuilder()
+                                    .header("ngrok-skip-browser-warning", "true")
+                                    .build()))
+                    .build();
             retrofit = new Retrofit.Builder()
                     .baseUrl(BASE_URL)
                     .addConverterFactory(GsonConverterFactory.create())

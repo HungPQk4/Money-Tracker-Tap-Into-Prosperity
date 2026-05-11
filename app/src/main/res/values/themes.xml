@@ -31,6 +31,11 @@
 
 
 
+    <style name="FabShape14">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">14dp</item>
+    </style>
+
     <style name="NumpadKey">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">72dp</item>

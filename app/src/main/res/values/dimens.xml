@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bottom Navigation Bar -->
+    <dimen name="bottom_nav_height">52dp</dimen>
+    <dimen name="bottom_nav_icon_size">20dp</dimen>
+    <dimen name="bottom_nav_corner_radius">20dp</dimen>
+    <dimen name="bottom_nav_elevation">10dp</dimen>
+</resources>

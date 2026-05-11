@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.utils.AnimUtils;
 import vn.edu.usth.tip.adapters.DebtLoanAdapter;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 
@@ -50,10 +51,10 @@ public class DebtsLoansFragment extends Fragment {
         // Add Button
         View btnAddDebt = view.findViewById(R.id.btn_add_debt);
         if (btnAddDebt != null) {
-            btnAddDebt.setOnClickListener(v -> {
+            btnAddDebt.setOnClickListener(v -> AnimUtils.bounceClick(v, () -> {
                 AddDebtSheet sheet = new AddDebtSheet();
                 sheet.show(getChildFragmentManager(), "add_debt");
-            });
+            }));
         }
 
         // Setup RecyclerView
