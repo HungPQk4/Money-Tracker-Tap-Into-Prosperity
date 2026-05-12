@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Root đổi sang CoordinatorLayout: bắt buộc để BottomAppBar.Behavior
-    đặt FAB vào cradle đúng cách. Đây là cách Material chính thức làm.
--->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -14,7 +10,6 @@
     android:clipToPadding="false"
     tools:context=".MainActivity">
 
-    <!-- Fragment Container: chừa 68dp dưới cho BottomAppBar -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/nav_host_fragment"
         android:name="androidx.navigation.fragment.NavHostFragment"
@@ -25,185 +20,159 @@
         app:defaultNavHost="true"
         app:navGraph="@navigation/nav_graph" />
 
-    <!--
-        BottomAppBar 68dp (cao hơn để chứa icon + label).
-        fabCradleVerticalOffset=4dp → FAB 48dp nhô lên 20dp, ôm cradle đẹp.
-    -->
-    <com.google.android.material.bottomappbar.BottomAppBar
+    <LinearLayout
         android:id="@+id/bottomAppBar"
         android:layout_width="match_parent"
         android:layout_height="68dp"
         android:layout_gravity="bottom"
-        android:backgroundTint="#FFFFFF"
-        app:contentInsetEnd="0dp"
-        app:contentInsetStart="0dp"
-        app:elevation="8dp"
-        app:fabAlignmentMode="center"
-        app:fabAnimationMode="slide"
-        app:fabCradleMargin="6dp"
-        app:fabCradleRoundedCornerRadius="20dp"
-        app:fabCradleVerticalOffset="0dp"
-        app:hideOnScroll="false">
+        android:background="#FFFFFF"
+        android:baselineAligned="false"
+        android:elevation="8dp"
+        android:orientation="horizontal">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/navHome"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:baselineAligned="false"
-            android:orientation="horizontal">
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingVertical="6dp">
 
-            <!-- ============== HOME ============== -->
-            <LinearLayout
-                android:id="@+id/navHome"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingVertical="6dp">
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="Home"
+                android:duplicateParentState="true"
+                android:src="@drawable/ic_home"
+                app:tint="@color/selector_bottom_nav" />
 
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:contentDescription="Home"
-                    android:duplicateParentState="true"
-                    android:src="@drawable/ic_home"
-                    app:tint="@color/selector_bottom_nav" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:duplicateParentState="true"
-                    android:text="Home"
-                    android:textColor="@color/selector_bottom_nav"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- ============== STATS ============== -->
-            <LinearLayout
-                android:id="@+id/navStats"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingVertical="6dp">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:contentDescription="Stats"
-                    android:duplicateParentState="true"
-                    android:src="@drawable/ic_stats"
-                    app:tint="@color/selector_bottom_nav" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:duplicateParentState="true"
-                    android:text="Stats"
-                    android:textColor="@color/selector_bottom_nav"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- ====== KHOẢNG TRỐNG CHO FAB CRADLE ====== -->
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1" />
-
-            <!-- ============== GOALS ============== -->
-            <LinearLayout
-                android:id="@+id/navGoals"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingVertical="6dp">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:contentDescription="Goals"
-                    android:duplicateParentState="true"
-                    android:src="@drawable/ic_calendar"
-                    app:tint="@color/selector_bottom_nav" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:duplicateParentState="true"
-                    android:text="Goals"
-                    android:textColor="@color/selector_bottom_nav"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- ============== WALLET ============== -->
-            <LinearLayout
-                android:id="@+id/navWallet"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingVertical="6dp">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:contentDescription="Wallet"
-                    android:duplicateParentState="true"
-                    android:src="@drawable/ic_user"
-                    app:tint="@color/selector_bottom_nav" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:duplicateParentState="true"
-                    android:text="Wallet"
-                    android:textColor="@color/selector_bottom_nav"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:duplicateParentState="true"
+                android:text="Home"
+                android:textColor="@color/selector_bottom_nav"
+                android:textSize="11sp" />
         </LinearLayout>
-    </com.google.android.material.bottomappbar.BottomAppBar>
 
-    <!--
-        FAB tím #735BF2, 48x48dp, bo góc 14dp (qua @style/FabShape14).
-        anchorGravity="center" + Behavior mặc định tự đặt FAB vào cradle.
-    -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:backgroundTint="#735BF2"
-        android:contentDescription="Add transaction"
-        android:outlineAmbientShadowColor="#1A735BF2"
-        android:outlineSpotShadowColor="#4D735BF2"
-        android:src="@android:drawable/ic_input_add"
-        app:borderWidth="0dp"
-        app:elevation="6dp"
-        app:fabCustomSize="48dp"
-        app:layout_anchor="@id/bottomAppBar"
-        app:layout_anchorGravity="center"
-        app:maxImageSize="20dp"
-        app:shapeAppearance="@style/FabShape14"
-        app:tint="#FFFFFF" />
+        <LinearLayout
+            android:id="@+id/navStats"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="Stats"
+                android:duplicateParentState="true"
+                android:src="@drawable/ic_stats"
+                app:tint="@color/selector_bottom_nav" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:duplicateParentState="true"
+                android:text="Stats"
+                android:textColor="@color/selector_bottom_nav"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:backgroundTint="#735BF2"
+                android:contentDescription="Add transaction"
+                android:outlineAmbientShadowColor="#1A735BF2"
+                android:outlineSpotShadowColor="#4D735BF2"
+                android:src="@android:drawable/ic_input_add"
+                app:borderWidth="0dp"
+                app:elevation="6dp"
+                app:fabCustomSize="48dp"
+                app:maxImageSize="20dp"
+                app:shapeAppearance="@style/FabShape14"
+                app:tint="#FFFFFF" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/navGoals"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="Goals"
+                android:duplicateParentState="true"
+                android:src="@drawable/ic_calendar"
+                app:tint="@color/selector_bottom_nav" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:duplicateParentState="true"
+                android:text="Goals"
+                android:textColor="@color/selector_bottom_nav"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navWallet"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="Wallet"
+                android:duplicateParentState="true"
+                android:src="@drawable/ic_user"
+                app:tint="@color/selector_bottom_nav" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:duplicateParentState="true"
+                android:text="Wallet"
+                android:textColor="@color/selector_bottom_nav"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

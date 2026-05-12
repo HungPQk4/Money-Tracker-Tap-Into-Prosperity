@@ -77,6 +77,13 @@ public class AnalyticsFragment extends Fragment {
         dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
         appViewModel = new ViewModelProvider(requireActivity()).get(AppViewModel.class);
 
+        // Nhúng SpendingByCategoryFragment vào container (chỉ lần đầu, không nhân đôi khi rotate)
+        if (savedInstanceState == null) {
+            getChildFragmentManager().beginTransaction()
+                    .replace(R.id.container_donut_chart, new SpendingByCategoryFragment())
+                    .commit();
+        }
+
         dashboardViewModel.getSummaryData().observe(getViewLifecycleOwner(), summary -> updateAnalyticsSummary());
         appViewModel.getTransactions().observe(getViewLifecycleOwner(), txs -> {
             updateAnalyticsSummary();

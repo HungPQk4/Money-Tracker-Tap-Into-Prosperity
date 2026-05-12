@@ -660,6 +660,23 @@ public class TransactionRepository {
         return tx;
     }
 
+    /**
+     * Trả về LiveData danh sách giao dịch EXPENSE trong một tháng cụ thể.
+     * Dùng nguồn Room cục bộ (luôn đồng bộ qua syncTransactions).
+     */
+    public androidx.lifecycle.LiveData<List<Transaction>> getMonthlyExpenses(int year, int month) {
+        java.util.Calendar start = java.util.Calendar.getInstance();
+        start.set(year, month - 1, 1, 0, 0, 0);
+        start.set(java.util.Calendar.MILLISECOND, 0);
+        long startMs = start.getTimeInMillis();
+
+        java.util.Calendar end = (java.util.Calendar) start.clone();
+        end.add(java.util.Calendar.MONTH, 1);
+        long endMs = end.getTimeInMillis();
+
+        return transactionDao.getTransactionsBetween(startMs, endMs);
+    }
+
     /** Post runnable về Main thread an toàn */
     private void runOnMain(Runnable action) {
         new android.os.Handler(android.os.Looper.getMainLooper()).post(action);

@@ -5,7 +5,9 @@
       "Bash(./gradlew lintDebug)",
       "Bash(Get-ChildItem -Path \"f:\\\\Money-Tracker-Tap-Into-Prosperity\\\\app\\\\src\\\\main\" -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(Sort-Object)"
+      "Bash(Sort-Object)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)"
     ]
   }
 }

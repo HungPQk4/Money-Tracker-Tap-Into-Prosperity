@@ -24,7 +24,7 @@ import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 
-import com.google.android.material.bottomappbar.BottomAppBar;
+// Bỏ import BottomAppBar vì bar giờ là LinearLayout phẳng (xem activity_main.xml).
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class MainActivity extends AppCompatActivity {
@@ -32,7 +32,10 @@ public class MainActivity extends AppCompatActivity {
     private NavController navController;
     private AccountViewModel accountViewModel;
 
-    private BottomAppBar bottomAppBar;
+    // Bar giờ là LinearLayout (không còn BottomAppBar). Khai báo dạng View
+    // để tất cả method animate()/setPadding()/setLayoutParams()/setVisibility()...
+    // dùng API của lớp View cơ sở, chạy y nguyên không cần đổi gì khác.
+    private View bottomAppBar;
     private FloatingActionButton fab;
     private LinearLayout navHome, navStats, navGoals, navWallet;
     private LinearLayout activeTab = null;
@@ -61,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Inset handling đúng cách cho edge-to-edge:
      * - Root: chừa khoảng cho status bar trên + cutout 2 bên, KHÔNG chừa dưới.
-     * - BottomAppBar: tự cao 68dp + chiều cao gesture bar, padding bottom = gesture bar.
+     * - Bar: tự cao 68dp + chiều cao gesture bar, padding bottom = gesture bar.
      *   → Bar trắng tràn xuống đáy màn hình, icon/label/FAB nằm phía trên gesture bar.
      */
     private void applyWindowInsets() {
@@ -71,7 +74,8 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        BottomAppBar bar = findViewById(R.id.bottomAppBar);
+        // Đổi từ BottomAppBar → View vì bar giờ là LinearLayout.
+        View bar = findViewById(R.id.bottomAppBar);
         final int baseHeightPx = (int) (68 * getResources().getDisplayMetrics().density);
 
         ViewCompat.setOnApplyWindowInsetsListener(bar, (v, insets) -> {
@@ -123,16 +127,16 @@ public class MainActivity extends AppCompatActivity {
         boolean homeActive   = destId == R.id.dashboardFragment;
         boolean statsActive  = destId == R.id.analyticsFragment;
         boolean goalsActive  = destId == R.id.goalsFragment
-                            || destId == R.id.budgetsFragment
-                            || destId == R.id.debtsFragment;
+                || destId == R.id.budgetsFragment
+                || destId == R.id.debtsFragment;
         boolean walletActive = destId == R.id.walletManagementFragment
-                            || destId == R.id.profileFragment;
+                || destId == R.id.profileFragment;
 
         LinearLayout newActive = homeActive   ? navHome
-                               : statsActive  ? navStats
-                               : goalsActive  ? navGoals
-                               : walletActive ? navWallet
-                               : null;
+                : statsActive  ? navStats
+                : goalsActive  ? navGoals
+                : walletActive ? navWallet
+                : null;
 
         if (newActive != null && newActive != activeTab) {
             if (activeTab != null) deactivateTab(activeTab);
@@ -202,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateBottomBarVisibility(int destId) {
         boolean hide = destId == R.id.newTransactionFragment
-                    || destId == R.id.scanReceiptFragment;
+                || destId == R.id.scanReceiptFragment;
         if (hide) {
             float slideY = bottomAppBar.getHeight() > 0
                     ? bottomAppBar.getHeight()
