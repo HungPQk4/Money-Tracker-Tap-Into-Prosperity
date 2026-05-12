@@ -228,22 +228,6 @@ public class DashboardFragment extends BaseFragment {
                             Navigation.findNavController(v).navigate(R.id.action_dashboard_to_allTransactions)));
         }
 
-        // ── Sync API ngầm ─────────────────────────────
-        viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
-            @Override
-            public void onSuccess() {
-                if (getActivity() != null) {
-                    getActivity().runOnUiThread(() -> {
-                        // Reload cả summary VÀ account balances từ server
-                        // vì sau sync, server đã cập nhật số dư ví (tích lũy tất cả giao dịch)
-                        dashboardViewModel.loadDashboardSummary();
-                        accountViewModel.loadAccounts();
-                    });
-                }
-            }
-            @Override
-            public void onError(String message) {}
-        });
     }
 
     private void updateOptimisticDashboard(View view) {
@@ -289,9 +273,9 @@ public class DashboardFragment extends BaseFragment {
                         if (transactions != null) {
                             for (Transaction t : transactions) {
                                 if (!t.isSynced() && t.getWalletName() != null && t.getWalletName().equals(w.getName())) {
-                                    if (t.getType() == Transaction.Type.INCOME)   balance += t.getAmountVnd();
-                                    else if (t.getType() == Transaction.Type.EXPENSE) balance -= t.getAmountVnd();
-                                    else if (t.getType() == Transaction.Type.TRANSFER) balance -= t.getAmountVnd();
+                                    if (t.getType() == Transaction.Type.INCOME)        balance += t.getAmountVnd();
+                                    else if (t.getType() == Transaction.Type.EXPENSE)  balance -= t.getAmountVnd();
+                                    // TRANSFER: net effect trên tổng tài sản = 0 → bỏ qua
                                 }
                             }
                         }

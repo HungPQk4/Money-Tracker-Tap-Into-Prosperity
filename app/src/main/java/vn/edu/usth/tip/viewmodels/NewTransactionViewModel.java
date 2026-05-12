@@ -42,6 +42,7 @@ public class NewTransactionViewModel extends AndroidViewModel {
     private final MutableLiveData<UiState> uiState = new MutableLiveData<>(new UiState());
     private final MutableLiveData<String> validationError = new MutableLiveData<>();
     private final MutableLiveData<Transaction> transactionToSave = new MutableLiveData<>();
+    private final MutableLiveData<Transaction> transactionToUpdate = new MutableLiveData<>();
 
     // Accounts list loaded from server
     private final MutableLiveData<List<AccountResponse>> accounts = new MutableLiveData<>();
@@ -58,6 +59,7 @@ public class NewTransactionViewModel extends AndroidViewModel {
     public LiveData<UiState> getUiState() { return uiState; }
     public LiveData<String> getValidationError() { return validationError; }
     public LiveData<Transaction> getTransactionToSave() { return transactionToSave; }
+    public LiveData<Transaction> getTransactionToUpdate() { return transactionToUpdate; }
     public LiveData<List<AccountResponse>> getAccounts() { return accounts; }
     public LiveData<String> getAccountsError() { return accountsError; }
 
@@ -179,9 +181,8 @@ public class NewTransactionViewModel extends AndroidViewModel {
             return;
         }
 
-        Transaction tx;
         if (state.editingTx != null) {
-            tx = state.editingTx;
+            Transaction tx = state.editingTx;
             tx.setTitle(state.note.isEmpty() ? selectedCategory.getName() : state.note);
             tx.setCategory(selectedCategory.getName());
             tx.setIcon(selectedCategory.getIcon());
@@ -190,11 +191,12 @@ public class NewTransactionViewModel extends AndroidViewModel {
             tx.setType(state.selectedType);
             tx.setTimestampMs(state.timestampMs);
             tx.setNote(state.note);
-            // Set IDs for direct UUID resolution (avoids fragile name-based lookups)
             if (state.selectedAccountId != null) tx.setAccountId(state.selectedAccountId);
             if (state.selectedCategoryId != null) tx.setCategoryId(state.selectedCategoryId);
+            transactionToUpdate.setValue(tx);
+            transactionToUpdate.setValue(null);
         } else {
-            tx = new Transaction(
+            Transaction tx = new Transaction(
                     UUID.randomUUID().toString(),
                     state.note.isEmpty() ? selectedCategory.getName() : state.note,
                     selectedCategory.getName(),
@@ -205,12 +207,10 @@ public class NewTransactionViewModel extends AndroidViewModel {
                     state.timestampMs,
                     state.note
             );
-            // Set IDs for direct UUID resolution (avoids fragile name-based lookups)
             if (state.selectedAccountId != null) tx.setAccountId(state.selectedAccountId);
             if (state.selectedCategoryId != null) tx.setCategoryId(state.selectedCategoryId);
+            transactionToSave.setValue(tx);
+            transactionToSave.setValue(null);
         }
-
-        transactionToSave.setValue(tx);
-        transactionToSave.setValue(null); // Reset after emitting
     }
 }

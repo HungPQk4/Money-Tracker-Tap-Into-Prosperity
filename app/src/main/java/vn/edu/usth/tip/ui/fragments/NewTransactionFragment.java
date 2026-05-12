@@ -8,6 +8,7 @@ import vn.edu.usth.tip.viewmodels.AppViewModel;
 import vn.edu.usth.tip.viewmodels.NewTransactionViewModel;
 
 import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -122,13 +123,17 @@ public class NewTransactionFragment extends Fragment {
 
         newTxViewModel.getTransactionToSave().observe(getViewLifecycleOwner(), tx -> {
             if (tx != null) {
-                if (appViewModel.getEditingTransaction() != null) {
-                    appViewModel.updateTransaction(tx);
-                    Toast.makeText(requireContext(), "Đã cập nhật giao dịch", Toast.LENGTH_SHORT).show();
-                } else {
-                    appViewModel.addTransaction(tx);
-                    Toast.makeText(requireContext(), "Đã lưu giao dịch", Toast.LENGTH_SHORT).show();
-                }
+                appViewModel.addTransaction(tx);
+                Toast.makeText(requireContext(), "Đã lưu giao dịch", Toast.LENGTH_SHORT).show();
+                appViewModel.clearEditingTransaction();
+                Navigation.findNavController(requireView()).navigateUp();
+            }
+        });
+
+        newTxViewModel.getTransactionToUpdate().observe(getViewLifecycleOwner(), tx -> {
+            if (tx != null) {
+                appViewModel.updateTransaction(tx);
+                Toast.makeText(requireContext(), "Đã cập nhật giao dịch", Toast.LENGTH_SHORT).show();
                 appViewModel.clearEditingTransaction();
                 Navigation.findNavController(requireView()).navigateUp();
             }
@@ -292,13 +297,35 @@ public class NewTransactionFragment extends Fragment {
         });
 
         view.findViewById(R.id.btn_select_date).setOnClickListener(v -> {
+            NewTransactionViewModel.UiState currentState = newTxViewModel.getUiState().getValue();
+            long currentTs = currentState != null ? currentState.timestampMs : System.currentTimeMillis();
+
             MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
                     .setTitleText("Chọn ngày giao dịch")
-                    .setSelection(newTxViewModel.getUiState().getValue().timestampMs)// Optional: ensure light theme
+                    .setSelection(currentTs)
                     .build();
 
             datePicker.addOnPositiveButtonClickListener(selection -> {
-                newTxViewModel.updateDate(selection);
+                // selection là UTC midnight; tách ra year/month/day theo UTC
+                java.util.TimeZone utc = java.util.TimeZone.getTimeZone("UTC");
+                Calendar utcCal = Calendar.getInstance(utc);
+                utcCal.setTimeInMillis(selection);
+                int year  = utcCal.get(Calendar.YEAR);
+                int month = utcCal.get(Calendar.MONTH);
+                int day   = utcCal.get(Calendar.DAY_OF_MONTH);
+
+                // Lấy giờ:phút hiện tại của giao dịch để làm giá trị mặc định
+                Calendar existingCal = Calendar.getInstance();
+                existingCal.setTimeInMillis(currentTs);
+                int initHour   = existingCal.get(Calendar.HOUR_OF_DAY);
+                int initMinute = existingCal.get(Calendar.MINUTE);
+
+                new TimePickerDialog(requireContext(), (tp, hour, minute) -> {
+                    Calendar finalCal = Calendar.getInstance();
+                    finalCal.set(year, month, day, hour, minute, 0);
+                    finalCal.set(Calendar.MILLISECOND, 0);
+                    newTxViewModel.updateDate(finalCal.getTimeInMillis());
+                }, initHour, initMinute, true).show();
             });
 
             datePicker.show(getChildFragmentManager(), "transaction_date_picker");
@@ -313,14 +340,19 @@ public class NewTransactionFragment extends Fragment {
         Calendar yesterday = Calendar.getInstance();
         yesterday.add(Calendar.DAY_OF_YEAR, -1);
 
+        String time = String.format(Locale.getDefault(), "%02d:%02d",
+                target.get(Calendar.HOUR_OF_DAY),
+                target.get(Calendar.MINUTE));
+
         if (isSameDay(target, today)) {
-            return "Hôm nay";
+            return "Hôm nay  " + time;
         } else if (isSameDay(target, yesterday)) {
-            return "Hôm qua";
+            return "Hôm qua  " + time;
         } else {
             SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd/MM", new Locale("vi", "VN"));
             String formatted = sdf.format(target.getTime());
-            return Character.toUpperCase(formatted.charAt(0)) + formatted.substring(1);
+            String date = Character.toUpperCase(formatted.charAt(0)) + formatted.substring(1);
+            return date + "  " + time;
         }
     }
 

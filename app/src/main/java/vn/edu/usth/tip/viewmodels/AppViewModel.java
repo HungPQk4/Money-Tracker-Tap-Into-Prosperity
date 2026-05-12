@@ -176,6 +176,7 @@ public class AppViewModel extends AndroidViewModel {
         c.set(Calendar.HOUR_OF_DAY, 0);
         c.set(Calendar.MINUTE, 0);
         c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
         long startOfMonth = c.getTimeInMillis();
 
         List<Wallet> calculatedWallets = new ArrayList<>();
@@ -347,7 +348,7 @@ public class AppViewModel extends AndroidViewModel {
 
     public void updateTransaction(Transaction tx) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            transactionDao.update(tx);
+            transactionDao.insert(tx); // INSERT OR REPLACE — works even if sync deleted the record
             transactionRepository.updateTransactionOnline(tx);
         });
     }

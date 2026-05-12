@@ -41,15 +41,21 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             UUID userId, LocalDate since);
 
     /**
-     * Kiểm tra trùng khi sync: cùng user + amount + ngày giao dịch + loại.
+     * Kiểm tra trùng khi sync: cùng user + amount + ngày + loại + category + note.
      * Dùng native query để tránh issue với OffsetDateTime trong JPQL.
      */
-    @Query(value = "SELECT COUNT(*) > 0 FROM transactions WHERE user_id = :userId AND amount = :amount AND transaction_date = :txDate AND type = :type",
+    @Query(value = "SELECT COUNT(*) > 0 FROM transactions t " +
+                   "JOIN categories c ON t.category_id = c.id " +
+                   "WHERE t.user_id = :userId AND t.amount = :amount AND t.transaction_date = :txDate " +
+                   "AND t.type = :type AND LOWER(c.name) = LOWER(:categoryName) " +
+                   "AND ((:note IS NULL AND t.note IS NULL) OR LOWER(t.note) = LOWER(:note))",
            nativeQuery = true)
     boolean existsDuplicate(
             @Param("userId") UUID userId,
             @Param("amount") BigDecimal amount,
             @Param("txDate") LocalDate txDate,
-            @Param("type") String type
+            @Param("type") String type,
+            @Param("categoryName") String categoryName,
+            @Param("note") String note
     );
 }

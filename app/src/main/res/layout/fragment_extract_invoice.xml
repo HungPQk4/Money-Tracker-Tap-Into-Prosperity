@@ -1,36 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    Màn hình trích xuất hóa đơn (sau OCR).
+    - Light theme: nền #F5F5F7 (off-white), card #FFFFFF, chữ tối tương phản.
+    - Layout: ảnh hóa đơn ở nửa TRÊN (320dp), form nửa DƯỚI scroll được.
+    - Cấu trúc field đồng nhất với new_transaction: amount, date, time, category, wallet, note.
+    - Toolbar trắng → cần set status bar icon TỐI MÀU trong theme (windowLightStatusBar=true).
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212">
+    android:background="#F5F5F7"
+    android:fitsSystemWindows="true">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#121212"
+        android:background="#F5F5F7"
         app:elevation="0dp">
 
         <androidx.appcompat.widget.Toolbar
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize">
-            
+            android:layout_height="?attr/actionBarSize"
+            android:background="#F5F5F7">
+
             <ImageView
                 android:id="@+id/btn_back"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_gravity="start"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Đóng"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
-                app:tint="#FFFFFF" />
+                app:tint="#1F1B2E" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="Chi tiết trích xuất"
-                android:textColor="#FFFFFF"
+                android:textColor="#1F1B2E"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -40,28 +50,86 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:fillViewport="true"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="32dp">
 
-            <!-- AI Sparkle Banner -->
+            <!-- ============ ẢNH HÓA ĐƠN (NỬA TRÊN) ============ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="320dp"
+                android:layout_marginTop="8dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <!-- Khi có ảnh: load vào đây qua Glide/Picasso bằng iv_receipt -->
+                    <ImageView
+                        android:id="@+id/iv_receipt"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="Ảnh hóa đơn"
+                        android:scaleType="centerCrop" />
+
+                    <!-- Khi chưa có ảnh: hiện placeholder, set GONE sau khi load -->
+                    <LinearLayout
+                        android:id="@+id/placeholder_image"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="64dp"
+                            android:layout_height="64dp"
+                            app:cardBackgroundColor="#F3F0FF"
+                            app:cardCornerRadius="32dp"
+                            app:cardElevation="0dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:padding="18dp"
+                                android:src="@android:drawable/ic_menu_camera"
+                                app:tint="#735BF2" />
+                        </androidx.cardview.widget.CardView>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Ảnh hóa đơn"
+                            android:textColor="#6B7280"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </FrameLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ============ BANNER: ĐÃ TỰ ĐỘNG ĐIỀN ============ -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="#1A192D"
-                app:cardCornerRadius="16dp"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="#F3F0FF"
+                app:cardCornerRadius="14dp"
                 app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:padding="14dp">
 
                     <androidx.cardview.widget.CardView
                         android:layout_width="32dp"
@@ -82,34 +150,34 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="AI đã tự động điền các thông tin"
-                        android:textColor="#909FFC"
-                        android:textSize="14sp"
+                        android:text="Đã tự động điền — kiểm tra &amp; xác nhận"
+                        android:textColor="#5849D6"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Amount Input -->
+            <!-- ============ SỐ TIỀN ============ -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="24dp"
                 android:text="Số tiền"
-                android:textColor="#A0A0B0"
-                android:textSize="14sp" />
+                android:textColor="#6B7280"
+                android:textSize="13sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="₫"
-                    android:textColor="#FFFFFF"
+                    android:textColor="#1F1B2E"
                     android:textSize="32sp"
                     android:textStyle="bold" />
 
@@ -117,28 +185,122 @@
                     android:id="@+id/et_amount"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
+                    android:hint="0"
                     android:inputType="numberDecimal"
-                    android:textColor="#FFFFFF"
-                    android:textSize="40sp"
+                    android:textColor="#1F1B2E"
+                    android:textColorHint="#D1D5DB"
+                    android:textSize="36sp"
                     android:textStyle="bold" />
             </LinearLayout>
-            
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="8dp"
-                android:background="#333333"/>
+                android:layout_marginTop="4dp"
+                android:background="#E5E7EB" />
 
-            <!-- Category -->
+            <!-- ============ THỜI GIAN (NGÀY + GIỜ) ============ -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
+                android:text="Thời gian giao dịch"
+                android:textColor="#6B7280"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <!-- Ngày -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/card_date"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1.4"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="14dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_menu_my_calendar"
+                            app:tint="#735BF2" />
+
+                        <TextView
+                            android:id="@+id/tv_date"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="1"
+                            android:text="12/05/2026"
+                            android:textColor="#1F1B2E"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Giờ -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/card_time"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="14dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_menu_recent_history"
+                            app:tint="#735BF2" />
+
+                        <TextView
+                            android:id="@+id/tv_time"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="1"
+                            android:text="14:30"
+                            android:textColor="#1F1B2E"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
+
+            <!-- ============ DANH MỤC ============ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
                 android:text="Danh mục"
-                android:textColor="#A0A0B0"
-                android:textSize="14sp" />
+                android:textColor="#6B7280"
+                android:textSize="13sp" />
 
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_category"
@@ -146,50 +308,60 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:foreground="?attr/selectableItemBackground"
-                app:cardBackgroundColor="#1A1A1A"
-                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="14dp"
                 app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:padding="12dp">
 
-                    <TextView
-                        android:id="@+id/tv_category_icon"
+                    <!-- Icon circle (CardView thay drawable cũ) -->
+                    <androidx.cardview.widget.CardView
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_circle_dark"
-                        android:gravity="center"
-                        android:textSize="20sp" />
+                        app:cardBackgroundColor="#F3F0FF"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp">
+
+                        <TextView
+                            android:id="@+id/tv_category_icon"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:textSize="20sp"
+                            tools:text="🍔" />
+                    </androidx.cardview.widget.CardView>
 
                     <TextView
                         android:id="@+id/tv_category_name"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
                         android:layout_weight="1"
-                        android:layout_marginStart="16dp"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp" />
+                        android:textColor="#1F1B2E"
+                        android:textSize="16sp"
+                        tools:text="Ăn uống" />
 
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@android:drawable/arrow_down_float"
-                        app:tint="#666666" />
+                        app:tint="#9CA3AF" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Wallet -->
+            <!-- ============ VÍ THANH TOÁN ============ -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
                 android:text="Ví thanh toán"
-                android:textColor="#A0A0B0"
-                android:textSize="14sp" />
+                android:textColor="#6B7280"
+                android:textSize="13sp" />
 
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_wallet"
@@ -197,80 +369,98 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:foreground="?attr/selectableItemBackground"
-                app:cardBackgroundColor="#1A1A1A"
-                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="14dp"
                 app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:padding="12dp">
 
-                    <TextView
-                        android:id="@+id/tv_wallet_icon"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="20sp" />
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        app:cardBackgroundColor="#F3F0FF"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp">
+
+                        <TextView
+                            android:id="@+id/tv_wallet_icon"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:textSize="20sp"
+                            tools:text="💳" />
+                    </androidx.cardview.widget.CardView>
 
                     <TextView
                         android:id="@+id/tv_wallet_name"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
                         android:layout_weight="1"
-                        android:layout_marginStart="16dp"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp" />
+                        android:textColor="#1F1B2E"
+                        android:textSize="16sp"
+                        tools:text="Ví tiền mặt" />
 
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@android:drawable/arrow_down_float"
-                        app:tint="#666666" />
+                        app:tint="#9CA3AF" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Note -->
+            <!-- ============ GHI CHÚ ============ -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
                 android:text="Ghi chú hóa đơn"
-                android:textColor="#A0A0B0"
-                android:textSize="14sp" />
+                android:textColor="#6B7280"
+                android:textSize="13sp" />
 
-            <EditText
-                android:id="@+id/et_note"
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:background="@drawable/bg_edittext"
-                android:hint="Thêm ghi chú..."
-                android:textColorHint="#666666"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:padding="16dp"
-                android:minLines="2"
-                android:gravity="top|start" />
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp">
 
-            <!-- Save Button -->
+                <EditText
+                    android:id="@+id/et_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:gravity="top|start"
+                    android:hint="Thêm ghi chú..."
+                    android:minLines="2"
+                    android:padding="14dp"
+                    android:textColor="#1F1B2E"
+                    android:textColorHint="#9CA3AF"
+                    android:textSize="15sp" />
+            </androidx.cardview.widget.CardView>
+
+            <!-- ============ NÚT LƯU ============ -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/btn_save"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:layout_marginTop="40dp"
-                android:layout_marginBottom="24dp"
+                android:layout_marginTop="28dp"
                 android:foreground="?attr/selectableItemBackground"
                 app:cardBackgroundColor="#735BF2"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
+                app:cardElevation="2dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:text="Xác nhận &amp; Lưu"
+                    android:text="Xác nhận &amp; Lưu giao dịch"
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:textStyle="bold" />

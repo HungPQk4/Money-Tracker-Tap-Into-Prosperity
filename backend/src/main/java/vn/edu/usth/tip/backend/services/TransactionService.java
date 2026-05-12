@@ -93,15 +93,16 @@ public class TransactionService {
         Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", "id", id));
 
-        // ── Hoàn nguyên số dư cũ trước khi update ──────────────────────────
-        Account account = tx.getAccount();
-        if (account != null && tx.getAmount() != null) {
-            BigDecimal current = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
+        // ── Hoàn nguyên số dư ví CŨ trước khi update ──────────────────────
+        Account oldAccount = tx.getAccount();
+        if (oldAccount != null && tx.getAmount() != null) {
+            BigDecimal current = oldAccount.getBalance() != null ? oldAccount.getBalance() : BigDecimal.ZERO;
             if (TransactionType.income == tx.getType()) {
-                account.setBalance(current.subtract(tx.getAmount()));
+                oldAccount.setBalance(current.subtract(tx.getAmount()));
             } else if (TransactionType.expense == tx.getType() || TransactionType.transfer == tx.getType()) {
-                account.setBalance(current.add(tx.getAmount()));
+                oldAccount.setBalance(current.add(tx.getAmount()));
             }
+            accountRepository.save(oldAccount);
         }
 
         // ── Áp dụng giá trị mới ────────────────────────────────────────────
@@ -117,15 +118,22 @@ public class TransactionService {
                     .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategoryId())));
         }
 
-        // ── Cập nhật số dư mới ─────────────────────────────────────────────
-        if (account != null) {
-            BigDecimal current = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
+        // ── Cập nhật ví MỚI (hỗ trợ đổi ví khi chỉnh sửa giao dịch) ────────
+        Account newAccount = (req.getAccountId() != null)
+                ? accountRepository.findById(req.getAccountId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Account", "id", req.getAccountId()))
+                : oldAccount;
+        tx.setAccount(newAccount);
+
+        // ── Áp dụng số dư cho ví mới ──────────────────────────────────────
+        if (newAccount != null) {
+            BigDecimal current = newAccount.getBalance() != null ? newAccount.getBalance() : BigDecimal.ZERO;
             if (TransactionType.income == req.getType()) {
-                account.setBalance(current.add(req.getAmount()));
+                newAccount.setBalance(current.add(req.getAmount()));
             } else if (TransactionType.expense == req.getType() || TransactionType.transfer == req.getType()) {
-                account.setBalance(current.subtract(req.getAmount()));
+                newAccount.setBalance(current.subtract(req.getAmount()));
             }
-            accountRepository.save(account);
+            accountRepository.save(newAccount);
         }
 
         return toResponse(transactionRepository.save(tx));
@@ -170,11 +178,18 @@ public class TransactionService {
 
             // ── Kiểm tra trùng lặp trước khi lưu ────────────────────────────
             // Dùng native query → truyền type dưới dạng String (lowercase)
+            String categoryName = null;
+            if (item.getCategoryId() != null) {
+                categoryName = categoryRepository.findById(item.getCategoryId())
+                        .map(c -> c.getName()).orElse(null);
+            }
             boolean duplicate = transactionRepository.existsDuplicate(
                     user.getId(),
                     item.getAmount(),
                     item.getTransactionDate(),
-                    item.getType() != null ? item.getType().name() : null
+                    item.getType() != null ? item.getType().name() : null,
+                    categoryName,
+                    item.getNote()
             );
             if (duplicate) {
                 skipped++;

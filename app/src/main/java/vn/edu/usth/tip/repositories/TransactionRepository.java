@@ -225,7 +225,7 @@ public class TransactionRepository {
                 // Mark synced=true BEFORE sending to prevent pushUnsyncedToServer()
                 // from picking up the same transaction and double-sending it.
                 tx.setSynced(true);
-                transactionDao.update(tx);
+                transactionDao.insert(tx); // INSERT OR REPLACE — an toàn hơn update nếu record bị xóa
 
                 String userIdStr = tokenManager.getUserId();
                 if (userIdStr == null) {
@@ -293,7 +293,7 @@ public class TransactionRepository {
     private void revertToUnsynced(Transaction tx) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             tx.setSynced(false);
-            transactionDao.update(tx);
+            transactionDao.insert(tx); // INSERT OR REPLACE — đảm bảo record không bị mất nếu sync đã xóa nó
         });
     }
 
