@@ -66,4 +66,16 @@ dependencies {
 
     // MPAndroidChart — donut / pie / bar charts
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    // CameraX
+    val camerax_version = "1.3.4"
+    implementation("androidx.camera:camera-core:$camerax_version")
+    implementation("androidx.camera:camera-camera2:$camerax_version")
+    implementation("androidx.camera:camera-lifecycle:$camerax_version")
+    implementation("androidx.camera:camera-view:$camerax_version")
+    // ListenableFuture — dùng bởi ProcessCameraProvider.getInstance()
+    implementation("androidx.concurrent:concurrent-futures:1.1.0")
+
+    // ML Kit Text Recognition (Latin + Vietnamese)
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 }

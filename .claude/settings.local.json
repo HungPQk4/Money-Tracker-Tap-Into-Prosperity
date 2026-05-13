@@ -7,7 +7,11 @@
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(Sort-Object)",
       "Bash(Select-Object FullName)",
-      "Bash(Sort-Object FullName)"
+      "Bash(Sort-Object FullName)",
+      "Bash(adb logcat *)",
+      "Bash(adb shell *)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(./gradlew compileDebugJavaWithJavac)"
     ]
   }
 }

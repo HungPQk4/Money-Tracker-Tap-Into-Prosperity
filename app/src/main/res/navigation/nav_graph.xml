@@ -90,7 +90,18 @@
         android:id="@+id/extractInvoiceFragment"
         android:name="vn.edu.usth.tip.ui.fragments.ExtractInvoiceFragment"
         android:label="Extract Invoice"
-        tools:layout="@layout/fragment_extract_invoice" />
+        tools:layout="@layout/fragment_extract_invoice">
+
+        <argument
+            android:name="ocr_amount"
+            app:argType="long"
+            android:defaultValue="0L" />
+
+        <argument
+            android:name="ocr_note"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
 
     <fragment
         android:id="@+id/analyticsFragment"
