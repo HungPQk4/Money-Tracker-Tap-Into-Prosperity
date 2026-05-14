@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -68,6 +69,18 @@ public class GoalsFragment extends Fragment {
                 AddGoalSheet sheet = new AddGoalSheet();
                 sheet.setGoal(goal);
                 sheet.show(getChildFragmentManager(), "edit_goal");
+            });
+        }
+
+        // ── Setup SwipeRefreshLayout ────────────────────────────────────
+        SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout_goals);
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#735BF2"));
+            swipeRefreshLayout.setOnRefreshListener(() -> {
+                if (viewModel != null) {
+                    viewModel.syncAllData();
+                }
+                swipeRefreshLayout.postDelayed(() -> swipeRefreshLayout.setRefreshing(false), 500);
             });
         }
 

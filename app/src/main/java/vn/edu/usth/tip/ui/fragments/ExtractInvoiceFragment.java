@@ -20,12 +20,20 @@ import com.google.android.material.datepicker.DateValidatorPointBackward;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import android.net.Uri;
+import android.widget.ImageView;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 import vn.edu.usth.tip.R;
 import vn.edu.usth.tip.models.Category;
@@ -48,6 +56,18 @@ public class ExtractInvoiceFragment extends Fragment {
     private Category selectedCategory;
     private AccountResponse selectedAccount;
     private long selectedTimestampMs;
+    
+    private ImageView ivReceipt;
+    private View placeholderImage;
+    private String currentPhotoUri;
+
+    private final ActivityResultLauncher<String> pickImageLauncher =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) {
+                    currentPhotoUri = uri.toString();
+                    updatePhotoUI();
+                }
+            });
 
     public ExtractInvoiceFragment() {}
 
@@ -76,6 +96,12 @@ public class ExtractInvoiceFragment extends Fragment {
         tvWalletName   = view.findViewById(R.id.tv_wallet_name);
         tvDate = view.findViewById(R.id.tv_date);
         tvTime = view.findViewById(R.id.tv_time);
+        
+        ivReceipt = view.findViewById(R.id.iv_receipt);
+        placeholderImage = view.findViewById(R.id.placeholder_image);
+        
+        placeholderImage.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
+        ivReceipt.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
         // Thời điểm hiện tại
         selectedTimestampMs = System.currentTimeMillis();
@@ -88,6 +114,12 @@ public class ExtractInvoiceFragment extends Fragment {
             String ocrShopName = args.getString("ocr_shop_name", "");
             String ocrDate = args.getString("ocr_date", "");
             String ocrNote = args.getString("ocr_note", "");
+            String ocrPhotoUri = args.getString("ocr_photo_uri");
+
+            if (ocrPhotoUri != null && !ocrPhotoUri.isEmpty()) {
+                currentPhotoUri = ocrPhotoUri;
+                updatePhotoUI();
+            }
 
             etAmount.setText(ocrAmount > 0 ? String.valueOf(ocrAmount) : "");
 
@@ -268,6 +300,17 @@ public class ExtractInvoiceFragment extends Fragment {
         }
     }
 
+    private void updatePhotoUI() {
+        if (currentPhotoUri != null && !currentPhotoUri.isEmpty()) {
+            placeholderImage.setVisibility(View.GONE);
+            ivReceipt.setVisibility(View.VISIBLE);
+            ivReceipt.setImageURI(Uri.parse(currentPhotoUri));
+        } else {
+            placeholderImage.setVisibility(View.VISIBLE);
+            ivReceipt.setVisibility(View.GONE);
+        }
+    }
+
     // ── Guard chống double-tap (tham khảo NewTransactionViewModel) ────────────
     private boolean isSaving = false;
 
@@ -316,10 +359,38 @@ public class ExtractInvoiceFragment extends Fragment {
         );
         tx.setAccountId(selectedAccount.getId());
         tx.setCategoryId(selectedCategory.getId());
+        
+        if (currentPhotoUri != null && !currentPhotoUri.isEmpty()) {
+            String internalUri = saveImageToInternalStorage(Uri.parse(currentPhotoUri));
+            if (internalUri != null) {
+                tx.setPhotoUri(internalUri);
+            }
+        }
 
         appViewModel.addTransaction(tx);
         Toast.makeText(getContext(), "Lưu hóa đơn thành công", Toast.LENGTH_SHORT).show();
         Navigation.findNavController(v).popBackStack(R.id.dashboardFragment, false);
+    }
+    
+    private String saveImageToInternalStorage(Uri uri) {
+        try {
+            InputStream is = requireContext().getContentResolver().openInputStream(uri);
+            if (is == null) return null;
+            String fileName = "tx_" + System.currentTimeMillis() + ".jpg";
+            File file = new File(requireContext().getFilesDir(), fileName);
+            FileOutputStream fos = new FileOutputStream(file);
+            byte[] buf = new byte[8192];
+            int len;
+            while ((len = is.read(buf)) > 0) {
+                fos.write(buf, 0, len);
+            }
+            fos.close();
+            is.close();
+            return Uri.fromFile(file).toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**

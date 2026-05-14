@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
@@ -144,6 +145,16 @@ public class WalletManagementFragment extends Fragment
 
         // Tải dữ liệu từ server
         accountViewModel.loadAccounts();
+
+        // ── Setup SwipeRefreshLayout ────────────────────────────────────
+        SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout_wallet);
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#735BF2"));
+            swipeRefreshLayout.setOnRefreshListener(() -> {
+                accountViewModel.loadAccounts();
+                swipeRefreshLayout.setRefreshing(false);
+            });
+        }
 
         // Lắng nghe kết quả thêm mới để tự động tải lại mà không cần delay "đoán mò"
         accountViewModel.getCreatedAccountData().observe(getViewLifecycleOwner(), accountResponse -> {

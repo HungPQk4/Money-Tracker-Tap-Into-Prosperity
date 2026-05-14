@@ -24,6 +24,7 @@ public class Transaction {
     private Type   type;
     private long   timestampMs; // epoch milliseconds
     private String note;        // Ghi chú giao dịch
+    private String photoUri;    // Ảnh đính kèm
     private boolean isSynced = false; // Mặc định là false cho tạo mới cục bộ
 
     @Ignore // Không lưu vào Room, chỉ dùng khi gửi lên API
@@ -74,6 +75,7 @@ public class Transaction {
     public Type   getType()         { return type; }
     public long   getTimestampMs()  { return timestampMs; }
     public String getNote()         { return note; }
+    public String getPhotoUri()     { return photoUri; }
     public boolean isSynced()       { return isSynced; }
 
     // ── Setters ───────────────────────────────────────────────────────
@@ -86,6 +88,7 @@ public class Transaction {
     public void setType(Type type) { this.type = type; }
     public void setTimestampMs(long timestampMs) { this.timestampMs = timestampMs; }
     public void setNote(String note) { this.note = note; }
+    public void setPhotoUri(String photoUri) { this.photoUri = photoUri; }
     public void setSynced(boolean synced) { isSynced = synced; }
     public void setAccountId(String accountId) { this.accountId = accountId; }
     public String getAccountId() { return accountId; }

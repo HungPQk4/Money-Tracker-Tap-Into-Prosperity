@@ -25,8 +25,9 @@ public class GeminiService {
     @Value("${gemini.api.key}")
     private String apiKey;
 
+    // Đã test: gemini-2.5-flash là phiên bản flash mới nhất hiện tại mà API Key của bạn có quyền truy cập
     private static final String GEMINI_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -41,8 +42,7 @@ public class GeminiService {
      */
     public InvoiceAnalysisResponse analyzeInvoice(String rawText) {
         try {
-            String prompt = buildPrompt(rawText);
-            String geminiResponse = callGeminiApi(prompt);
+            String geminiResponse = callGeminiApi(rawText);
             return parseGeminiResponse(geminiResponse);
         } catch (Exception e) {
             log.error("Gemini API error: {}", e.getMessage(), e);
@@ -54,41 +54,13 @@ public class GeminiService {
     }
 
     /**
-     * Tạo prompt hướng dẫn Gemini phân tích hóa đơn.
-     * Prompt được thiết kế để:
-     * - Tìm đúng tổng tiền thanh toán (không phải tiền khách đưa, tiền thối)
-     * - Bỏ qua mã nhân viên, SĐT, VAT riêng
-     * - Trích xuất tên cửa hàng và ngày tháng
-     */
-    private String buildPrompt(String rawText) {
-        return """
-                Bạn là hệ thống phân tích hóa đơn/receipt thông minh. Nhiệm vụ: đọc văn bản OCR thô bên dưới và trích xuất thông tin.
-
-                QUY TẮC BẮT BUỘC:
-                1. "amount" là TỔNG TIỀN KHÁCH PHẢI TRẢ (tổng cộng, thành tiền, total). KHÔNG lấy tiền khách đưa, tiền thối, tiền mặt, VAT riêng, mã nhân viên, SĐT.
-                2. "shopName" là tên cửa hàng/quán/nhà hàng/doanh nghiệp xuất hóa đơn.
-                3. "date" là ngày trên hóa đơn, định dạng yyyy-MM-dd. Nếu không tìm thấy, để rỗng.
-                4. "note" là mô tả ngắn gọn nội dung mua hàng (VD: "Cà phê, bánh mì").
-                5. Số tiền trả về là số nguyên VND (không có dấu chấm/phẩy phân cách). VD: 49300 chứ không phải 49.300.
-
-                TRẢ VỀ ĐÚNG ĐỊNH DẠNG JSON (không markdown, không giải thích):
-                {"amount": 49300, "shopName": "Highlands Coffee", "date": "2025-01-15", "note": "Cà phê sữa đá"}
-
-                NẾU KHÔNG TRÍCH XUẤT ĐƯỢC, trả về:
-                {"amount": 0, "shopName": "", "date": "", "note": ""}
-
-                === VĂN BẢN OCR THÔ ===
-                """ + rawText;
-    }
-
-    /**
      * Gọi Gemini REST API với prompt đã xây dựng.
      */
-    private String callGeminiApi(String prompt) throws Exception {
+    private String callGeminiApi(String rawText) throws Exception {
         String url = GEMINI_URL + "?key=" + apiKey;
 
-        // Build request body theo Gemini API spec
-        String requestBody = serializeGeminiRequest(prompt);
+        // Build request body theo Gemini API spec (Structured Output)
+        String requestBody = serializeGeminiStructuredRequest(rawText);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -131,7 +103,8 @@ public class GeminiService {
 
         log.debug("Gemini extracted text: {}", text);
 
-        // Gemini có thể bọc JSON trong markdown code block, cần strip
+        // Khi dùng Structured Output (application/json), text trả về sẽ luôn là JSON chuẩn,
+        // nhưng đôi khi vẫn có the bị bọc markdown block (hiếm).
         text = text.trim();
         if (text.startsWith("```json")) {
             text = text.substring(7);
@@ -156,20 +129,69 @@ public class GeminiService {
     }
 
     /**
-     * Serialize prompt thành đúng format Gemini API request body:
-     * { "contents": [{ "parts": [{ "text": "..." }] }] }
+     * Serialize request thành đúng format Gemini API sử dụng Structured Output (JSON Schema).
+     * Áp dụng temperature = 0 để khử tính "sáng tạo", yêu cầu trả về JSON chuẩn xác.
      */
-    private String serializeGeminiRequest(String prompt) throws Exception {
-        return objectMapper.writeValueAsString(
-                java.util.Map.of(
-                        "contents", java.util.List.of(
-                                java.util.Map.of(
-                                        "parts", java.util.List.of(
-                                                java.util.Map.of("text", prompt)
-                                        )
+    private String serializeGeminiStructuredRequest(String rawText) throws Exception {
+        java.util.Map<String, Object> amountSchema = java.util.Map.of(
+                "type", "INTEGER",
+                "description", "TỔNG TIỀN KHÁCH PHẢI TRẢ (Tổng cộng, Thành tiền, Total). KHỬ NHIỄU: Phân biệt rõ Tổng cộng và Tổng/Subtotal. CHỐNG NHIỄU: KHÔNG lấy tiền khách đưa, tiền thối. ERROR CORRECTION: Nếu OCR đọc thiếu số ở Tổng tiền, dùng phép toán (VD: Subtotal + VAT) để tự động sửa lại cho đúng. Chỉ trả về số nguyên."
+        );
+        
+        java.util.Map<String, Object> shopNameSchema = java.util.Map.of(
+                "type", "STRING",
+                "description", "Tên cửa hàng, siêu thị, quán cà phê, nhà hàng xuất hóa đơn. Trả về chuỗi rỗng nếu không tìm thấy."
+        );
+        
+        java.util.Map<String, Object> dateSchema = java.util.Map.of(
+                "type", "STRING",
+                "description", "Ngày trên hóa đơn. ÉP FORMAT: Bắt buộc chuẩn yyyy-MM-dd. ANTI-HALLUCINATION: TUYỆT ĐỐI KHÔNG TỰ BỊA RA ngày (không lấy ngày huấn luyện/hiện tại). Nếu hóa đơn không có, bắt buộc trả về chuỗi rỗng \"\"."
+        );
+        
+        java.util.Map<String, Object> noteSchema = java.util.Map.of(
+                "type", "STRING",
+                "description", "Mô tả ngắn gọn nội dung mua bán hoặc các mặt hàng tiêu biểu trên hóa đơn (VD: 'Cà phê, bánh mì'). Trả về rỗng nếu không xác định được."
+        );
+
+        java.util.Map<String, Object> responseSchema = java.util.Map.of(
+                "type", "OBJECT",
+                "properties", java.util.Map.of(
+                        "amount", amountSchema,
+                        "shopName", shopNameSchema,
+                        "date", dateSchema,
+                        "note", noteSchema
+                ),
+                "required", java.util.List.of("amount", "shopName", "date", "note")
+        );
+
+        java.util.Map<String, Object> generationConfig = java.util.Map.of(
+                "temperature", 0.0,
+                "responseMimeType", "application/json",
+                "responseSchema", responseSchema
+        );
+
+        String currentDate = java.time.LocalDate.now().toString();
+        String prompt = "Bạn là hệ thống trích xuất dữ liệu hóa đơn siêu thông minh và chính xác.\n" +
+                "Ngày hiện tại của hệ thống: " + currentDate + ".\n" +
+                "Nhiệm vụ: đọc văn bản OCR thô bên dưới và trích xuất thông tin chặt chẽ theo các quy tắc (RULES) sau:\n" +
+                " - RULE 1 (AMOUNT - KHỬ NHIỄU SUBTOTAL & CHỐNG NHIỄU): Ưu tiên số 1 là 'Tổng cộng' / 'Thành tiền' (Total). Quy tắc chỉ rõ sự khác biệt giữa Tổng cộng và Tổng (Subtotal), tuyệt đối không lấy Subtotal. Phớt lờ tiền khách đưa, tiền thối.\n" +
+                " - RULE 2 (AMOUNT - ERROR CORRECTION): Nếu OCR đọc thiếu hoặc mất số ở Tổng Tiền do bị che/rách (VD: mất số 0 cuối), hãy dùng khả năng toán học để kiểm tra chéo (VD: Subtotal + VAT = Total) và tự động sửa lại thành giá trị logic nhất.\n" +
+                " - RULE 3 (DATE - CHỐNG HALLUCINATION & ÉP FORMAT): TUYỆT ĐỐI KHÔNG TỰ BỊA RA NGÀY. Dựa vào 'Ngày hiện tại' để suy luận nếu hóa đơn chỉ ghi ngày/tháng (thiếu năm). Nếu hóa đơn hoàn toàn không có ngày, trả về rỗng \"\". Nếu có, ép về 'yyyy-MM-dd'.\n" +
+                " - RULE 4 (SHOP NAME): Lấy tên cửa hàng ở phần đầu hóa đơn.\n" +
+                " - RULE 5 (NOTE): Tóm tắt các mặt hàng (tối đa 3 món tiêu biểu).\n\n" +
+                "=== VĂN BẢN OCR THÔ ===\n" + rawText;
+
+        java.util.Map<String, Object> requestBody = java.util.Map.of(
+                "contents", java.util.List.of(
+                        java.util.Map.of(
+                                "parts", java.util.List.of(
+                                        java.util.Map.of("text", prompt)
                                 )
                         )
-                )
+                ),
+                "generationConfig", generationConfig
         );
+
+        return objectMapper.writeValueAsString(requestBody);
     }
 }

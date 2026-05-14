@@ -1,18 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/swipe_refresh_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F3F4F6"
-    android:clipToPadding="false"
-    android:paddingBottom="90dp">
+    android:layout_height="match_parent">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="20dp">
+        android:layout_height="match_parent"
+        android:background="#F3F4F6"
+        android:clipToPadding="false"
+        android:paddingBottom="90dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="20dp">
 
         <!-- Gọi lại Header đã tách -->
         <include layout="@layout/header_dashboard" />
@@ -586,6 +591,16 @@
             android:nestedScrollingEnabled="false"
             android:overScrollMode="never" />
 
+        <!-- Loading State for transactions -->
+        <ProgressBar
+            android:id="@+id/pb_transactions"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="24dp"
+            android:visibility="gone"
+            android:indeterminateTint="#735BF2" />
+
         <!-- Empty State: no transactions -->
         <LinearLayout
             android:id="@+id/layout_tx_empty"
@@ -637,4 +652,5 @@
         </androidx.cardview.widget.CardView>
 
     </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+    </androidx.core.widget.NestedScrollView>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

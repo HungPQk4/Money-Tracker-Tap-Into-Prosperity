@@ -21,6 +21,7 @@ import androidx.lifecycle.Observer;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -123,6 +124,42 @@ public class DashboardFragment extends BaseFragment {
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setAdapter(txAdapter);
         emptyState = view.findViewById(R.id.layout_tx_empty);
+
+        // ── Setup SwipeRefreshLayout ────────────────────────────────────
+        SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#735BF2"));
+            swipeRefreshLayout.setOnRefreshListener(() -> {
+                // Tải lại các dữ liệu cơ bản ngay lập tức
+                if (dashboardViewModel != null) dashboardViewModel.loadDashboardSummary();
+                if (accountViewModel != null) accountViewModel.loadAccounts();
+                if (tabToday != null) selectTab(currentTab);
+
+                // Đồng bộ các giao dịch (nếu có) và tải lại lần nữa để chắc chắn
+                if (viewModel != null) {
+                    viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
+                        @Override
+                        public void onSuccess() {
+                            if (getActivity() != null) {
+                                getActivity().runOnUiThread(() -> {
+                                    dashboardViewModel.loadDashboardSummary();
+                                    accountViewModel.loadAccounts();
+                                    swipeRefreshLayout.setRefreshing(false);
+                                });
+                            }
+                        }
+                        @Override
+                        public void onError(String message) {
+                            if (getActivity() != null) {
+                                getActivity().runOnUiThread(() -> swipeRefreshLayout.setRefreshing(false));
+                            }
+                        }
+                    });
+                } else {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
+            });
+        }
 
         // ── Observe Wallet Data (PostgreSQL Source + Optimistic Local Tx) ──
         // ── Observe Wallet Data (PostgreSQL Source + Optimistic Local Tx) ──
@@ -380,8 +417,23 @@ public class DashboardFragment extends BaseFragment {
             currentTxLiveData.removeObserver(txObserver);
         }
 
+        // --- Xóa data cũ và hiển thị loading để tránh giật/nhảy UI ---
+        if (txAdapter != null) {
+            txAdapter.setData(new ArrayList<>());
+        }
+        if (emptyState != null) {
+            emptyState.setVisibility(View.GONE);
+        }
+        View pbTransactions = getView() != null ? getView().findViewById(R.id.pb_transactions) : null;
+        if (pbTransactions != null) {
+            pbTransactions.setVisibility(View.VISIBLE);
+        }
+
         currentTxLiveData = viewModel.getTransactionsBetween(fromMs, toMs);
         txObserver = txList -> {
+            if (pbTransactions != null) {
+                pbTransactions.setVisibility(View.GONE);
+            }
             if (txAdapter != null) {
                 txAdapter.setData(txList != null ? txList : new ArrayList<>());
             }

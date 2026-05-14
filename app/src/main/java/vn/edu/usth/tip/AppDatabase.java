@@ -31,7 +31,7 @@ import vn.edu.usth.tip.models.GoalDao;
 @Database(
         entities = {Transaction.class, Category.class, Wallet.class,
                 Budget.class, DebtLoan.class, Goal.class},
-        version = 10,
+        version = 11,
         exportSchema = false
 )
 @TypeConverters({Converters.class})

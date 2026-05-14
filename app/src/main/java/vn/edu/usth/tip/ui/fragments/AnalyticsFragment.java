@@ -15,6 +15,8 @@ import androidx.lifecycle.ViewModelProvider;
 import java.util.Calendar;
 import java.util.List;
 
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import vn.edu.usth.tip.R;
 import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.network.responses.DashboardSummary;
@@ -118,6 +120,18 @@ public class AnalyticsFragment extends Fragment {
                             Toast.makeText(requireContext(), "Lọc: " + times[which], Toast.LENGTH_SHORT).show();
                         })
                         .show();
+            });
+        }
+
+        // ── Setup SwipeRefreshLayout ────────────────────────────────────
+        SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout_analytics);
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#735BF2"));
+            swipeRefreshLayout.setOnRefreshListener(() -> {
+                if (dashboardViewModel != null) {
+                    dashboardViewModel.loadDashboardSummary();
+                }
+                swipeRefreshLayout.setRefreshing(false);
             });
         }
     }

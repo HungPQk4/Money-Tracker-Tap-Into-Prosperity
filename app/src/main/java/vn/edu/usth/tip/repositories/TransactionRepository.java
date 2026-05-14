@@ -162,7 +162,9 @@ public class TransactionRepository {
                         Transaction    tx  = syncedTx.get(i);
                         try {
                             transactionDao.delete(tx);
-                            transactionDao.insert(convertToModel(dto));
+                            Transaction newTx = convertToModel(dto);
+                            newTx.setPhotoUri(tx.getPhotoUri());
+                            transactionDao.insert(newTx);
                         } catch (Exception ignored) {}
                     }
                 }
@@ -268,7 +270,9 @@ public class TransactionRepository {
                             AppDatabase.databaseWriteExecutor.execute(() -> {
                                 try {
                                     transactionDao.delete(tx);
-                                    transactionDao.insert(convertToModel(response.body()));
+                                    Transaction newTx = convertToModel(response.body());
+                                    newTx.setPhotoUri(tx.getPhotoUri());
+                                    transactionDao.insert(newTx);
                                 } catch (Exception ignored) {}
                             });
                         } else {
@@ -388,7 +392,17 @@ public class TransactionRepository {
                 // Upsert các record đã dedup từ server
                 for (TransactionDto dto : uniqueDtos) {
                     try {
-                        transactionDao.insert(convertToModel(dto));
+                        Transaction newTx = convertToModel(dto);
+                        // Preserve photoUri from local DB
+                        if (localAll != null) {
+                            for (Transaction local : localAll) {
+                                if (local.getId().equals(newTx.getId())) {
+                                    newTx.setPhotoUri(local.getPhotoUri());
+                                    break;
+                                }
+                            }
+                        }
+                        transactionDao.insert(newTx);
                     } catch (Exception ignored) {}
                 }
 

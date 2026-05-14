@@ -53,6 +53,7 @@ public class ScanReceiptFragment extends Fragment {
     private ImageCapture imageCapture;
     private Camera camera;
     private boolean torchEnabled = false;
+    private Uri currentPhotoUri;
 
     // ── Launcher: yêu cầu quyền Camera ──────────────────────────────────────
     private final ActivityResultLauncher<String> cameraPermissionLauncher =
@@ -84,6 +85,7 @@ public class ScanReceiptFragment extends Fragment {
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (!isAdded()) return;
                 if (uri != null) {
+                    currentPhotoUri = uri;
                     // Gallery flow: hiện loading rồi mới chạy OCR
                     showLoading(true);
                     runOcrOnUri(uri);
@@ -197,8 +199,9 @@ public class ScanReceiptFragment extends Fragment {
                 new ImageCapture.OnImageSavedCallback() {
                     @Override
                     public void onImageSaved(@NonNull ImageCapture.OutputFileResults results) {
+                        currentPhotoUri = Uri.fromFile(outputFile);
                         // Loading đã hiện từ capturePhoto(); gọi OCR trực tiếp
-                        runOcrOnUri(Uri.fromFile(outputFile));
+                        runOcrOnUri(currentPhotoUri);
                     }
 
                     @Override
@@ -333,6 +336,7 @@ public class ScanReceiptFragment extends Fragment {
         args.putString("ocr_shop_name", shopName != null ? shopName : "");
         args.putString("ocr_date", date != null ? date : "");
         args.putString("ocr_note", note != null ? note : "");
+        args.putString("ocr_photo_uri", currentPhotoUri != null ? currentPhotoUri.toString() : null);
         Navigation.findNavController(requireView())
                 .navigate(R.id.action_scanReceipt_to_extractInvoice, args);
     }
