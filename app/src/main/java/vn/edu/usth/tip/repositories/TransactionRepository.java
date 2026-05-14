@@ -197,9 +197,9 @@ public class TransactionRepository {
         });
     }
 
-    // ─── Pull: lấy 30 ngày gần nhất từ Neon về Room ──────────────────────────
+    // ─── Pull: lấy 180 ngày gần nhất từ Neon về Room ──────────────────────────
     private void pullFromServer(SyncCallback callback) {
-        transactionApi.getRecentTransactions(30).enqueue(new Callback<List<TransactionDto>>() {
+        transactionApi.getRecentTransactions(180).enqueue(new Callback<List<TransactionDto>>() {
             @Override
             public void onResponse(@NonNull Call<List<TransactionDto>> call,
                                    @NonNull Response<List<TransactionDto>> response) {
