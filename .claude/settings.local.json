@@ -11,7 +11,8 @@
       "Bash(adb logcat *)",
       "Bash(adb shell *)",
       "Bash(grep -v \"^--$\")",
-      "Bash(./gradlew compileDebugJavaWithJavac)"
+      "Bash(./gradlew compileDebugJavaWithJavac)",
+      "Bash(xargs grep -l \"suggest\\\\|recommend\\\\|predict\\\\|insight\\\\|tip\\\\|advice\\\\|optimal\")"
     ]
   }
 }

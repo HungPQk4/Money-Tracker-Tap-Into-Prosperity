@@ -31,7 +31,7 @@ import vn.edu.usth.tip.models.GoalDao;
 @Database(
         entities = {Transaction.class, Category.class, Wallet.class,
                 Budget.class, DebtLoan.class, Goal.class},
-        version = 11,
+        version = 12,
         exportSchema = false
 )
 @TypeConverters({Converters.class})
@@ -83,7 +83,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "money_tracker_database")
-                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12)
                             .fallbackToDestructiveMigration()
                             .addCallback(sRoomDatabaseCallback)
                             .build();
@@ -114,6 +114,16 @@ public abstract class AppDatabase extends RoomDatabase {
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("DELETE FROM categories");
             database.execSQL("DELETE FROM wallets");
+        }
+    };
+
+    // 11→12: thêm createdMs vào goals (DEFAULT 0 = data cũ, GoalAdvisor fallback 90 ngày)
+    static final Migration MIGRATION_11_12 = new Migration(11, 12) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "ALTER TABLE goals ADD COLUMN createdMs INTEGER NOT NULL DEFAULT 0"
+            );
         }
     };
 

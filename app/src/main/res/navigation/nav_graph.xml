@@ -69,6 +69,14 @@
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+
+        <action
+            android:id="@+id/action_dashboard_to_insights"
+            app:destination="@id/insightsFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     </fragment>
 
     <fragment
@@ -107,7 +115,22 @@
         android:id="@+id/analyticsFragment"
         android:name="vn.edu.usth.tip.ui.fragments.AnalyticsFragment"
         android:label="Analytics"
-        tools:layout="@layout/fragment_analytics" />
+        tools:layout="@layout/fragment_analytics">
+
+        <action
+            android:id="@+id/action_analytics_to_insights"
+            app:destination="@id/insightsFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/insightsFragment"
+        android:name="vn.edu.usth.tip.insights.InsightsFragment"
+        android:label="Gợi ý thông minh"
+        tools:layout="@layout/fragment_insights" />
 
     <fragment
         android:id="@+id/goalsFragment"

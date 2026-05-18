@@ -119,6 +119,7 @@ public class AddGoalSheet extends BottomSheetDialogFragment {
                             targetDateMs,
                             randomHex
                     );
+                    goal.setCreatedMs(System.currentTimeMillis());
                     viewModel.addGoal(goal);
                     Toast.makeText(requireContext(), "Đã lưu mục tiêu thành công", Toast.LENGTH_SHORT).show();
                 }

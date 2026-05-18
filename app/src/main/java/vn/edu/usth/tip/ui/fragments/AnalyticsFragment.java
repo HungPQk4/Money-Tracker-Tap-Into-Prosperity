@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.Navigation;
 
 import java.util.Calendar;
 import java.util.List;
@@ -18,6 +19,9 @@ import java.util.List;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.insights.InsightViewModel;
+import vn.edu.usth.tip.insights.models.Insight;
+import vn.edu.usth.tip.insights.models.InsightPriority;
 import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.network.responses.DashboardSummary;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
@@ -27,6 +31,7 @@ public class AnalyticsFragment extends Fragment {
 
     private DashboardViewModel dashboardViewModel;
     private AppViewModel appViewModel;
+    private InsightViewModel insightViewModel;
 
     private TextView tvIncome;
     private TextView tvExpense;
@@ -78,6 +83,7 @@ public class AnalyticsFragment extends Fragment {
 
         dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
         appViewModel = new ViewModelProvider(requireActivity()).get(AppViewModel.class);
+        insightViewModel = new ViewModelProvider(this).get(InsightViewModel.class);
 
         // Nhúng SpendingByCategoryFragment vào container (chỉ lần đầu, không nhân đôi khi rotate)
         if (savedInstanceState == null) {
@@ -123,14 +129,37 @@ public class AnalyticsFragment extends Fragment {
             });
         }
 
+        // Card AI → navigate + cập nhật nội dung từ InsightViewModel
+        View cardAiInsight = view.findViewById(R.id.card_ai_insight);
+        TextView tvAiTitle = view.findViewById(R.id.tv_analytics_ai_title);
+        TextView tvAiBody  = view.findViewById(R.id.tv_analytics_ai_body);
+
+        if (cardAiInsight != null) {
+            cardAiInsight.setOnClickListener(v ->
+                Navigation.findNavController(v)
+                    .navigate(R.id.action_analytics_to_insights));
+        }
+
+        insightViewModel.getInsights().observe(getViewLifecycleOwner(), insights -> {
+            if (insights == null || insights.isEmpty()) return;
+            Insight top = null;
+            for (Insight ins : insights) {
+                if (ins.priority == InsightPriority.HIGH) { top = ins; break; }
+            }
+            if (top == null) top = insights.get(0);
+            if (tvAiTitle != null) tvAiTitle.setText(top.title);
+            if (tvAiBody  != null) tvAiBody.setText(top.body);
+        });
+
+        insightViewModel.generateInsights();
+
         // ── Setup SwipeRefreshLayout ────────────────────────────────────
         SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout_analytics);
         if (swipeRefreshLayout != null) {
             swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#735BF2"));
             swipeRefreshLayout.setOnRefreshListener(() -> {
-                if (dashboardViewModel != null) {
-                    dashboardViewModel.loadDashboardSummary();
-                }
+                if (dashboardViewModel != null) dashboardViewModel.loadDashboardSummary();
+                if (insightViewModel != null) insightViewModel.generateInsights();
                 swipeRefreshLayout.setRefreshing(false);
             });
         }

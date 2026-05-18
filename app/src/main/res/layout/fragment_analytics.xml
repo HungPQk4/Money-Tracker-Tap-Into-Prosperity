@@ -277,9 +277,11 @@
              AI INSIGHT CARD
         ═══════════════════════════════════════════════════════ -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/card_ai_insight"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:foreground="?attr/selectableItemBackground"
             app:cardBackgroundColor="#FFFFFF"
             app:cardCornerRadius="20dp"
             app:cardElevation="2dp">
@@ -313,18 +315,20 @@
                     android:orientation="vertical">
 
                     <TextView
+                        android:id="@+id/tv_analytics_ai_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Dự đoán chi tiêu"
+                        android:text="Gợi ý thông minh"
                         android:textColor="#6A5AE0"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/tv_analytics_ai_body"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="Với tốc độ hiện tại, bạn sẽ vượt ngân sách Ăn uống khoảng ₫1.2M trong tháng này. Hãy cân nhắc giảm chi tiêu!"
+                        android:text="Đang phân tích dữ liệu..."
                         android:textColor="#6B7280"
                         android:textSize="13sp"
                         android:lineSpacingExtra="4dp" />

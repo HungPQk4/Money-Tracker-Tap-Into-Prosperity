@@ -30,6 +30,9 @@ import java.util.UUID;
 
 import vn.edu.usth.tip.R;
 import vn.edu.usth.tip.utils.AnimUtils;
+import vn.edu.usth.tip.insights.InsightViewModel;
+import vn.edu.usth.tip.insights.models.Insight;
+import vn.edu.usth.tip.insights.models.InsightPriority;
 import androidx.lifecycle.ViewModelProvider;
 
 public class DashboardFragment extends BaseFragment {
@@ -42,6 +45,7 @@ public class DashboardFragment extends BaseFragment {
 
     private DashboardViewModel dashboardViewModel;
     private vn.edu.usth.tip.viewmodels.AccountViewModel accountViewModel;
+    private InsightViewModel insightViewModel;
     private TransactionAdapter txAdapter;
     private View               emptyState;
 
@@ -101,6 +105,30 @@ public class DashboardFragment extends BaseFragment {
 
         dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
         accountViewModel   = new ViewModelProvider(requireActivity()).get(vn.edu.usth.tip.viewmodels.AccountViewModel.class);
+        insightViewModel   = new ViewModelProvider(this).get(InsightViewModel.class);
+
+        // ── AI Insight Card ───────────────────────────────────────────
+        View cardInsight = view.findViewById(R.id.card_ai_insight_dashboard);
+        TextView tvInsightTitle = view.findViewById(R.id.tv_dashboard_insight_title);
+        TextView tvInsightBody  = view.findViewById(R.id.tv_dashboard_insight_body);
+
+        if (cardInsight != null) {
+            cardInsight.setOnClickListener(v ->
+                    Navigation.findNavController(v).navigate(R.id.action_dashboard_to_insights));
+        }
+
+        insightViewModel.getInsights().observe(getViewLifecycleOwner(), insights -> {
+            if (insights == null || insights.isEmpty()) return;
+            Insight top = null;
+            for (Insight ins : insights) {
+                if (ins.priority == InsightPriority.HIGH) { top = ins; break; }
+            }
+            if (top == null) top = insights.get(0);
+            if (tvInsightTitle != null) tvInsightTitle.setText(top.title);
+            if (tvInsightBody  != null) tvInsightBody.setText(top.body);
+        });
+
+        insightViewModel.generateInsights();
 
         // ── Setup RecyclerView & Adapter ─────────────────────────────────
         txAdapter = new TransactionAdapter(new ArrayList<>(), tx -> {
@@ -136,6 +164,7 @@ public class DashboardFragment extends BaseFragment {
                 if (tabToday != null) selectTab(currentTab);
 
                 // Đồng bộ các giao dịch (nếu có) và tải lại lần nữa để chắc chắn
+                if (insightViewModel != null) insightViewModel.generateInsights();
                 if (viewModel != null) {
                     viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
                         @Override

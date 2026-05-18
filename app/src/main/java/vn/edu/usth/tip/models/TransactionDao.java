@@ -10,6 +10,10 @@ import androidx.room.Update;
 
 import java.util.List;
 
+import vn.edu.usth.tip.models.dto.CategoryMonthlyDTO;
+import vn.edu.usth.tip.models.dto.DailySpendDTO;
+import vn.edu.usth.tip.models.dto.DayPatternDTO;
+
 @Dao
 public interface TransactionDao {
 
@@ -35,6 +39,43 @@ public interface TransactionDao {
 
     @Query("DELETE FROM transactions WHERE isSynced = 1")
     void deleteSyncedTransactions();
+
+    // ── InsightEngine sync queries ────────────────────────────────────────────
+    // Chỉ dùng từ background thread (ExecutorService). Không trả LiveData.
+
+    // BudgetForecaster: chi tiêu mỗi ngày trong khoảng thời gian (chỉ EXPENSE dương)
+    // CAST sang INTEGER vì strftime trả về String — Room không tự ép kiểu int
+    // 'localtime' bắt buộc: tránh giao dịch 00:00-06:59 VN bị xếp sang ngày trước (UTC)
+    @Query("SELECT CAST(strftime('%d', timestampMs/1000, 'unixepoch', 'localtime') AS INTEGER) as dayNum, " +
+           "SUM(amountVnd) as totalVnd " +
+           "FROM transactions WHERE type = 'EXPENSE' AND amountVnd > 0 " +
+           "AND timestampMs BETWEEN :fromMs AND :toMs " +
+           "GROUP BY dayNum ORDER BY dayNum ASC")
+    List<DailySpendDTO> getDailyExpensesSync(long fromMs, long toMs);
+
+    @Query("SELECT CAST(strftime('%d', timestampMs/1000, 'unixepoch', 'localtime') AS INTEGER) as dayNum, " +
+           "SUM(amountVnd) as totalVnd " +
+           "FROM transactions WHERE type = 'EXPENSE' AND amountVnd > 0 " +
+           "AND category = :category " +
+           "AND timestampMs BETWEEN :fromMs AND :toMs " +
+           "GROUP BY dayNum ORDER BY dayNum ASC")
+    List<DailySpendDTO> getDailyExpensesByCategorySync(long fromMs, long toMs, String category);
+
+    // PatternAnalyzer: trung bình chi tiêu theo thứ trong tuần (7 dòng tối đa)
+    @Query("SELECT strftime('%w', timestampMs/1000, 'unixepoch', 'localtime') as dayOfWeek, " +
+           "AVG(amountVnd) as avgSpend " +
+           "FROM transactions WHERE type = 'EXPENSE' AND amountVnd > 0 " +
+           "AND timestampMs > :sinceMs " +
+           "GROUP BY dayOfWeek")
+    List<DayPatternDTO> getAvgSpendByDayOfWeekSync(long sinceMs);
+
+    // AnomalyDetector: tổng chi tiêu theo tháng, phân nhóm category (4 tháng gần nhất)
+    @Query("SELECT category, strftime('%Y%m', timestampMs/1000, 'unixepoch', 'localtime') as yearMonth, " +
+           "SUM(amountVnd) as totalVnd " +
+           "FROM transactions WHERE type = 'EXPENSE' AND amountVnd > 0 " +
+           "AND timestampMs > :sinceMs " +
+           "GROUP BY category, yearMonth")
+    List<CategoryMonthlyDTO> getCategoryMonthlyTotalsSync(long sinceMs);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(Transaction transaction);

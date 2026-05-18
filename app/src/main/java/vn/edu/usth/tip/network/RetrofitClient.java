@@ -53,6 +53,35 @@ public class RetrofitClient {
         return retrofit.create(serviceClass);
     }
 
+    // AI Insight API — timeout nới lỏng 30s vì Claude/Gemini mất 5-15s sinh text
+    // KHÔNG tái dùng instance thường (readTimeout chỉ 60s có thể fail với LLM slow)
+    public static InsightApi createAiInsightService(TokenManager tokenManager) {
+        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+
+        OkHttpClient aiClient = new OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .addInterceptor(logging)
+                .addInterceptor(chain -> {
+                    Request.Builder builder = chain.request().newBuilder()
+                            .header("ngrok-skip-browser-warning", "true");
+                    if (tokenManager != null && tokenManager.getToken() != null) {
+                        builder.header("Authorization", "Bearer " + tokenManager.getToken());
+                    }
+                    return chain.proceed(builder.build());
+                })
+                .build();
+
+        return new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .client(aiClient)
+                .build()
+                .create(InsightApi.class);
+    }
+
     // Giữ lại hàm cũ cho Login (không cần token)
     public static AuthApi getAuthApi() {
         if (retrofit == null) {
