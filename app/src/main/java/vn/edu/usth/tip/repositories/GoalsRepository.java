@@ -15,18 +15,23 @@ import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.RetrofitClient;
 import vn.edu.usth.tip.network.responses.FinancialDtos.GoalDto;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
+import vn.edu.usth.tip.utils.NetworkUtils;
 import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
 public class GoalsRepository {
+    private final AppDatabase db;
+    private final Context appContext;
     private final GoalDao goalDao;
     private final FinancialApi financialApi;
     private final TokenManager tokenManager;
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
     public GoalsRepository(Context context) {
-        this.goalDao = AppDatabase.getDatabase(context).goalDao();
-        this.tokenManager = new TokenManager(context);
+        this.appContext = context.getApplicationContext();
+        this.db = AppDatabase.getDatabase(appContext);
+        this.goalDao = db.goalDao();
+        this.tokenManager = new TokenManager(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 
@@ -64,10 +69,9 @@ public class GoalsRepository {
                 @Override public void onResponse(Call<GoalDto> call, Response<GoalDto> response) {
                     if (!response.isSuccessful()) {
                         android.util.Log.e("GOAL_SYNC", "Update error: " + response.code() + " " + response.message());
-                        if (response.code() == 404) {
-                            android.util.Log.d("GOAL_SYNC", "Fallback to addOnline...");
-                            addOnline(g);
-                        }
+                        // 404: server deleted the record (cross-device delete) or local UUID never reached server.
+                        // Do NOT recreate — that would resurrect a deleted goal on other devices.
+                        // The next full sync() will reconcile the final state.
                     } else {
                         android.util.Log.d("GOAL_SYNC", "Update success!");
                     }
@@ -85,36 +89,47 @@ public class GoalsRepository {
         try {
             UUID id = UUID.fromString(goalId);
             financialApi.deleteGoal(id).enqueue(new Callback<Void>() {
-                @Override public void onResponse(Call<Void> call, Response<Void> response) {}
-                @Override public void onFailure(Call<Void> call, Throwable t) {}
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        android.util.Log.d("GOAL_SYNC", "Delete success!");
+                    } else {
+                        android.util.Log.e("GOAL_SYNC", "Delete error: " + response.code() + " " + response.message());
+                    }
+                }
+                @Override public void onFailure(Call<Void> call, Throwable t) {
+                    android.util.Log.e("GOAL_SYNC", "Delete failed: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("GOAL_SYNC", "Delete UUID parse error: " + e.getMessage());
+        }
     }
 
     public void sync(SyncCallback callback) {
+        if (!NetworkUtils.isConnected(appContext)) {
+            callback.onError("Không có kết nối internet");
+            return;
+        }
         financialApi.getAllGoals().enqueue(new Callback<List<GoalDto>>() {
             @Override
             public void onResponse(@NonNull Call<List<GoalDto>> call, @NonNull Response<List<GoalDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
-                        List<Goal> localGoals = goalDao.getAllGoalsSync();
-                        for (GoalDto dto : response.body()) {
-                            Goal serverGoal = convertToModel(dto);
-                            
-                            // Check for conflicts: if a goal with the exact same name exists locally
-                            // but has a different ID (because the server generated a new UUID),
-                            // we delete the local one to prevent duplicates.
-                            for (Goal local : localGoals) {
-                                if (local.getName().trim().equalsIgnoreCase(serverGoal.getName().trim())) {
-                                    if (!local.getId().equals(serverGoal.getId())) {
+                        final List<Goal> localGoals = goalDao.getAllGoalsSync();
+                        final List<GoalDto> serverGoals = response.body();
+                        db.runInTransaction(() -> {
+                            for (GoalDto dto : serverGoals) {
+                                Goal serverGoal = convertToModel(dto);
+                                for (Goal local : localGoals) {
+                                    if (local.getName().trim().equalsIgnoreCase(serverGoal.getName().trim())
+                                            && !local.getId().equals(serverGoal.getId())) {
                                         goalDao.delete(local);
+                                        break;
                                     }
-                                    break;
                                 }
+                                goalDao.insert(serverGoal);
                             }
-                            
-                            goalDao.insert(serverGoal);
-                        }
+                        });
                         callback.onSuccess();
                     });
                 } else callback.onError("Error: " + response.code());

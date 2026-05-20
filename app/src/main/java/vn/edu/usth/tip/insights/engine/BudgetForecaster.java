@@ -69,11 +69,16 @@ public class BudgetForecaster {
             } else {
                 projectedEnd = Math.max(0, (long) (ols.beta0 + ols.beta1 * daysInMonth));
                 // Thêm các điểm dự báo vào chart (ngày hiện tại+1 → cuối tháng)
+                int lastAdded = currentDay;
                 for (int d = currentDay + 1; d <= daysInMonth; d += 2) {
                     long proj = Math.max(0, (long) (ols.beta0 + ols.beta1 * d));
                     forecastPoints.add(new ForecastPoint(d, proj, true));
+                    lastAdded = d;
                 }
-                forecastPoints.add(new ForecastPoint(daysInMonth, projectedEnd, true));
+                // Thêm điểm cuối tháng nếu vòng lặp chưa đến đúng daysInMonth
+                if (lastAdded != daysInMonth) {
+                    forecastPoints.add(new ForecastPoint(daysInMonth, projectedEnd, true));
+                }
             }
         }
 

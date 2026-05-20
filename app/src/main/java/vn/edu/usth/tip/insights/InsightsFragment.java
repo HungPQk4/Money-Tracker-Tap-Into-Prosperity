@@ -21,6 +21,7 @@ import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.ValueFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,14 +86,36 @@ public class InsightsFragment extends Fragment {
         lineChart.getLegend().setEnabled(false);
         lineChart.setTouchEnabled(false);
         lineChart.setDrawGridBackground(false);
+
         lineChart.getAxisRight().setEnabled(false);
+
         lineChart.getAxisLeft().setTextColor(Color.parseColor("#888888"));
         lineChart.getAxisLeft().setGridColor(Color.parseColor("#F0F0F0"));
+        lineChart.getAxisLeft().setTextSize(10f);
+        // Hiển thị đơn vị "K₫" (nghìn đồng) thay vì số thô
+        lineChart.getAxisLeft().setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                if (value >= 1_000f) return String.format("%.0ftr", value / 1_000f);
+                return String.format("%.0fK", value);
+            }
+        });
+
         lineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
         lineChart.getXAxis().setTextColor(Color.parseColor("#888888"));
         lineChart.getXAxis().setGridColor(Color.parseColor("#F0F0F0"));
-        lineChart.getXAxis().setLabelCount(6, false);
+        lineChart.getXAxis().setLabelCount(6, true);
+        lineChart.getXAxis().setTextSize(10f);
+        // Trục X hiển thị "Ngày N"
+        lineChart.getXAxis().setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return "Ng " + (int) value;
+            }
+        });
+
         lineChart.setExtraBottomOffset(8f);
+        lineChart.setExtraLeftOffset(4f);
     }
 
     private void observeViewModel() {

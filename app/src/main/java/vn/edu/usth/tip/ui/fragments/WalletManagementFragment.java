@@ -89,7 +89,9 @@ public class WalletManagementFragment extends Fragment
                     if (response.getColorHex() != null) {
                         defaultColor = android.graphics.Color.parseColor(response.getColorHex());
                     }
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                    android.util.Log.w("WalletManagement", "Invalid color hex '" + response.getColorHex() + "', using default: " + e.getMessage());
+                }
 
                 Wallet.Type mappedType = Wallet.Type.OTHER;
                 if(response.getType() != null) {

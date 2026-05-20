@@ -2,12 +2,18 @@ package vn.edu.usth.tip.repositories;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
+import vn.edu.usth.tip.utils.NetworkUtils;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -33,6 +39,8 @@ import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
 public class TransactionRepository {
+    private final AppDatabase db;
+    private final Context appContext;
     private final TransactionDao transactionDao;
     private final WalletDao walletDao;
     private final CategoryDao categoryDao;
@@ -40,23 +48,20 @@ public class TransactionRepository {
     private final FinancialApi financialApi;
     private final TokenManager tokenManager;
 
-    // Format ngày cho transactionDate (YYYY-MM-DD)
+    // Format ngày cho transactionDate (YYYY-MM-DD) — chỉ dùng trên databaseWriteExecutor, an toàn
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-    // Format ISO-8601 với timezone cho createdAt (server cần đúng định dạng này)
-    private final SimpleDateFormat isoFormat;
+    // Thread-safe ISO-8601 formatter cho updatedAt/createdAt (dùng thay SimpleDateFormat isoFormat cũ)
+    private static final DateTimeFormatter ISO_UTC = DateTimeFormatter.ISO_INSTANT;
 
     public TransactionRepository(Context context) {
-        AppDatabase db = AppDatabase.getDatabase(context);
+        this.appContext     = context.getApplicationContext();
+        this.db             = AppDatabase.getDatabase(appContext);
         this.transactionDao = db.transactionDao();
         this.walletDao      = db.walletDao();
         this.categoryDao    = db.categoryDao();
-        this.tokenManager   = new TokenManager(context);
+        this.tokenManager   = new TokenManager(appContext);
         this.transactionApi = RetrofitClient.createService(TransactionApi.class, tokenManager);
         this.financialApi   = RetrofitClient.createService(FinancialApi.class, tokenManager);
-
-        // ISO-8601 với offset timezone (ví dụ: 2025-03-15T19:30:00+07:00)
-        isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
-        isoFormat.setTimeZone(TimeZone.getTimeZone("UTC")); // ← sửa ở đây
     }
 
     // =========================================================================
@@ -96,11 +101,27 @@ public class TransactionRepository {
                 // ── 2. Map sang SyncItem, resolve accountId & categoryId ──────
                 List<SyncBatchRequest.SyncItem> items     = new ArrayList<>();
                 List<Transaction>               skippedTx = new ArrayList<>();
-                // Track các tx đã map thành công — dùng lại khi ghép kết quả server,
-                // tránh gọi resolveAccountId/resolveCategoryId lần 2 (mỗi lần = HTTP call).
-                List<Transaction>               syncedTx  = new ArrayList<>();
+                // Track local tx keyed by ID — dùng khi ghép kết quả server (ID-based, không phải positional).
+                Map<String, Transaction>        localById = new HashMap<>();
 
                 for (Transaction tx : unsynced) {
+                    // Soft-deleted: chỉ cần UUID để ra lệnh xóa, không cần account/category.
+                    if (tx.isDeleted()) {
+                        UUID serverTxId = null;
+                        try { serverTxId = UUID.fromString(tx.getId()); } catch (IllegalArgumentException ignored) {}
+                        if (serverTxId == null) {
+                            // Legacy ID chưa bao giờ lên server — xóa thẳng, không cần push.
+                            transactionDao.deleteById(tx.getId());
+                            continue;
+                        }
+                        SyncBatchRequest.SyncItem deleteItem = new SyncBatchRequest.SyncItem(
+                                serverTxId, null, null, null, null, null, null, null, null);
+                        deleteItem.setDeleted(true);
+                        items.add(deleteItem);
+                        localById.put(tx.getId(), tx);
+                        continue;
+                    }
+
                     long rawAmount = tx.getAmountVnd();
                     if (rawAmount == 0) {
                         android.util.Log.w("SYNC", "Skip tx id=" + tx.getId() + ": amount = 0");
@@ -119,20 +140,30 @@ public class TransactionRepository {
                         continue;
                     }
 
-                    String createdAtStr = isoFormat.format(new Date(tx.getTimestampMs()));
+                    String createdAtStr = ISO_UTC.format(Instant.ofEpochMilli(tx.getTimestampMs()));
                     java.math.BigDecimal positiveAmount = new java.math.BigDecimal(Math.abs(rawAmount));
 
+                    UUID serverTxId = null;
+                    try { serverTxId = UUID.fromString(tx.getId()); } catch (IllegalArgumentException ignored) {}
+
+                    String clientUpdatedAt = ISO_UTC.format(Instant.ofEpochMilli(
+                            tx.getUpdatedAtMs() > 0 ? tx.getUpdatedAtMs() : tx.getTimestampMs()));
+
                     SyncBatchRequest.SyncItem item = new SyncBatchRequest.SyncItem(
+                            serverTxId,
                             accountId,
                             categoryId,
                             positiveAmount,
                             tx.getType().name().toLowerCase(),
                             tx.getNote(),
                             dateFormat.format(new Date(tx.getTimestampMs())),
-                            createdAtStr
+                            createdAtStr,
+                            clientUpdatedAt
                     );
+                    item.setRecurring(tx.isRecurring());
+                    if (tx.isRecurring()) item.setRecurInterval(tx.getRecurInterval());
                     items.add(item);
-                    syncedTx.add(tx);
+                    localById.put(tx.getId(), tx);
                 }
 
                 if (items.isEmpty()) {
@@ -153,19 +184,32 @@ public class TransactionRepository {
 
                 SyncBatchResponse result = response.body();
 
-                // ── 4. Cập nhật Room: xóa bản nháp, insert bản từ server ──────
-                // syncedTx[i] tương ứng 1-1 với savedTransactions[i] — không cần resolve lại.
+                // ── 4. Cập nhật Room: match bằng ID (không phải positional) ──
                 if (result.getSavedTransactions() != null) {
-                    int count = Math.min(syncedTx.size(), result.getSavedTransactions().size());
-                    for (int i = 0; i < count; i++) {
-                        TransactionDto dto = result.getSavedTransactions().get(i);
-                        Transaction    tx  = syncedTx.get(i);
+                    for (TransactionDto dto : result.getSavedTransactions()) {
+                        if (dto.getId() == null) continue;
+                        String dtoId = dto.getId().toString();
+                        Transaction local = localById.get(dtoId);
+
+                        if (dto.isDeleted()) {
+                            // Server xác nhận xóa — hard delete khỏi Room
+                            transactionDao.deleteById(dtoId);
+                            continue;
+                        }
+
+                        if (local == null) continue;
+
                         try {
-                            transactionDao.delete(tx);
+                            transactionDao.delete(local);
                             Transaction newTx = convertToModel(dto);
-                            newTx.setPhotoUri(tx.getPhotoUri());
+                            newTx.setPhotoUri(local.getPhotoUri());
+                            // Server chỉ lưu ngày (YYYY-MM-DD), không lưu giờ.
+                            // Giữ lại timestampMs gốc của local để không bị reset về 00:00.
+                            newTx.setTimestampMs(local.getTimestampMs());
                             transactionDao.insert(newTx);
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            android.util.Log.e("TX_SYNC", "import DB replace failed for id=" + dto.getId() + ": " + e.getMessage());
+                        }
                     }
                 }
 
@@ -185,6 +229,10 @@ public class TransactionRepository {
     // =========================================================================
 
     public void syncTransactions(SyncCallback callback) {
+        if (!NetworkUtils.isConnected(appContext)) {
+            runOnMain(() -> callback.onError("Không có kết nối internet"));
+            return;
+        }
         // Bước 1: Push dữ liệu cũ chưa sync lên Neon trước
         AppDatabase.databaseWriteExecutor.execute(() -> {
             pushUnsyncedToServer(new PushCallback() {
@@ -195,6 +243,149 @@ public class TransactionRepository {
                 }
             });
         });
+    }
+
+    // =========================================================================
+    //  SYNCHRONOUS BATCH SYNC — dùng bởi TransactionSyncWorker
+    //  Trả về true nếu cần retry (5xx), false nếu thành công.
+    //  Throws IOException nếu mất mạng giữa chừng (Worker sẽ retry theo backoff).
+    // =========================================================================
+
+    public boolean pushUnsyncedBatchSync() throws IOException {
+        String userIdStr = tokenManager.getUserId();
+        if (userIdStr == null) return false; // chưa đăng nhập — không retry
+
+        UUID userId = UUID.fromString(userIdStr);
+        List<Transaction> unsynced = transactionDao.getUnsyncedTransactionsSync();
+        if (unsynced == null || unsynced.isEmpty()) return false;
+
+        final int BATCH_SIZE = 100;
+        for (int i = 0; i < unsynced.size(); i += BATCH_SIZE) {
+            List<Transaction> chunk = unsynced.subList(i, Math.min(i + BATCH_SIZE, unsynced.size()));
+
+            // Snapshot TRƯỚC khi build SyncItems — ngăn Late Callback Overwrite race condition
+            Map<String, Long> requestTimeMap = new HashMap<>();
+            List<SyncBatchRequest.SyncItem> items = new ArrayList<>();
+
+            for (Transaction tx : chunk) {
+                requestTimeMap.put(tx.getId(), tx.getUpdatedAtMs());
+
+                // Soft-deleted transaction — chỉ gửi lệnh xóa, không cần resolve account/category
+                if (tx.isDeleted()) {
+                    UUID serverTxId = null;
+                    try { serverTxId = UUID.fromString(tx.getId()); } catch (IllegalArgumentException ignored) {}
+                    if (serverTxId == null) {
+                        // Legacy ID chưa bao giờ lên server — xóa local ngay
+                        transactionDao.deleteById(tx.getId());
+                        requestTimeMap.remove(tx.getId());
+                        continue;
+                    }
+                    SyncBatchRequest.SyncItem deleteItem = new SyncBatchRequest.SyncItem(
+                            serverTxId, null, null, null, null, null, null, null, null);
+                    deleteItem.setDeleted(true);
+                    items.add(deleteItem);
+                    continue;
+                }
+
+                long rawAmount = tx.getAmountVnd();
+                if (rawAmount == 0) { requestTimeMap.remove(tx.getId()); continue; }
+
+                // UUID healing — legacy ID không phải UUID chuẩn
+                UUID serverTxId;
+                try {
+                    serverTxId = UUID.fromString(tx.getId());
+                } catch (IllegalArgumentException e) {
+                    serverTxId = UUID.randomUUID();
+                    final String oldId = tx.getId();
+                    final String newId = serverTxId.toString();
+                    tx.setId(newId);
+                    transactionDao.updateTransactionId(oldId, newId);
+                    // Cập nhật snapshot key sang ID mới
+                    Long snap = requestTimeMap.remove(oldId);
+                    requestTimeMap.put(newId, snap != null ? snap : tx.getUpdatedAtMs());
+                    android.util.Log.w("SYNC", "Legacy ID healed: " + oldId + " → " + newId);
+                }
+
+                UUID accountId  = resolveAccountId(tx);
+                UUID categoryId = resolveCategoryId(tx);
+                if (accountId == null || categoryId == null) {
+                    requestTimeMap.remove(tx.getId());
+                    continue;
+                }
+
+                String createdAt     = ISO_UTC.format(Instant.ofEpochMilli(tx.getTimestampMs()));
+                String clientUpdated = ISO_UTC.format(Instant.ofEpochMilli(
+                        tx.getUpdatedAtMs() > 0 ? tx.getUpdatedAtMs() : tx.getTimestampMs()));
+
+                SyncBatchRequest.SyncItem syncItem = new SyncBatchRequest.SyncItem(
+                        serverTxId, accountId, categoryId,
+                        new java.math.BigDecimal(Math.abs(rawAmount)),
+                        tx.getType().name().toLowerCase(),
+                        tx.getNote(),
+                        dateFormat.format(new Date(tx.getTimestampMs())),
+                        createdAt, clientUpdated);
+                syncItem.setRecurring(tx.isRecurring());
+                if (tx.isRecurring()) syncItem.setRecurInterval(tx.getRecurInterval());
+                items.add(syncItem);
+            }
+
+            if (items.isEmpty()) continue;
+
+            Response<SyncBatchResponse> response =
+                    transactionApi.syncBatch(new SyncBatchRequest(userId, items)).execute();
+
+            if (response.code() >= 500) return true; // 5xx → retry
+            if (!response.isSuccessful() || response.body() == null) continue; // 4xx → skip
+
+            List<TransactionDto> saved = response.body().getSavedTransactions();
+            if (saved == null) continue;
+
+            for (TransactionDto serverTx : saved) {
+                if (serverTx.getId() == null) continue;
+                String id = serverTx.getId().toString();
+                Long requestTimeMs = requestTimeMap.get(id);
+                if (requestTimeMs == null) continue;
+
+                if (serverTx.isDeleted()) {
+                    transactionDao.deleteById(id); // server confirm xóa → hard delete Room
+                } else {
+                    long serverTs = parseServerUpdatedAt(serverTx.getUpdatedAt());
+                    String title    = serverTx.getNote() != null ? serverTx.getNote() : "Giao dịch";
+                    String category = serverTx.getCategoryName() != null ? serverTx.getCategoryName() : "Khác";
+                    String wallet   = serverTx.getAccountName() != null ? serverTx.getAccountName() : "Ví chính";
+                    long amount     = serverTx.getAmount() != null ? serverTx.getAmount().longValue() : 0;
+                    String type     = mapTypeStr(serverTx.getType());
+                    String note     = serverTx.getNote();
+                    long tsMs       = parseDateToMs(serverTx.getTransactionDate());
+
+                    transactionDao.fullUpdateIfUnchanged(
+                            id, requestTimeMs,
+                            title, category, wallet,
+                            amount, type, note,
+                            tsMs, serverTs);
+                }
+            }
+        }
+        return false; // success
+    }
+
+    private long parseServerUpdatedAt(String updatedAt) {
+        if (updatedAt == null) return 0;
+        try { return Instant.parse(updatedAt).toEpochMilli(); } catch (Exception e) { return 0; }
+    }
+
+    private long parseDateToMs(String dateStr) {
+        if (dateStr == null) return 0;
+        try { return dateFormat.parse(dateStr).getTime(); } catch (Exception e) { return 0; }
+    }
+
+    private String mapTypeStr(String serverType) {
+        if (serverType == null) return "expense";
+        switch (serverType.toLowerCase()) {
+            case "income":   return "INCOME";
+            case "transfer": return "TRANSFER";
+            default:         return "EXPENSE";
+        }
     }
 
     // ─── Pull: lấy 180 ngày gần nhất từ Neon về Room ──────────────────────────
@@ -267,13 +458,17 @@ public class TransactionRepository {
                     public void onResponse(Call<TransactionDto> call, Response<TransactionDto> response) {
                         if (response.isSuccessful() && response.body() != null) {
                             android.util.Log.d("TX_SYNC", "Transaction created on server: " + response.body().getId());
+                            long localTimestamp = tx.getTimestampMs();
                             AppDatabase.databaseWriteExecutor.execute(() -> {
                                 try {
                                     transactionDao.delete(tx);
                                     Transaction newTx = convertToModel(response.body());
                                     newTx.setPhotoUri(tx.getPhotoUri());
+                                    newTx.setTimestampMs(localTimestamp);
                                     transactionDao.insert(newTx);
-                                } catch (Exception ignored) {}
+                                } catch (Exception e) {
+                                    android.util.Log.e("TX_SYNC", "Local replace failed after create: " + e.getMessage());
+                                }
                             });
                         } else {
                             String errBody = "";
@@ -329,12 +524,18 @@ public class TransactionRepository {
                                 tx.setSynced(true);
                                 transactionDao.update(tx);
                             });
+                        } else {
+                            android.util.Log.e("TX_SYNC", "Update error: " + response.code() + " " + response.message());
+                            revertToUnsynced(tx);
                         }
                     }
-                    @Override public void onFailure(Call<TransactionDto> call, Throwable t) {}
+                    @Override public void onFailure(Call<TransactionDto> call, Throwable t) {
+                        android.util.Log.e("TX_SYNC", "Update failed: " + t.getMessage());
+                        revertToUnsynced(tx);
+                    }
                 });
             } catch (Exception e) {
-                e.printStackTrace();
+                android.util.Log.e("TX_SYNC", "updateTransactionOnline exception", e);
             }
         });
     }
@@ -343,10 +544,20 @@ public class TransactionRepository {
         try {
             UUID id = UUID.fromString(txId);
             transactionApi.deleteTransaction(id).enqueue(new Callback<Void>() {
-                @Override public void onResponse(Call<Void> call, Response<Void> response) {}
-                @Override public void onFailure(Call<Void> call, Throwable t) {}
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        android.util.Log.d("TX_SYNC", "Delete success: " + txId);
+                    } else {
+                        android.util.Log.e("TX_SYNC", "Delete error: " + response.code() + " " + response.message());
+                    }
+                }
+                @Override public void onFailure(Call<Void> call, Throwable t) {
+                    android.util.Log.e("TX_SYNC", "Delete failed: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("TX_SYNC", "deleteTransactionOnline UUID parse error: " + e.getMessage());
+        }
     }
 
     // =========================================================================
@@ -379,32 +590,60 @@ public class TransactionRepository {
                     if (dto.getId() != null) serverIds.add(dto.getId().toString());
                 }
 
-                // Xóa record đã sync nhưng server không còn nữa
-                List<Transaction> localAll = transactionDao.getAllTransactionsSync();
-                if (localAll != null) {
-                    for (Transaction local : localAll) {
-                        if (local.isSynced() && !serverIds.contains(local.getId())) {
-                            transactionDao.delete(local);
+                // Snapshot local DB once (outside transaction — read-only)
+                final List<Transaction> localAll = transactionDao.getAllTransactionsSync();
+
+                // All deletes + inserts run as a single atomic transaction:
+                // if any uncaught error occurs mid-way, Room rolls back everything.
+                db.runInTransaction(() -> {
+                    // Xóa record đã sync nhưng server không còn nữa
+                    if (localAll != null) {
+                        for (Transaction local : localAll) {
+                            if (local.isSynced() && !serverIds.contains(local.getId())) {
+                                transactionDao.delete(local);
+                            }
                         }
                     }
-                }
 
-                // Upsert các record đã dedup từ server
-                for (TransactionDto dto : uniqueDtos) {
-                    try {
-                        Transaction newTx = convertToModel(dto);
-                        // Preserve photoUri from local DB
-                        if (localAll != null) {
-                            for (Transaction local : localAll) {
-                                if (local.getId().equals(newTx.getId())) {
-                                    newTx.setPhotoUri(local.getPhotoUri());
+                    // Upsert các record đã dedup từ server (với LWW guard)
+                    for (TransactionDto dto : uniqueDtos) {
+                        try {
+                            Transaction newTx = convertToModel(dto);
+                            Transaction existingLocal = null;
+                            if (localAll != null) {
+                                for (Transaction local : localAll) {
+                                    if (local.getId().equals(newTx.getId())) {
+                                        existingLocal = local;
+                                        newTx.setPhotoUri(local.getPhotoUri());
+                                        if (hasActualTime(local.getTimestampMs())) {
+                                            newTx.setTimestampMs(local.getTimestampMs());
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            if (existingLocal != null && shouldSkipServerVersion(existingLocal, newTx)) {
+                                continue;
+                            }
+                            transactionDao.insert(newTx);
+                        } catch (Exception e) {
+                            android.util.Log.e("TX_SYNC", "saveToLocal insert failed for id=" + dto.getId() + ": " + e.getMessage());
+                        }
+                    }
+
+                    // Clean up isSynced=false orphans whose data was already pushed to server
+                    if (localAll != null) {
+                        for (Transaction local : localAll) {
+                            if (local.isSynced()) continue;
+                            for (TransactionDto dto : uniqueDtos) {
+                                if (isMatchingRecord(local, dto)) {
+                                    transactionDao.delete(local);
                                     break;
                                 }
                             }
                         }
-                        transactionDao.insert(newTx);
-                    } catch (Exception ignored) {}
-                }
+                    }
+                });
 
                 runOnMain(callback::onSuccess);
             } catch (Exception e) {
@@ -671,6 +910,12 @@ public class TransactionRepository {
                 dto.getNote()
         );
         tx.setSynced(true);
+        tx.setRecurring(dto.isRecurring());
+        tx.setRecurInterval(dto.getRecurInterval());
+        // Parse server updatedAt → updatedAtMs for LWW pull guard
+        if (dto.getUpdatedAt() != null) {
+            tx.setUpdatedAtMs(parseServerUpdatedAt(dto.getUpdatedAt()));
+        }
         return tx;
     }
 
@@ -689,6 +934,45 @@ public class TransactionRepository {
         long endMs = end.getTimeInMillis();
 
         return transactionDao.getTransactionsBetween(startMs, endMs);
+    }
+
+    /**
+     * LWW pull guard: returns true when the local copy has an unsynced edit that is
+     * at least as recent as the server version — server version should NOT overwrite it.
+     *
+     * Fallback: if updatedAtMs == 0 (pre-migration record), use timestampMs as a proxy
+     * so we don't accidentally overwrite data from users who just upgraded the app.
+     */
+    private boolean shouldSkipServerVersion(Transaction local, Transaction serverTx) {
+        if (local.isSynced()) return false; // already in sync — let server win
+        long localTs = local.getUpdatedAtMs() > 0
+                ? local.getUpdatedAtMs()
+                : local.getTimestampMs();
+        return localTs >= serverTx.getUpdatedAtMs();
+    }
+
+    /** Returns true if a local unsynced record matches a server DTO (same date/amount/type/account/category). */
+    private boolean isMatchingRecord(Transaction local, TransactionDto dto) {
+        String localDate = dateFormat.format(new Date(local.getTimestampMs()));
+        if (!localDate.equals(dto.getTransactionDate())) return false;
+        if (dto.getAmount() == null || local.getAmountVnd() != dto.getAmount().longValue()) return false;
+        String localType = local.getType().name().toLowerCase();
+        String dtoType = dto.getType() != null ? dto.getType().toString().toLowerCase() : "expense";
+        if (!localType.equals(dtoType)) return false;
+        String localWallet = local.getWalletName() != null ? local.getWalletName().trim().toLowerCase() : "";
+        String dtoAccount = dto.getAccountName() != null ? dto.getAccountName().trim().toLowerCase() : "";
+        if (!localWallet.equals(dtoAccount)) return false;
+        String localCat = local.getCategory() != null ? local.getCategory().trim().toLowerCase() : "";
+        String dtoCat = dto.getCategoryName() != null ? dto.getCategoryName().trim().toLowerCase() : "";
+        return localCat.equals(dtoCat);
+    }
+
+    /** Trả về true nếu timestamp có giờ:phút khác 00:00 (tức là đã được set thủ công). */
+    private boolean hasActualTime(long timestampMs) {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTimeInMillis(timestampMs);
+        return cal.get(java.util.Calendar.HOUR_OF_DAY) != 0
+            || cal.get(java.util.Calendar.MINUTE)      != 0;
     }
 
     /** Post runnable về Main thread an toàn */

@@ -27,17 +27,26 @@ public class PatternAnalyzer {
             } catch (NumberFormatException ignored) {}
         }
 
-        // Tìm ngày chi tiêu nhiều nhất và ít nhất
-        int maxDay = 0, minDay = 0;
-        for (int i = 1; i < 7; i++) {
-            if (avgSpendByDay[i] > avgSpendByDay[maxDay]) maxDay = i;
-            if (avgSpendByDay[i] < avgSpendByDay[minDay]) minDay = i;
+        // Tìm ngày chi tiêu nhiều nhất trong số ngày có dữ liệu thực (> 0)
+        int maxDay = -1;
+        for (int i = 0; i < 7; i++) {
+            if (avgSpendByDay[i] > 0) {
+                if (maxDay == -1 || avgSpendByDay[i] > avgSpendByDay[maxDay]) maxDay = i;
+            }
         }
+        if (maxDay == -1) return null; // Không có ngày nào có dữ liệu
 
-        // Guard: tránh chia cho 0 khi người dùng không chi vào ngày minDay
-        // Math.max(1.0, ...) đủ vì tiền VNĐ nhỏ nhất là 1 đồng
-        double minSpend = Math.max(1.0, avgSpendByDay[minDay]);
-        double ratio = avgSpendByDay[maxDay] / minSpend;
+        // Tìm ngày chi tiêu ít nhất — chỉ trong số ngày có giao dịch (> 0)
+        // Tránh so sánh với ngày zero-padded (không có giao dịch) → ratio ảo
+        int minDay = -1;
+        for (int i = 0; i < 7; i++) {
+            if (avgSpendByDay[i] > 0) {
+                if (minDay == -1 || avgSpendByDay[i] < avgSpendByDay[minDay]) minDay = i;
+            }
+        }
+        if (minDay == -1 || minDay == maxDay) return null;
+
+        double ratio = avgSpendByDay[maxDay] / avgSpendByDay[minDay];
 
         if (ratio < 1.5) return null; // Không có xu hướng đáng kể
 

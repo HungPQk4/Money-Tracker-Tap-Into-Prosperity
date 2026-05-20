@@ -13,6 +13,10 @@ public class TransactionDto {
     private String type; // INCOME, EXPENSE, TRANSFER
     private String note;
     private String transactionDate; // Format YYYY-MM-DD
+    private String updatedAt;       // ISO-8601 từ server, dùng cho LWW pull guard
+    private boolean deleted;        // server xác nhận xóa
+    private boolean isRecurring;
+    private String recurInterval;   // "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"
 
     // Getters
     public UUID getId() { return id; }
@@ -24,4 +28,10 @@ public class TransactionDto {
     public String getType() { return type; }
     public String getNote() { return note; }
     public String getTransactionDate() { return transactionDate; }
+    public String getUpdatedAt() { return updatedAt; }
+    public boolean isDeleted() { return deleted; }
+    public boolean isRecurring() { return isRecurring; }
+    public String getRecurInterval() { return recurInterval; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+    public void setId(UUID id) { this.id = id; }
 }

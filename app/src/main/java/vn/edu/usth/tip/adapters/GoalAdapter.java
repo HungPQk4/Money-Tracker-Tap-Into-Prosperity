@@ -93,7 +93,7 @@ public class GoalAdapter extends RecyclerView.Adapter<GoalAdapter.ViewHolder> {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            android.util.Log.e("GoalAdapter", "bindView error for goal '" + item.getName() + "': " + e.getMessage());
         }
 
         // Set weight of progress bar

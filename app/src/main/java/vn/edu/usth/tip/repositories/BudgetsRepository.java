@@ -131,10 +131,20 @@ public class BudgetsRepository {
         try {
             UUID id = UUID.fromString(budgetId);
             financialApi.deleteBudget(id).enqueue(new Callback<Void>() {
-                @Override public void onResponse(Call<Void> call, Response<Void> response) {}
-                @Override public void onFailure(Call<Void> call, Throwable t) {}
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        android.util.Log.d("BUDGET_SYNC", "Delete success!");
+                    } else {
+                        android.util.Log.e("BUDGET_SYNC", "Delete error: " + response.code() + " " + response.message());
+                    }
+                }
+                @Override public void onFailure(Call<Void> call, Throwable t) {
+                    android.util.Log.e("BUDGET_SYNC", "Delete failed: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("BUDGET_SYNC", "Delete UUID parse error: " + e.getMessage());
+        }
     }
 
     public void sync(SyncCallback callback) {

@@ -102,14 +102,25 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
         notifyDataSetChanged();
     }
 
+    public void resetSelection() {
+        int prev = selectedPosition;
+        selectedPosition = 0;
+        if (prev != 0) {
+            notifyItemChanged(prev);
+            notifyItemChanged(0);
+        }
+    }
+
     public void selectCategoryByName(String name) {
         if (name == null) return;
         for (int i = 0; i < categories.size(); i++) {
             if (name.equals(categories.get(i).getName())) {
                 int prev = selectedPosition;
                 selectedPosition = i;
-                notifyItemChanged(prev);
-                notifyItemChanged(selectedPosition);
+                if (prev != selectedPosition) {
+                    notifyItemChanged(prev);
+                    notifyItemChanged(selectedPosition);
+                }
                 break;
             }
         }

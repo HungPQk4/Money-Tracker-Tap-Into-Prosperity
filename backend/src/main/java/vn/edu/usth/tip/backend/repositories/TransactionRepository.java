@@ -10,6 +10,7 @@ import vn.edu.usth.tip.backend.models.enums.TransactionType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -29,6 +30,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<Transaction> findByUser_IdAndTransactionDateBetweenOrderByTransactionDateDesc(
             UUID userId, LocalDate startDate, LocalDate endDate);
 
+    /** LWW PATH A: lookup transaction by ID owned by this user */
+    Optional<Transaction> findByIdAndUser_Id(UUID id, UUID userId);
+
     // ─── Queries mới: lọc 30 ngày theo transactionDate ───────────────────────
     // Dùng Spring Data method naming thay vì JPQL tùy chỉnh → Hibernate tự bind
     // LocalDate (không có timezone issue như OffsetDateTime trên Neon TIMESTAMPTZ)
@@ -41,16 +45,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             UUID userId, LocalDate since);
 
     /**
-     * Kiểm tra trùng khi sync: cùng user + amount + ngày + loại + category + note.
+     * Kiểm tra trùng khi sync (legacy PATH B): cùng user + amount + ngày + loại + category + note.
      * Dùng native query để tránh issue với OffsetDateTime trong JPQL.
+     * Trả về Optional<Transaction> để client nhận UUID server thật (ngăn Bóng ma Duplicate).
      */
-    @Query(value = "SELECT COUNT(*) > 0 FROM transactions t " +
+    @Query(value = "SELECT t.* FROM transactions t " +
                    "JOIN categories c ON t.category_id = c.id " +
                    "WHERE t.user_id = :userId AND t.amount = :amount AND t.transaction_date = :txDate " +
                    "AND t.type = :type AND LOWER(c.name) = LOWER(:categoryName) " +
-                   "AND ((:note IS NULL AND t.note IS NULL) OR LOWER(t.note) = LOWER(:note))",
+                   "AND ((:note IS NULL AND t.note IS NULL) OR LOWER(t.note) = LOWER(:note)) " +
+                   "LIMIT 1",
            nativeQuery = true)
-    boolean existsDuplicate(
+    Optional<Transaction> findDuplicate(
             @Param("userId") UUID userId,
             @Param("amount") BigDecimal amount,
             @Param("txDate") LocalDate txDate,

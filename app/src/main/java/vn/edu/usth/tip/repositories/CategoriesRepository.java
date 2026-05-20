@@ -14,17 +14,22 @@ import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.RetrofitClient;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
 import vn.edu.usth.tip.network.responses.FinancialDtos.CategoryDto;
+import vn.edu.usth.tip.utils.NetworkUtils;
 import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
 public class CategoriesRepository {
+    private final AppDatabase db;
+    private final Context appContext;
     private final CategoryDao categoryDao;
     private final FinancialApi financialApi;
     private final TokenManager tokenManager;
 
     public CategoriesRepository(Context context) {
-        this.categoryDao = AppDatabase.getDatabase(context).categoryDao();
-        this.tokenManager = new TokenManager(context);
+        this.appContext = context.getApplicationContext();
+        this.db = AppDatabase.getDatabase(appContext);
+        this.categoryDao = db.categoryDao();
+        this.tokenManager = new TokenManager(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 
@@ -47,7 +52,9 @@ public class CategoriesRepository {
                             categoryDao.deleteById(c.getId());
                             c.setId(response.body().getId().toString());
                             categoryDao.insert(c);
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            android.util.Log.e("CAT_SYNC", "Local ID update failed after server create: " + e.getMessage());
+                        }
                     });
                 } else {
                     String errBody = "";
@@ -73,23 +80,47 @@ public class CategoriesRepository {
         try {
             UUID id = UUID.fromString(c.getId());
             financialApi.updateCategory(id, req).enqueue(new Callback<CategoryDto>() {
-                @Override public void onResponse(Call<CategoryDto> call, Response<CategoryDto> response) {}
-                @Override public void onFailure(Call<CategoryDto> call, Throwable t) {}
+                @Override public void onResponse(Call<CategoryDto> call, Response<CategoryDto> response) {
+                    if (response.isSuccessful()) {
+                        android.util.Log.d("CAT_SYNC", "Update success!");
+                    } else {
+                        android.util.Log.e("CAT_SYNC", "Update error: " + response.code() + " " + response.message());
+                    }
+                }
+                @Override public void onFailure(Call<CategoryDto> call, Throwable t) {
+                    android.util.Log.e("CAT_SYNC", "Update failed: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("CAT_SYNC", "Update UUID parse error: " + e.getMessage());
+        }
     }
 
     public void deleteOnline(String categoryId) {
         try {
             UUID id = UUID.fromString(categoryId);
             financialApi.deleteCategory(id).enqueue(new Callback<Void>() {
-                @Override public void onResponse(Call<Void> call, Response<Void> response) {}
-                @Override public void onFailure(Call<Void> call, Throwable t) {}
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        android.util.Log.d("CAT_SYNC", "Delete success!");
+                    } else {
+                        android.util.Log.e("CAT_SYNC", "Delete error: " + response.code() + " " + response.message());
+                    }
+                }
+                @Override public void onFailure(Call<Void> call, Throwable t) {
+                    android.util.Log.e("CAT_SYNC", "Delete failed: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("CAT_SYNC", "Delete UUID parse error: " + e.getMessage());
+        }
     }
 
     public void sync(SyncCallback callback) {
+        if (!NetworkUtils.isConnected(appContext)) {
+            callback.onError("Không có kết nối internet");
+            return;
+        }
         financialApi.getAllCategories().enqueue(new Callback<List<CategoryDto>>() {
             @Override
             public void onResponse(@NonNull Call<List<CategoryDto>> call, @NonNull Response<List<CategoryDto>> response) {
@@ -98,7 +129,8 @@ public class CategoriesRepository {
                         List<Category> localCategories = categoryDao.getAllCategoriesSync();
                         List<CategoryDto> serverCategories = new java.util.ArrayList<>(response.body());
 
-                        // 1. Đẩy các danh mục tạo offline lên server
+                        // 1. Đẩy các danh mục tạo offline lên server (blocking network calls —
+                        //    intentionally outside DB transaction to avoid holding DB lock during IO)
                         for (Category local : localCategories) {
                             if (local.isAddButton()) continue;
                             boolean foundOnServer = false;
@@ -115,8 +147,8 @@ public class CategoriesRepository {
                                 try {
                                     String userId = tokenManager.getUserId();
                                     if (userId != null) {
-                                        vn.edu.usth.tip.network.requests.FinancialRequests.CreateCategoryRequest req = 
-                                            new vn.edu.usth.tip.network.requests.FinancialRequests.CreateCategoryRequest(
+                                        FinancialRequests.CreateCategoryRequest req =
+                                            new FinancialRequests.CreateCategoryRequest(
                                                 UUID.fromString(userId),
                                                 local.getName(),
                                                 local.getType() != null ? local.getType() : "expense",
@@ -126,36 +158,39 @@ public class CategoriesRepository {
                                         retrofit2.Response<CategoryDto> res = financialApi.createCategory(req).execute();
                                         if (res.isSuccessful() && res.body() != null) {
                                             serverCategories.add(res.body());
+                                        } else {
+                                            android.util.Log.e("CAT_SYNC", "Offline push error for '" + local.getName() + "': " + res.code());
                                         }
                                     }
-                                } catch (Exception ignored) {}
+                                } catch (Exception e) {
+                                    android.util.Log.e("CAT_SYNC", "Offline push failed for '" + local.getName() + "': " + e.getMessage());
+                                }
                             }
                         }
 
-                        // 2. Kéo dữ liệu từ server về và dọn dẹp duplicate
-                        List<Category> toInsert = new java.util.ArrayList<>();
+                        // 2. Kéo dữ liệu từ server về — xóa duplicate cũ + insertAll trong 1 transaction
+                        final List<Category> toInsert = new java.util.ArrayList<>();
                         for (CategoryDto dto : serverCategories) {
-                            Category serverCategory = convertToModel(dto);
+                            toInsert.add(convertToModel(dto));
+                        }
 
-                            // Xóa các category ở local có cùng tên (thường là do fake UUID sinh ra lúc offline)
-                            for (Category local : localCategories) {
-                                String localType = local.getType() != null ? local.getType().trim() : "expense";
-                                String serverType = serverCategory.getType() != null ? serverCategory.getType().trim() : "expense";
-                                if (local.getName().trim().equalsIgnoreCase(serverCategory.getName().trim()) &&
-                                    localType.equalsIgnoreCase(serverType)) {
-                                    if (!local.getId().equals(serverCategory.getId())) {
+                        db.runInTransaction(() -> {
+                            for (Category serverCategory : toInsert) {
+                                for (Category local : localCategories) {
+                                    String localType = local.getType() != null ? local.getType().trim() : "expense";
+                                    String serverType = serverCategory.getType() != null ? serverCategory.getType().trim() : "expense";
+                                    if (local.getName().trim().equalsIgnoreCase(serverCategory.getName().trim())
+                                            && localType.equalsIgnoreCase(serverType)
+                                            && !local.getId().equals(serverCategory.getId())) {
                                         categoryDao.deleteById(local.getId());
                                     }
                                 }
                             }
+                            if (!toInsert.isEmpty()) {
+                                categoryDao.insertAll(toInsert);
+                            }
+                        });
 
-                            toInsert.add(serverCategory);
-                        }
-                        
-                        if (!toInsert.isEmpty()) {
-                            categoryDao.insertAll(toInsert);
-                        }
-                        
                         callback.onSuccess();
                     });
                 } else callback.onError("Error: " + response.code());

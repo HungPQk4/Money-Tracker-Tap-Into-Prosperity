@@ -86,6 +86,25 @@
 
                 </androidx.cardview.widget.CardView>
 
+                <!-- Recurring badge -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/card_tx_recurring"
+                    android:layout_width="wrap_content"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="8dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="#EDE9FE"
+                    app:cardCornerRadius="11dp"
+                    app:cardElevation="0dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:paddingHorizontal="6dp"
+                        android:text="🔁"
+                        android:textSize="10sp" />
+                </androidx.cardview.widget.CardView>
+
                 <!-- Time -->
                 <TextView
                     android:id="@+id/tv_tx_time"

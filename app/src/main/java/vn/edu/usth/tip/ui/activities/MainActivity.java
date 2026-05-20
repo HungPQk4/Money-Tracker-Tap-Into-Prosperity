@@ -2,8 +2,7 @@ package vn.edu.usth.tip.ui.activities;
 
 import vn.edu.usth.tip.R;
 import vn.edu.usth.tip.utils.AnimUtils;
-import vn.edu.usth.tip.utils.TokenManager;
-import vn.edu.usth.tip.viewmodels.AccountViewModel;
+import vn.edu.usth.tip.utils.SessionManager;
 
 import android.os.Bundle;
 import android.view.View;
@@ -18,7 +17,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
@@ -30,7 +28,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 public class MainActivity extends AppCompatActivity {
 
     private NavController navController;
-    private AccountViewModel accountViewModel;
 
     // Bar giờ là LinearLayout (không còn BottomAppBar). Khai báo dạng View
     // để tất cả method animate()/setPadding()/setLayoutParams()/setVisibility()...
@@ -239,11 +236,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupSessionExpiry() {
-        accountViewModel = new ViewModelProvider(this).get(AccountViewModel.class);
-        accountViewModel.getSessionExpired().observe(this, expired -> {
+        SessionManager.getInstance().getSessionExpiredEvent().observe(this, expired -> {
             if (expired == null || !expired) return;
-            new TokenManager(this).clear();
-            accountViewModel.clearSessionExpired();
+            SessionManager.getInstance().clearSessionExpired();
             android.widget.Toast.makeText(
                     this,
                     "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",

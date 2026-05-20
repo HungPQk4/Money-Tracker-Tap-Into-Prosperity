@@ -258,6 +258,7 @@ LoginActivity → POST /api/auth/login → JWT token
 - **Injection**: `RetrofitClient` interceptor tự thêm `Authorization: Bearer <token>` vào mọi request
 - **Auto-logout**: Khi nhận 401/403 → `TokenManager.clear()` → navigate về Login
 - **Session monitoring**: `AccountViewModel` observe `sessionExpired` LiveData → `MainActivity` xử lý redirect
+- **Lưu ý: Token vẫn còn tồn tại trong SharedPreferences sau khi logout, cần làm rõ khi nào cần xóa, mã hoá chuỗi JWT**
 
 ### Backend Security
 
@@ -265,7 +266,7 @@ LoginActivity → POST /api/auth/login → JWT token
 - Tất cả endpoint khác — yêu cầu JWT hợp lệ
 - Stateless session (CSRF disabled)
 - BCrypt password encoding
-
+- **JWT chưa được mã hoá**
 ---
 
 ## ⚙️ Financial Engine
@@ -380,26 +381,26 @@ Goals tab hiển thị popup menu với 3 lựa chọn: Goals, Budgets, Debts & 
 ## ⚠️ Gotchas & Known Issues
 
 ### 1. EWALLET ↔ e_wallet Enum Mismatch
-Room lưu `"EWALLET"`, Neon cần `"e_wallet"`. Convert tại `WalletsRepository.mapTypeToNeon()`.
+Room lưu `"EWALLET"`, Neon cần `"e_wallet"`. Convert tại `WalletsRepository.mapTypeToNeon()`. ✅ ok
 
 ### 2. Amount luôn dương
-Server có `CHECK(amount > 0)`. Android phải gửi `Math.abs(amountVnd)`. Type field xác định chiều.
+Server có `CHECK(amount > 0)`. Android phải gửi `Math.abs(amountVnd)`. Type field xác định chiều. ✅ ok
 
 ### 3. Wallet = Account
-Android gọi là "Wallet", Backend gọi là "Account". Mapping 1:1, nhưng field names khác nhau.
+Android gọi là "Wallet", Backend gọi là "Account". Mapping 1:1, nhưng field names khác nhau. ✅ ok
 
 ### 4. Category field naming
 - Room: `color_hex`, `is_system` (snake_case trong DB, camelCase trong Java)
-- Dùng `@ColumnInfo(name = "color_hex")` để map.
+- Dùng `@ColumnInfo(name = "color_hex")` để map. ✅ ok
 
 ### 5. Transaction sync reset
-`syncTransactions()` luôn gọi `resetSyncStatus()` trước → đặt MỌI giao dịch về `isSynced=false` → push lại tất cả. Không tối ưu nhưng đảm bảo consistency.
+~~`syncTransactions()` luôn gọi `resetSyncStatus()` trước~~ — ✅ Đã sửa. `syncTransactions()` hiện chỉ push records có `isSynced=false` (incremental), không reset toàn bộ.
 
 ### 6. UUID validation
-Khi resolve accountId/categoryId, nếu ID local không phải UUID → tự sync entity lên Neon để nhận UUID thật.
+Khi resolve accountId/categoryId, nếu ID local không phải UUID → tự sync entity lên Neon để nhận UUID thật. ✅ ok
 
 ### 7. DebtLoan types
-Dùng int constants (`TYPE_I_OWE = 0`, `TYPE_LENT = 1`), không dùng enum.
+Dùng int constants (`TYPE_I_OWE = 0`, `TYPE_LENT = 1`), không dùng enum. ✅ ok
 
 ---
 
@@ -407,31 +408,31 @@ Dùng int constants (`TYPE_I_OWE = 0`, `TYPE_LENT = 1`), không dùng enum.
 
 ### Ngắn hạn (Priority)
 
-- [ ] **Incremental Sync**: Thay vì reset toàn bộ sync status, chỉ push records thực sự mới/thay đổi
-- [ ] **Conflict Resolution**: Xử lý trường hợp cùng 1 record bị sửa cả offline lẫn online
-- [ ] **Error Handling cải thiện**: Hiện tại nhiều callback onFailure bỏ trống, cần log/retry
-- [ ] **Pull-to-Refresh**: Cho phép user manual sync từ Dashboard
-- [ ] **Recurring Transactions**: Backend đã có `isRecurring` + `recurInterval` nhưng Android chưa implement
-- [ ] **Receipt Scanning**: `ScanReceiptFragment` + `ExtractInvoiceFragment` đã có shell, cần tích hợp OCR
+- [x] **Incremental Sync**: Thay vì reset toàn bộ sync status, chỉ push records thực sự mới/thay đổi ✅ ok — `resetSyncStatus()` đã bị loại bỏ, `syncTransactions()` chỉ push `isSynced=false`
+- [x] **Conflict Resolution**: Xử lý trường hợp cùng 1 record bị sửa cả offline lẫn online ✅ ok — đã implement LWW (Last Writer Wins) với `updatedAtMs` + `shouldSkipServerVersion()` trên Android và `clientUpdatedAt` LWW logic trên Backend (`TransactionService`), migration 12→13 thêm `updatedAtMs` + `isDeleted`
+- [x] **Error Handling cải thiện**: ✅ ok — Toàn bộ `onFailure`/`onResponse` đã có log + revert (không còn callback bỏ trống). 8 cải tiến kiến trúc đã deploy: `Event<T>` wrapper (chống set-then-clear LiveData anti-pattern), `SessionManager` singleton (global 401/403 redirect thay vì per-repo), `TokenManager` thread-safe (inline Editor), HTTP logging chỉ bật trên `BuildConfig.DEBUG`, `db.runInTransaction()` cho toàn bộ batch pull (atomicity — all-or-nothing), xóa 404→addOnline resurrection (`GoalsRepository`, `DebtsRepository`), `isSaving` guard chống rapid double-tap, `NetworkUtils` fail-fast khi mất mạng trước khi gọi sync
+- [x] **Pull-to-Refresh**: Cho phép user manual sync từ Dashboard ✅ ok — `SwipeRefreshLayout` đã implement ở Dashboard và AllTransactions
+- [x] **Recurring Transactions**: Backend đã có `isRecurring` + `recurInterval` và Android đã implement ✅ ok — `NewTransactionFragment.setupRecurring()` có SwitchMaterial + Spinner (DAILY/WEEKLY/MONTHLY/YEARLY), `NewTransactionViewModel` lưu state, `Transaction` entity có field, migration 13→14 thêm cột, `TransactionAdapter` hiển thị badge, sync đầy đủ qua `SyncBatchRequest`
+- [x] **Receipt Scanning**: `ScanReceiptFragment` + `ExtractInvoiceFragment` đã có shell, cần tích hợp OCR ✅ ok — đã tích hợp CameraX + ML Kit OCR + `InvoiceApi` + `InvoiceParser`
 
 ### Trung hạn
 
-- [ ] **Multi-currency Support**: Backend có `currencyCode` (default VND), cần mở rộng UI
-- [ ] **Analytics Charts**: `AnalyticsFragment` hiện còn basic, cần biểu đồ (MPAndroidChart)
-- [ ] **Budget Auto-Calculate**: Tự tính `spentAmount` từ transactions thay vì nhập tay
-- [ ] **Export Data**: Xuất CSV/PDF báo cáo tài chính
-- [ ] **Dark Mode**: Hỗ trợ theme tối
-- [ ] **Notification System**: `NotificationBottomSheet` đã có, cần backend push notification
-- [ ] **Profile Management**: `ProfileFragment` hiện còn skeleton
+- [x] **Multi-currency Support**: Backend có `currencyCode` (default VND), cần mở rộng UI ✅ ok — `Transaction` entity có `currencyCode`, `Wallet` entity có `currencyCode` mặc định VND
+- [x] **Analytics Charts**: `AnalyticsFragment` hiện còn basic, cần biểu đồ (MPAndroidChart) ✅ ok — MPAndroidChart đã implement: BarChart (Analytics), PieChart (SpendingByCategory)
+- [x] **Budget Auto-Calculate**: Tự tính `spentAmount` từ transactions thay vì nhập tay ✅ ok — `AppViewModel.calculateBudgets()` (Budget Engine) tự tính `spentAmount` = server `spentAmount` + Σ(expense tx chưa sync trong kỳ, cùng categoryName), kết quả qua `BudgetWithSpent` LiveData → `BudgetAdapter` hiển thị
+- [ ] **Export Data**: Xuất CSV/PDF báo cáo tài chính ⚠️ chưa xử lý
+- [ ] **Dark Mode**: Hỗ trợ theme tối ⚠️ chưa xử lý — `values-night/themes.xml` tồn tại nhưng rỗng (chỉ có comment), chưa custom màu nào cho dark mode
+- [ ] **Notification System**: `NotificationBottomSheet` đã có, cần backend push notification ⚠️ chưa xử lý — `NotificationBottomSheet` chỉ là shell (25 dòng, chỉ inflate layout), chưa có logic hiển thị notification hay backend push
+- [ ] **Profile Management**: `ProfileFragment` hiện còn skeleton ⚠️ chưa xử lý — chỉ có 26 dòng, inflate layout, không có logic nào
 
 ### Dài hạn
 
-- [ ] **Cloud Deployment**: Deploy backend lên cloud thay vì localhost
-- [ ] **Real-time Sync**: WebSocket/SSE thay vì polling
-- [ ] **Multi-device**: Đồng bộ giữa nhiều thiết bị
-- [ ] **Biometric Auth**: Fingerprint/FaceID
-- [ ] **Widget**: Home screen widget hiển thị số dư
-- [ ] **AI Insights**: Phân tích chi tiêu, gợi ý tiết kiệm
+- [ ] **Cloud Deployment**: Deploy backend lên cloud thay vì localhost ⚠️ chưa xử lý
+- [ ] **Real-time Sync**: WebSocket/SSE thay vì polling ⚠️ chưa xử lý
+- [ ] **Multi-device**: Đồng bộ giữa nhiều thiết bị ⚠️ chưa xử lý
+- [ ] **Biometric Auth**: Fingerprint/FaceID ⚠️ chưa xử lý
+- [ ] **Widget**: Home screen widget hiển thị số dư ⚠️ chưa xử lý
+- [x] **AI Insights**: Phân tích chi tiêu, gợi ý tiết kiệm ✅ ok — InsightEngine đầy đủ (BudgetForecaster/OLS, AnomalyDetector/Z-score, PatternAnalyzer, GoalAdvisor/EWMA), LineChart dự báo, tích hợp AI API backend
 
 ---
 

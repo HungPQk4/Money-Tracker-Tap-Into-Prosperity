@@ -2,8 +2,19 @@ package vn.edu.usth.tip.viewmodels;
 
 import android.app.Application;
 
+import androidx.work.BackoffPolicy;
+import androidx.work.Constraints;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
+
+import java.util.concurrent.TimeUnit;
+
 import vn.edu.usth.tip.AppDatabase;
 import vn.edu.usth.tip.models.Budget;
+import vn.edu.usth.tip.workers.TransactionSyncWorker;
 import vn.edu.usth.tip.models.BudgetDao;
 import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.models.Category;
@@ -317,47 +328,47 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void addTransaction(Transaction tx) {
+        tx.setUpdatedAtMs(System.currentTimeMillis());
+        tx.setSynced(false);
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            tx.setSynced(false);
             transactionDao.insert(tx);
-        });
-        // Sync wallets & categories trước để đảm bảo có UUID thật, rồi mới gửi lên
-        // server
-        walletsRepository.sync(new WalletsRepository.SyncCallback() {
-            @Override
-            public void onSuccess() {
-                categoriesRepository.sync(new CategoriesRepository.SyncCallback() {
-                    @Override
-                    public void onSuccess() {
-                        transactionRepository.addTransactionOnline(tx);
-                    }
-
-                    @Override
-                    public void onError(String msg) {
-                        transactionRepository.addTransactionOnline(tx);
-                    }
-                });
-            }
-
-            @Override
-            public void onError(String msg) {
-                transactionRepository.addTransactionOnline(tx);
-            }
+            enqueueSync();
         });
     }
 
     public void updateTransaction(Transaction tx) {
+        tx.setUpdatedAtMs(System.currentTimeMillis());
+        tx.setSynced(false);
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            transactionDao.insert(tx); // INSERT OR REPLACE — works even if sync deleted the record
-            transactionRepository.updateTransactionOnline(tx);
+            transactionDao.insert(tx); // INSERT OR REPLACE
+            enqueueSync();
         });
     }
 
     public void deleteTransaction(Transaction tx) {
+        tx.setDeleted(true);
+        tx.setSynced(false);
+        tx.setUpdatedAtMs(System.currentTimeMillis());
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            transactionDao.delete(tx);
-            transactionRepository.deleteTransactionOnline(tx.getId());
+            transactionDao.insert(tx); // soft delete — push lên server trước khi hard delete
+            enqueueSync();
         });
+    }
+
+    private void enqueueSync() {
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+        OneTimeWorkRequest syncWork = new OneTimeWorkRequest.Builder(TransactionSyncWorker.class)
+                .setConstraints(constraints)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,
+                        WorkRequest.MIN_BACKOFF_MILLIS, TimeUnit.MILLISECONDS)
+                .build();
+        WorkManager.getInstance(getApplication()).enqueueUniqueWork(
+                "TxSync",
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                syncWork
+        );
     }
 
     public void addWallet(Wallet w) {

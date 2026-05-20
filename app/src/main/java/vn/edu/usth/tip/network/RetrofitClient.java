@@ -7,6 +7,8 @@ import okhttp3.Request;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import vn.edu.usth.tip.BuildConfig;
+import vn.edu.usth.tip.utils.SessionManager;
 import vn.edu.usth.tip.utils.TokenManager;
 
 public class RetrofitClient {
@@ -14,14 +16,15 @@ public class RetrofitClient {
     private static Retrofit retrofit = null;
 
     public static <T> T createService(Class<T> serviceClass, TokenManager tokenManager) {
-        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
-
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS);
-        httpClient.addInterceptor(logging);
+        if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+            httpClient.addInterceptor(logging);
+        }
 
         // Interceptor để thêm Authorization Header và xử lý lỗi 401
         httpClient.addInterceptor(chain -> {
@@ -39,6 +42,7 @@ public class RetrofitClient {
             // Nếu gặp lỗi 401 (Hết hạn token hoặc không hợp lệ), xóa token
             if ((response.code() == 401 || response.code() == 403) && tokenManager != null) {
                 tokenManager.clear();
+                SessionManager.getInstance().triggerSessionExpired();
             }
 
             return response;
@@ -56,14 +60,16 @@ public class RetrofitClient {
     // AI Insight API — timeout nới lỏng 30s vì Claude/Gemini mất 5-15s sinh text
     // KHÔNG tái dùng instance thường (readTimeout chỉ 60s có thể fail với LLM slow)
     public static InsightApi createAiInsightService(TokenManager tokenManager) {
-        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
-
-        OkHttpClient aiClient = new OkHttpClient.Builder()
+        OkHttpClient.Builder aiClientBuilder = new OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(15, TimeUnit.SECONDS)
-                .addInterceptor(logging)
+                .writeTimeout(15, TimeUnit.SECONDS);
+        if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+            aiClientBuilder.addInterceptor(logging);
+        }
+        OkHttpClient aiClient = aiClientBuilder
                 .addInterceptor(chain -> {
                     Request.Builder builder = chain.request().newBuilder()
                             .header("ngrok-skip-browser-warning", "true");
@@ -85,13 +91,16 @@ public class RetrofitClient {
     // Giữ lại hàm cũ cho Login (không cần token)
     public static AuthApi getAuthApi() {
         if (retrofit == null) {
-            HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
-            OkHttpClient client = new OkHttpClient.Builder()
+            OkHttpClient.Builder authClientBuilder = new OkHttpClient.Builder()
                     .connectTimeout(15, TimeUnit.SECONDS)
                     .readTimeout(30, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
-                    .addInterceptor(logging)
+                    .writeTimeout(30, TimeUnit.SECONDS);
+            if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+                logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+                authClientBuilder.addInterceptor(logging);
+            }
+            OkHttpClient client = authClientBuilder
                     .addInterceptor(chain -> chain.proceed(
                             chain.request().newBuilder()
                                     .header("ngrok-skip-browser-warning", "true")

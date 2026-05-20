@@ -15,18 +15,23 @@ import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.RetrofitClient;
 import vn.edu.usth.tip.network.responses.FinancialDtos.DebtDto;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
+import vn.edu.usth.tip.utils.NetworkUtils;
 import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
 public class DebtsRepository {
+    private final AppDatabase db;
+    private final Context appContext;
     private final DebtLoanDao debtLoanDao;
     private final FinancialApi financialApi;
     private final TokenManager tokenManager;
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
     public DebtsRepository(Context context) {
-        this.debtLoanDao = AppDatabase.getDatabase(context).debtLoanDao();
-        this.tokenManager = new TokenManager(context);
+        this.appContext = context.getApplicationContext();
+        this.db = AppDatabase.getDatabase(appContext);
+        this.debtLoanDao = db.debtLoanDao();
+        this.tokenManager = new TokenManager(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 
@@ -45,19 +50,23 @@ public class DebtsRepository {
                 req.setNote(d.getReason());
 
                 financialApi.createDebt(req).enqueue(new Callback<DebtDto>() {
-                    @Override 
+                    @Override
                     public void onResponse(Call<DebtDto> call, Response<DebtDto> response) {
                         if (response.isSuccessful()) {
                             AppDatabase.databaseWriteExecutor.execute(() -> {
                                 d.setSynced(true);
                                 debtLoanDao.update(d);
                             });
+                        } else {
+                            android.util.Log.e("DEBT_SYNC", "Add error: " + response.code() + " " + response.message());
                         }
                     }
-                    @Override public void onFailure(Call<DebtDto> call, Throwable t) {}
+                    @Override public void onFailure(Call<DebtDto> call, Throwable t) {
+                        android.util.Log.e("DEBT_SYNC", "Add failed: " + t.getMessage());
+                    }
                 });
             } catch (Exception e) {
-                e.printStackTrace();
+                android.util.Log.e("DEBT_SYNC", "addOnline exception", e);
             }
         });
     }
@@ -82,10 +91,9 @@ public class DebtsRepository {
                         @Override public void onResponse(Call<DebtDto> call, Response<DebtDto> response) {
                             if (!response.isSuccessful()) {
                                 android.util.Log.e("DEBT_SYNC", "Update error: " + response.code() + " " + response.message());
-                                if (response.code() == 404) {
-                                    android.util.Log.d("DEBT_SYNC", "Fallback to addOnline...");
-                                    addOnline(d);
-                                }
+                                // 404: server deleted the record (cross-device delete) or local UUID never reached server.
+                                // Do NOT recreate — that would resurrect a deleted debt on other devices.
+                                // The next full sync() will reconcile the final state.
                             } else {
                                 android.util.Log.d("DEBT_SYNC", "Update success!");
                             }
@@ -98,7 +106,7 @@ public class DebtsRepository {
                     android.util.Log.e("DEBT_SYNC", "Update UUID parse error: " + e.getMessage());
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                android.util.Log.e("DEBT_SYNC", "updateOnline exception", e);
             }
         });
     }
@@ -107,13 +115,27 @@ public class DebtsRepository {
         try {
             UUID id = UUID.fromString(debtId);
             financialApi.deleteDebt(id).enqueue(new Callback<Void>() {
-                @Override public void onResponse(Call<Void> call, Response<Void> response) {}
-                @Override public void onFailure(Call<Void> call, Throwable t) {}
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        android.util.Log.d("DEBT_SYNC", "Delete success!");
+                    } else {
+                        android.util.Log.e("DEBT_SYNC", "Delete error: " + response.code() + " " + response.message());
+                    }
+                }
+                @Override public void onFailure(Call<Void> call, Throwable t) {
+                    android.util.Log.e("DEBT_SYNC", "Delete failed: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("DEBT_SYNC", "Delete UUID parse error: " + e.getMessage());
+        }
     }
 
     public void sync(SyncCallback callback) {
+        if (!NetworkUtils.isConnected(appContext)) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Không có kết nối internet"));
+            return;
+        }
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
                 // 1. Đẩy các khoản vay/nợ chưa đồng bộ lên server trước
@@ -137,35 +159,39 @@ public class DebtsRepository {
                                 // Thay bằng bản ghi mới (ID chuẩn từ PostgreSQL server)
                                 debtLoanDao.insert(convertToModel(res.body()));
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            android.util.Log.e("DEBT_SYNC", "sync push failed for '" + d.getPersonName() + "': " + e.getMessage());
+                        }
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                android.util.Log.e("DEBT_SYNC", "sync exception", e);
             }
 
             // 2. Kéo tất cả dữ liệu từ server về Room
             financialApi.getAllDebts().enqueue(new Callback<List<DebtDto>>() {
                 @Override
                 public void onResponse(@NonNull Call<List<DebtDto>> call, @NonNull Response<List<DebtDto>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    AppDatabase.databaseWriteExecutor.execute(() -> {
-                        // Xóa sạch dữ liệu đã sync cũ (tránh rác nếu có khoản nợ bị xóa ở thiết bị khác)
-                        debtLoanDao.deleteSyncedDebts();
-                        for (DebtDto dto : response.body()) {
-                            debtLoanDao.insert(convertToModel(dto));
-                        }
-                        new android.os.Handler(android.os.Looper.getMainLooper()).post(callback::onSuccess);
-                    });
-                } else {
-                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Error: " + response.code()));
+                    if (response.isSuccessful() && response.body() != null) {
+                        AppDatabase.databaseWriteExecutor.execute(() -> {
+                            final List<DebtDto> serverDebts = response.body();
+                            db.runInTransaction(() -> {
+                                debtLoanDao.deleteSyncedDebts();
+                                for (DebtDto dto : serverDebts) {
+                                    debtLoanDao.insert(convertToModel(dto));
+                                }
+                            });
+                            new android.os.Handler(android.os.Looper.getMainLooper()).post(callback::onSuccess);
+                        });
+                    } else {
+                        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Error: " + response.code()));
+                    }
                 }
-            }
 
-            @Override
-            public void onFailure(@NonNull Call<List<DebtDto>> call, @NonNull Throwable t) {
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(t.getMessage()));
-            }
+                @Override
+                public void onFailure(@NonNull Call<List<DebtDto>> call, @NonNull Throwable t) {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(t.getMessage()));
+                }
             });
         });
     }

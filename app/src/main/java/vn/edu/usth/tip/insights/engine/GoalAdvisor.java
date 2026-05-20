@@ -34,29 +34,12 @@ public class GoalAdvisor {
         // Fallback về 90 ngày nếu createdMs = 0 (data trước migration)
         long createdMs = goal.getCreatedMs();
         if (createdMs <= 0) createdMs = now - 90L * 24 * 60 * 60 * 1000;
-        long weeksSinceStart = (now - createdMs) / ONE_WEEK_MS;
+        long weeksSinceStart = Math.max(1L, (now - createdMs) / ONE_WEEK_MS);
 
-        // Guard: ít nhất 1 tuần
-        int size = Math.max(1, (int) weeksSinceStart);
-        long[] actual = new long[size]; // khởi tạo = 0 (Zero-Padding)
-
-        // Điền từ lịch sử giao dịch tiết kiệm (thu nhập/INCOME vào ví mục tiêu)
-        // Thực tế: goal.savedAmount đã là tổng tiết kiệm, dùng nó để ước tính velocity
-        // bằng cách chia đều theo số tuần đã qua
-        // Điền actual[lastWeek] = savedAmount vì không có lịch sử nạp từng tuần
-        if (size > 0 && goal.getSavedAmount() > 0) {
-            actual[size - 1] = goal.getSavedAmount();
-        }
-
-        // EWMA α=0.3 — BẮT BUỘC double[] tránh sai số cộng dồn khi dùng long[]
-        double[] ewma = new double[size];
-        ewma[0] = (double) actual[0];
-        for (int t = 1; t < size; t++) {
-            ewma[t] = 0.3 * (double) actual[t] + 0.7 * ewma[t - 1];
-        }
-
-        // velocity = EWMA gần nhất (VNĐ/tuần)
-        double velocity = ewma[size - 1];
+        // Vì không có dữ liệu nạp từng tuần, dùng trung bình đơn giản:
+        // velocity = tổng đã tiết kiệm / số tuần đã qua
+        // EWMA sẽ sai ở đây vì tất cả tiền dồn vào 1 slot cuối → velocity = 0.3×total.
+        double velocity = (double) goal.getSavedAmount() / weeksSinceStart;
 
         // Guard: chưa tiết kiệm đồng nào → velocity = 0 → chia cho 0 → năm 292.278.994
         if (velocity <= 0.01) {
@@ -70,6 +53,10 @@ public class GoalAdvisor {
         }
 
         double weeksToComplete = remaining / velocity;
+        // Cap tại 5200 tuần (100 năm) để tránh overflow khi cast sang long
+        if (Double.isInfinite(weeksToComplete) || Double.isNaN(weeksToComplete) || weeksToComplete > 5200) {
+            weeksToComplete = 5200;
+        }
         long projectedDateMs = now + (long) (weeksToComplete * ONE_WEEK_MS);
         String projectedDateLabel = DATE_FMT.format(new Date(projectedDateMs));
 

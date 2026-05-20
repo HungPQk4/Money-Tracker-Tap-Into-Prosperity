@@ -17,22 +17,38 @@ import vn.edu.usth.tip.models.dto.DayPatternDTO;
 @Dao
 public interface TransactionDao {
 
-    /** Tất cả giao dịch, mới nhất trước */
-    @Query("SELECT * FROM transactions ORDER BY timestampMs DESC")
+    /** Tất cả giao dịch chưa xóa, mới nhất trước */
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY timestampMs DESC")
     LiveData<List<Transaction>> getAllTransactions();
 
-    @Query("SELECT * FROM transactions")
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0")
     List<Transaction> getAllTransactionsSync();
 
     /**
      * Lọc giao dịch theo khoảng [fromMs, toMs].
      * Dùng cho filter Hôm nay / Tuần này / Tháng này trên Dashboard.
      */
-    @Query("SELECT * FROM transactions WHERE timestampMs >= :fromMs AND timestampMs < :toMs ORDER BY timestampMs DESC")
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 AND timestampMs >= :fromMs AND timestampMs < :toMs ORDER BY timestampMs DESC")
     LiveData<List<Transaction>> getTransactionsBetween(long fromMs, long toMs);
 
     @Query("SELECT * FROM transactions WHERE isSynced = 0")
     List<Transaction> getUnsyncedTransactionsSync();
+
+    @Query("DELETE FROM transactions WHERE id = :id")
+    void deleteById(String id);
+
+    @Query("UPDATE transactions SET id = :newId WHERE id = :oldId")
+    void updateTransactionId(String oldId, String newId);
+
+    @Query("UPDATE transactions SET " +
+           "title = :title, category = :category, walletName = :walletName, " +
+           "amountVnd = :amountVnd, type = :type, note = :note, " +
+           "timestampMs = :timestampMs, updatedAtMs = :serverTs, isSynced = 1 " +
+           "WHERE id = :id AND updatedAtMs = :requestTimeMs")
+    int fullUpdateIfUnchanged(String id, long requestTimeMs,
+                              String title, String category, String walletName,
+                              long amountVnd, String type, String note,
+                              long timestampMs, long serverTs);
 
     @Query("UPDATE transactions SET isSynced = 0")
     void resetSyncStatus();

@@ -30,9 +30,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true // needed for java.time on API < 26
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -78,4 +80,10 @@ dependencies {
 
     // ML Kit Text Recognition (Latin + Vietnamese)
     implementation("com.google.mlkit:text-recognition:16.0.1")
+
+    // WorkManager — background sync with network constraint + exponential backoff
+    implementation("androidx.work:work-runtime:2.9.0")
+
+    // Java 8+ API desugaring for API < 26 (java.time.Instant, DateTimeFormatter)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

@@ -26,6 +26,10 @@ public class Transaction {
     private String note;        // Ghi chú giao dịch
     private String photoUri;    // Ảnh đính kèm
     private boolean isSynced = false; // Mặc định là false cho tạo mới cục bộ
+    private long updatedAtMs;   // epoch ms — set khi tạo/sửa local; ghi đè khi pull từ server
+    private boolean isDeleted = false; // soft delete — push lên server trước khi hard delete
+    private boolean isRecurring = false; // giao dịch định kỳ — server sinh clone hàng ngày/tuần/tháng/năm
+    private String recurInterval; // "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" | null
 
     @Ignore // Không lưu vào Room, chỉ dùng khi gửi lên API
     private String accountId;
@@ -45,7 +49,11 @@ public class Transaction {
         this.type        = type;
         this.timestampMs = timestampMs;
         this.note        = note;
-        this.isSynced    = false;
+        this.isSynced      = false;
+        this.updatedAtMs   = System.currentTimeMillis();
+        this.isDeleted     = false;
+        this.isRecurring   = false;
+        this.recurInterval = null;
     }
 
     /** Trả về chuỗi số tiền có dấu, vd: "-₫75.000" hoặc "+₫18.000.000" */
@@ -64,6 +72,37 @@ public class Transaction {
                 cal.get(java.util.Calendar.MINUTE));
     }
 
+    /** Trả về ngày + giờ dạng "Hôm nay 09:15", "Hôm qua 09:15", hoặc "15/05 09:15" */
+    public String getFormattedDateTime() {
+        java.util.Calendar tx  = java.util.Calendar.getInstance();
+        tx.setTimeInMillis(timestampMs);
+
+        java.util.Calendar today = java.util.Calendar.getInstance();
+
+        java.util.Calendar yesterday = java.util.Calendar.getInstance();
+        yesterday.add(java.util.Calendar.DAY_OF_YEAR, -1);
+
+        String time = String.format("%02d:%02d",
+                tx.get(java.util.Calendar.HOUR_OF_DAY),
+                tx.get(java.util.Calendar.MINUTE));
+
+        if (isSameDay(tx, today)) {
+            return "Hôm nay " + time;
+        } else if (isSameDay(tx, yesterday)) {
+            return "Hôm qua " + time;
+        } else {
+            String date = String.format("%02d/%02d",
+                    tx.get(java.util.Calendar.DAY_OF_MONTH),
+                    tx.get(java.util.Calendar.MONTH) + 1);
+            return date + " " + time;
+        }
+    }
+
+    private static boolean isSameDay(java.util.Calendar a, java.util.Calendar b) {
+        return a.get(java.util.Calendar.YEAR)       == b.get(java.util.Calendar.YEAR)
+            && a.get(java.util.Calendar.DAY_OF_YEAR) == b.get(java.util.Calendar.DAY_OF_YEAR);
+    }
+
     // ── Getters ───────────────────────────────────────────────────────
     @NonNull
     public String getId()           { return id; }
@@ -77,6 +116,10 @@ public class Transaction {
     public String getNote()         { return note; }
     public String getPhotoUri()     { return photoUri; }
     public boolean isSynced()       { return isSynced; }
+    public long getUpdatedAtMs()    { return updatedAtMs; }
+    public boolean isDeleted()       { return isDeleted; }
+    public boolean isRecurring()     { return isRecurring; }
+    public String getRecurInterval() { return recurInterval; }
 
     // ── Setters ───────────────────────────────────────────────────────
     public void setId(@NonNull String id) { this.id = id; }
@@ -90,6 +133,10 @@ public class Transaction {
     public void setNote(String note) { this.note = note; }
     public void setPhotoUri(String photoUri) { this.photoUri = photoUri; }
     public void setSynced(boolean synced) { isSynced = synced; }
+    public void setUpdatedAtMs(long updatedAtMs) { this.updatedAtMs = updatedAtMs; }
+    public void setDeleted(boolean deleted) { isDeleted = deleted; }
+    public void setRecurring(boolean recurring) { isRecurring = recurring; }
+    public void setRecurInterval(String recurInterval) { this.recurInterval = recurInterval; }
     public void setAccountId(String accountId) { this.accountId = accountId; }
     public String getAccountId() { return accountId; }
     public void setCategoryId(String categoryId) { this.categoryId = categoryId; }

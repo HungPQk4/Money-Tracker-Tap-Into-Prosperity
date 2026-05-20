@@ -21,10 +21,11 @@ public class DashboardRepository {
         this.dashboardApi = RetrofitClient.createService(DashboardApi.class, tokenManager);
     }
 
-    public void fetchSummary(MutableLiveData<DashboardSummary> summaryData, MutableLiveData<String> errorData) {
+    public void fetchSummary(MutableLiveData<DashboardSummary> summaryData, MutableLiveData<String> errorData, MutableLiveData<Boolean> isLoading) {
         dashboardApi.getDashboardSummary().enqueue(new Callback<DashboardSummary>() {
             @Override
             public void onResponse(Call<DashboardSummary> call, Response<DashboardSummary> response) {
+                if (isLoading != null) isLoading.postValue(false);
                 if (response.isSuccessful() && response.body() != null) {
                     summaryData.postValue(response.body());
                 } else {
@@ -34,15 +35,17 @@ public class DashboardRepository {
 
             @Override
             public void onFailure(Call<DashboardSummary> call, Throwable t) {
+                if (isLoading != null) isLoading.postValue(false);
                 errorData.postValue("Lỗi mạng: " + t.getMessage());
             }
         });
     }
 
-    public void fetchRecentTransactions(String period, MutableLiveData<List<TransactionResponse>> transactionsData, MutableLiveData<String> errorData) {
+    public void fetchRecentTransactions(String period, MutableLiveData<List<TransactionResponse>> transactionsData, MutableLiveData<String> errorData, MutableLiveData<Boolean> isLoading) {
         dashboardApi.getRecentTransactions(period).enqueue(new Callback<List<TransactionResponse>>() {
             @Override
             public void onResponse(Call<List<TransactionResponse>> call, Response<List<TransactionResponse>> response) {
+                if (isLoading != null) isLoading.postValue(false);
                 if (response.isSuccessful() && response.body() != null) {
                     transactionsData.postValue(response.body());
                 } else {
@@ -52,6 +55,7 @@ public class DashboardRepository {
 
             @Override
             public void onFailure(Call<List<TransactionResponse>> call, Throwable t) {
+                if (isLoading != null) isLoading.postValue(false);
                 errorData.postValue("Lỗi mạng: " + t.getMessage());
             }
         });

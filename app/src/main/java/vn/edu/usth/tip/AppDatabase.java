@@ -31,7 +31,7 @@ import vn.edu.usth.tip.models.GoalDao;
 @Database(
         entities = {Transaction.class, Category.class, Wallet.class,
                 Budget.class, DebtLoan.class, Goal.class},
-        version = 12,
+        version = 14,
         exportSchema = false
 )
 @TypeConverters({Converters.class})
@@ -83,7 +83,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "money_tracker_database")
-                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12)
+                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                             .fallbackToDestructiveMigration()
                             .addCallback(sRoomDatabaseCallback)
                             .build();
@@ -114,6 +114,25 @@ public abstract class AppDatabase extends RoomDatabase {
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("DELETE FROM categories");
             database.execSQL("DELETE FROM wallets");
+        }
+    };
+
+    // 13→14: thêm isRecurring + recurInterval vào transactions cho tính năng giao dịch định kỳ
+    static final Migration MIGRATION_13_14 = new Migration(13, 14) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE transactions ADD COLUMN isRecurring INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE transactions ADD COLUMN recurInterval TEXT");
+        }
+    };
+
+    // 12→13: thêm updatedAtMs + isDeleted vào transactions cho LWW conflict resolution
+    static final Migration MIGRATION_12_13 = new Migration(12, 13) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            // db.execSQL() chỉ chấp nhận 1 câu SQL mỗi lần — KHÔNG gộp với dấu ";"
+            database.execSQL("ALTER TABLE transactions ADD COLUMN updatedAtMs INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE transactions ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0");
         }
     };
 

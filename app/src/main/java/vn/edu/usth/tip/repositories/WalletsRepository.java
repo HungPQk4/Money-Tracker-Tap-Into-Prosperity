@@ -14,17 +14,22 @@ import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.RetrofitClient;
 import vn.edu.usth.tip.network.responses.FinancialDtos.AccountDto;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
+import vn.edu.usth.tip.utils.NetworkUtils;
 import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
 public class WalletsRepository {
+    private final AppDatabase db;
+    private final Context appContext;
     private final WalletDao walletDao;
     private final FinancialApi financialApi;
     private final TokenManager tokenManager;
 
     public WalletsRepository(Context context) {
-        this.walletDao = AppDatabase.getDatabase(context).walletDao();
-        this.tokenManager = new TokenManager(context);
+        this.appContext = context.getApplicationContext();
+        this.db = AppDatabase.getDatabase(appContext);
+        this.walletDao = db.walletDao();
+        this.tokenManager = new TokenManager(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 
@@ -55,7 +60,9 @@ public class WalletsRepository {
                             walletDao.delete(w);
                             w.setId(response.body().getId().toString());
                             walletDao.insert(w);
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            android.util.Log.e("WALLET_SYNC", "Local ID update failed after server create: " + e.getMessage());
+                        }
                     });
                 } else {
                     String errBody = "";
@@ -78,37 +85,63 @@ public class WalletsRepository {
         try {
             UUID id = UUID.fromString(w.getId());
             financialApi.updateAccount(id, req).enqueue(new Callback<AccountDto>() {
-                @Override public void onResponse(Call<AccountDto> call, Response<AccountDto> response) {}
-                @Override public void onFailure(Call<AccountDto> call, Throwable t) {}
+                @Override public void onResponse(Call<AccountDto> call, Response<AccountDto> response) {
+                    if (response.isSuccessful()) {
+                        android.util.Log.d("WALLET_SYNC", "Update success!");
+                    } else {
+                        android.util.Log.e("WALLET_SYNC", "Update error: " + response.code() + " " + response.message());
+                    }
+                }
+                @Override public void onFailure(Call<AccountDto> call, Throwable t) {
+                    android.util.Log.e("WALLET_SYNC", "Update failed: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("WALLET_SYNC", "Update UUID parse error: " + e.getMessage());
+        }
     }
 
     public void deleteOnline(String walletId) {
         try {
             UUID id = UUID.fromString(walletId);
             financialApi.deleteAccount(id).enqueue(new Callback<Void>() {
-                @Override public void onResponse(Call<Void> call, Response<Void> response) {}
-                @Override public void onFailure(Call<Void> call, Throwable t) {}
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        android.util.Log.d("WALLET_SYNC", "Delete success!");
+                    } else {
+                        android.util.Log.e("WALLET_SYNC", "Delete error: " + response.code() + " " + response.message());
+                    }
+                }
+                @Override public void onFailure(Call<Void> call, Throwable t) {
+                    android.util.Log.e("WALLET_SYNC", "Delete failed: " + t.getMessage());
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            android.util.Log.e("WALLET_SYNC", "Delete UUID parse error: " + e.getMessage());
+        }
     }
 
     public void sync(SyncCallback callback) {
+        if (!NetworkUtils.isConnected(appContext)) {
+            callback.onError("Không có kết nối internet");
+            return;
+        }
         financialApi.getAllAccounts().enqueue(new Callback<List<AccountDto>>() {
             @Override
             public void onResponse(@NonNull Call<List<AccountDto>> call, @NonNull Response<List<AccountDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
-                        for (AccountDto dto : response.body()) {
-                            Wallet incoming = convertToModel(dto);
-                            // Xóa record cũ cùng tên nhưng ID giả (không phải UUID)
-                            Wallet existing = walletDao.findByNameSync(dto.getName());
-                            if (existing != null && !existing.getId().equals(incoming.getId())) {
-                                walletDao.delete(existing);
+                        final List<AccountDto> serverAccounts = response.body();
+                        db.runInTransaction(() -> {
+                            for (AccountDto dto : serverAccounts) {
+                                Wallet incoming = convertToModel(dto);
+                                Wallet existing = walletDao.findByNameSync(dto.getName());
+                                if (existing != null && !existing.getId().equals(incoming.getId())) {
+                                    walletDao.delete(existing);
+                                }
+                                walletDao.insert(incoming);
                             }
-                            walletDao.insert(incoming);
-                        }
+                        });
                         callback.onSuccess();
                     });
                 } else callback.onError("Error: " + response.code());

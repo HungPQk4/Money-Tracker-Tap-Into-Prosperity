@@ -221,7 +221,7 @@ public class TransactionDetailSheet extends BottomSheetDialogFragment {
             
             Toast.makeText(requireContext(), "Đã lưu ảnh đính kèm", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            e.printStackTrace();
+            android.util.Log.e("TransactionDetail", "saveAttachmentPhoto failed: " + e.getMessage(), e);
             Toast.makeText(requireContext(), "Không thể lưu ảnh", Toast.LENGTH_SHORT).show();
         }
     }

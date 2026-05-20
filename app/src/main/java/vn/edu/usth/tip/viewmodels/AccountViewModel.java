@@ -21,19 +21,10 @@ public class AccountViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> deleteSuccessData = new MutableLiveData<>();
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
-    private final MutableLiveData<Boolean> sessionExpired = new MutableLiveData<>(false);
 
     public AccountViewModel(@NonNull Application application) {
         super(application);
-        repository = new AccountRepository(application, sessionExpired);
-    }
-
-    public LiveData<Boolean> getSessionExpired() {
-        return sessionExpired;
-    }
-
-    public void clearSessionExpired() {
-        sessionExpired.setValue(false);
+        repository = new AccountRepository(application);
     }
 
     public LiveData<List<AccountResponse>> getAccountsData() {
@@ -74,26 +65,22 @@ public class AccountViewModel extends AndroidViewModel {
 
     public void loadAccounts() {
         isLoading.setValue(true);
-        repository.fetchAllAccounts(accountsData, errorMessage);
-        isLoading.setValue(false);
+        repository.fetchAllAccounts(accountsData, errorMessage, isLoading);
     }
 
     public void createAccount(AccountRequest request) {
         isLoading.setValue(true);
-        repository.createAccount(request, createdAccountData, errorMessage);
-        isLoading.setValue(false);
+        repository.createAccount(request, createdAccountData, errorMessage, isLoading);
     }
 
     public void updateAccount(String id, AccountRequest request) {
         isLoading.setValue(true);
-        repository.updateAccount(id, request, updatedAccountData, errorMessage);
-        isLoading.setValue(false);
+        repository.updateAccount(id, request, updatedAccountData, errorMessage, isLoading);
     }
 
     public void deleteAccount(String id) {
         isLoading.setValue(true);
-        repository.deleteAccount(id, deleteSuccessData, errorMessage);
-        isLoading.setValue(false);
+        repository.deleteAccount(id, deleteSuccessData, errorMessage, isLoading);
     }
 
     public void clearErrorMessage() {

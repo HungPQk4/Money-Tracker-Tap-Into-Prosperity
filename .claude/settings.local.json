@@ -12,7 +12,18 @@
       "Bash(adb shell *)",
       "Bash(grep -v \"^--$\")",
       "Bash(./gradlew compileDebugJavaWithJavac)",
-      "Bash(xargs grep -l \"suggest\\\\|recommend\\\\|predict\\\\|insight\\\\|tip\\\\|advice\\\\|optimal\")"
+      "Bash(xargs grep -l \"suggest\\\\|recommend\\\\|predict\\\\|insight\\\\|tip\\\\|advice\\\\|optimal\")",
+      "Bash(Get-ChildItem -Path \"f:\\\\Money-Tracker-Tap-Into-Prosperity\\\\app\\\\src\\\\main\\\\java\\\\vn\\\\edu\\\\usth\\\\tip\\\\\" -Recurse -Filter \"*.java\" | Select-Object -ExpandProperty FullName | Sort-Object)",
+      "Bash(Get-ChildItem -Path \"f:\\\\Money-Tracker-Tap-Into-Prosperity\\\\app\\\\src\\\\main\\\\java\\\\vn\\\\edu\\\\usth\\\\tip\\\\\" -Recurse -Filter \"*.java\" | Select-Object -ExpandProperty FullName | head -50)",
+      "Bash(./gradlew :app:compileDebugJavaSources)",
+      "Bash(./gradlew :app:assembleDebug)",
+      "Bash(grep -E \"^\\\\-\\\\-$|onFailure|Log\\\\.\")",
+      "Bash(ls -la \"f:\\\\\\\\Money-Tracker-Tap-Into-Prosperity\\\\\\\\app\\\\\\\\src\\\\\\\\main\\\\\\\\java\\\\\\\\vn\\\\\\\\edu\\\\\\\\usth\\\\\\\\tip\\\\\\\\repositories\\\\\\\\\")",
+      "Bash(Get-ChildItem -Recurse -Path \"f:\\\\Money-Tracker-Tap-Into-Prosperity\\\\app\\\\src\\\\main\\\\java\\\\vn\\\\edu\\\\usth\\\\tip\\\\viewmodels\\\\\" | Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"f:\\\\Money-Tracker-Tap-Into-Prosperity\\\\app\\\\src\\\\main\\\\java\\\\vn\\\\edu\\\\usth\\\\tip\\\\\" -Recurse -Filter \"*.java\" | Select-Object -ExpandProperty Name | Sort-Object)",
+      "Bash(xargs grep -l \"SingleLiveEvent\\\\|Event<\")",
+      "Bash(xargs grep -l \"SingleLiveEvent\\\\|class Event\")",
+      "Bash(./gradlew :app:compileDebugJavaWithJavac)"
     ]
   }
 }

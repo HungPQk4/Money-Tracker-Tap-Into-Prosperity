@@ -39,18 +39,19 @@ public class AnomalyDetector {
             String category = entry.getKey();
             Map<String, Long> monthMap = entry.getValue();
 
-            // Data Leakage Prevention: lấy tháng hiện tại riêng, không đưa vào baseline
+            // Data Leakage Prevention: tháng hiện tại chỉ dùng để so sánh, không đưa vào baseline
             long current = monthMap.getOrDefault(currentYM, 0L);
 
-            // 3 tháng lịch sử (Zero-Padding: tháng thiếu = 0)
+            // 3 tháng lịch sử — dùng last4[1..3] (KHÔNG dùng last4[0] = tháng hiện tại)
             long[] historical = new long[3];
-            int idx = 0;
             for (int i = 0; i < 3; i++) {
-                historical[idx++] = monthMap.getOrDefault(last4[i], 0L);
+                historical[i] = monthMap.getOrDefault(last4[i + 1], 0L);
             }
 
-            // Guard: cần ít nhất 2 tháng lịch sử có nghĩa thống kê (N-1 ≥ 1)
-            if (idx < 2) continue;
+            // Guard: cần ít nhất 2 tháng lịch sử có số tiền > 0 để stdDev có nghĩa thống kê
+            int nonZeroCount = 0;
+            for (long v : historical) if (v > 0) nonZeroCount++;
+            if (nonZeroCount < 2) continue;
 
             double mean = RegressionHelper.mean(historical);
             double stdDev = RegressionHelper.sampleStdDev(historical);

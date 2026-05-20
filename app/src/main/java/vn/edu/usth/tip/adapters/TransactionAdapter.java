@@ -56,7 +56,7 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
         h.tvIcon.setText(tx.getIcon());
         h.tvTitle.setText(tx.getTitle());
         h.tvCategory.setText(tx.getCategory());
-        h.tvTime.setText(tx.getFormattedTime());
+        h.tvTime.setText(tx.getFormattedDateTime());
         h.tvAmount.setText(tx.getFormattedAmount());
         h.tvWallet.setText(tx.getWalletName());
 
@@ -71,6 +71,8 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
                      : tx.getType() == Transaction.Type.EXPENSE ? TEXT_EXPENSE
                      : TEXT_TRANSFER;
         h.tvAmount.setTextColor(amtColor);
+
+        h.cardRecurring.setVisibility(tx.isRecurring() ? View.VISIBLE : View.GONE);
 
         h.cardTransaction.setOnClickListener(v -> {
             if (listener != null) listener.onClick(tx);
@@ -91,13 +93,14 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
     // ── ViewHolder ────────────────────────────────────────────────────
 
     static class TxViewHolder extends RecyclerView.ViewHolder {
-        CardView cardTransaction, cardIcon;
+        CardView cardTransaction, cardIcon, cardRecurring;
         TextView tvIcon, tvTitle, tvCategory, tvTime, tvAmount, tvWallet;
 
         TxViewHolder(@NonNull View v) {
             super(v);
             cardTransaction = v.findViewById(R.id.card_transaction);
             cardIcon        = v.findViewById(R.id.card_tx_icon);
+            cardRecurring   = v.findViewById(R.id.card_tx_recurring);
             tvIcon          = v.findViewById(R.id.tv_tx_icon);
             tvTitle         = v.findViewById(R.id.tv_tx_title);
             tvCategory      = v.findViewById(R.id.tv_tx_category);

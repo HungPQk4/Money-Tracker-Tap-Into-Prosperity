@@ -11,13 +11,19 @@ import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.transition.TransitionManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,11 +38,13 @@ import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.utils.Event;
 
 public class NewTransactionFragment extends Fragment {
 
@@ -44,11 +52,16 @@ public class NewTransactionFragment extends Fragment {
     private NewTransactionViewModel newTxViewModel;
     private CategoryAdapter categoryAdapter;
     private Transaction.Type currentCategoryType = null;
+    private String pendingCategorySelection = null;
 
     // View references
     private TextView tvAmount;
     private CardView btnTypeExpense, btnTypeIncome, btnTypeTransfer;
+    private TextView tvTypeExpense, tvTypeIncome, tvTypeTransfer;
     private TextView tvNotePreview, tvDatePreview, tvWalletPreview;
+    private LinearLayout sectionCategory, sectionTransfer;
+    private View cardSelectWallet;
+    private TextView tvFromAccountPreview, tvToAccountPreview;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -72,6 +85,9 @@ public class NewTransactionFragment extends Fragment {
         btnTypeExpense = view.findViewById(R.id.btn_type_expense);
         btnTypeIncome  = view.findViewById(R.id.btn_type_income);
         btnTypeTransfer = view.findViewById(R.id.btn_type_transfer);
+        tvTypeExpense = view.findViewById(R.id.tv_type_expense);
+        tvTypeIncome  = view.findViewById(R.id.tv_type_income);
+        tvTypeTransfer = view.findViewById(R.id.tv_type_transfer);
         tvNotePreview = view.findViewById(R.id.tv_note_preview);
         tvDatePreview = view.findViewById(R.id.tv_date_preview);
         tvWalletPreview = view.findViewById(R.id.tv_wallet_preview);
@@ -85,6 +101,7 @@ public class NewTransactionFragment extends Fragment {
         // Initialize Edit Mode if navigating from Details
         Transaction editingTx = appViewModel.getEditingTransaction();
         if (editingTx != null) {
+            pendingCategorySelection = editingTx.getCategory();
             newTxViewModel.initEditMode(editingTx);
         } else {
             // Check default selected type from Dashboard
@@ -96,15 +113,23 @@ public class NewTransactionFragment extends Fragment {
         btnTypeIncome.setOnClickListener(v  -> newTxViewModel.setType(Transaction.Type.INCOME));
         btnTypeTransfer.setOnClickListener(v -> newTxViewModel.setType(Transaction.Type.TRANSFER));
 
+        sectionCategory = view.findViewById(R.id.section_category);
+        sectionTransfer = view.findViewById(R.id.section_transfer);
+        cardSelectWallet = view.findViewById(R.id.btn_select_wallet);
+        tvFromAccountPreview = view.findViewById(R.id.tv_from_account);
+        tvToAccountPreview = view.findViewById(R.id.tv_to_account);
+
         setupNumpad(view);
         setupNoteAndDate(view);
         setupWalletPicker(view);
+        setupTransferAccountPickers(view);
+        setupRecurring(view);
 
         // Setup Categories
         RecyclerView rvCategories = view.findViewById(R.id.rv_categories);
         rvCategories.setLayoutManager(new GridLayoutManager(requireContext(), 4));
         appViewModel.getCategories().observe(getViewLifecycleOwner(), categories -> {
-            refreshCategories();
+            refreshCategories(false);
         });
 
         view.findViewById(R.id.btn_save_transaction).setOnClickListener(v -> {
@@ -117,11 +142,15 @@ public class NewTransactionFragment extends Fragment {
         newTxViewModel.getUiState().observe(getViewLifecycleOwner(), this::renderUiState);
 
         // Observe Validation & Save Events
-        newTxViewModel.getValidationError().observe(getViewLifecycleOwner(), msg -> {
+        newTxViewModel.getValidationError().observe(getViewLifecycleOwner(), event -> {
+            if (event == null) return;
+            String msg = event.getContentIfNotHandled();
             if (msg != null) Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
         });
 
-        newTxViewModel.getTransactionToSave().observe(getViewLifecycleOwner(), tx -> {
+        newTxViewModel.getTransactionToSave().observe(getViewLifecycleOwner(), event -> {
+            if (event == null) return;
+            Transaction tx = event.getContentIfNotHandled();
             if (tx != null) {
                 appViewModel.addTransaction(tx);
                 Toast.makeText(requireContext(), "Đã lưu giao dịch", Toast.LENGTH_SHORT).show();
@@ -130,7 +159,9 @@ public class NewTransactionFragment extends Fragment {
             }
         });
 
-        newTxViewModel.getTransactionToUpdate().observe(getViewLifecycleOwner(), tx -> {
+        newTxViewModel.getTransactionToUpdate().observe(getViewLifecycleOwner(), event -> {
+            if (event == null) return;
+            Transaction tx = event.getContentIfNotHandled();
             if (tx != null) {
                 appViewModel.updateTransaction(tx);
                 Toast.makeText(requireContext(), "Đã cập nhật giao dịch", Toast.LENGTH_SHORT).show();
@@ -147,6 +178,57 @@ public class NewTransactionFragment extends Fragment {
                 tvWalletPreview.setText("Không tải được ví");
             }
         });
+    }
+
+    private void updateSectionVisibility(Transaction.Type type) {
+        if (sectionCategory == null || sectionTransfer == null) return;
+        ViewGroup parent = (ViewGroup) sectionCategory.getParent();
+        if (parent != null) TransitionManager.beginDelayedTransition(parent);
+        if (type == Transaction.Type.TRANSFER) {
+            sectionCategory.setVisibility(View.GONE);
+            sectionTransfer.setVisibility(View.VISIBLE);
+            if (cardSelectWallet != null) cardSelectWallet.setVisibility(View.GONE);
+        } else {
+            sectionCategory.setVisibility(View.VISIBLE);
+            sectionTransfer.setVisibility(View.GONE);
+            if (cardSelectWallet != null) cardSelectWallet.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void setupTransferAccountPickers(View view) {
+        CardView btnFromAccount = view.findViewById(R.id.btn_select_from_account);
+        CardView btnToAccount = view.findViewById(R.id.btn_select_to_account);
+        if (btnFromAccount == null || btnToAccount == null) return;
+
+        btnFromAccount.setOnClickListener(v -> showAccountPicker(false));
+        btnToAccount.setOnClickListener(v -> showAccountPicker(true));
+    }
+
+    private void showAccountPicker(boolean isToAccount) {
+        List<AccountResponse> accounts = newTxViewModel.getAccounts().getValue();
+        if (accounts == null || accounts.isEmpty()) {
+            Toast.makeText(requireContext(), "Chưa có ví, vui lòng tạo ví trước", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] names = new String[accounts.size()];
+        for (int i = 0; i < accounts.size(); i++) {
+            AccountResponse acc = accounts.get(i);
+            String icon = (acc.getIcon() != null && !acc.getIcon().isEmpty()) ? acc.getIcon() + "  " : "💳  ";
+            String balance = String.format("%,d₫", acc.getBalance()).replace(",", ".");
+            names[i] = icon + acc.getName() + "  (" + balance + ")";
+        }
+        String title = isToAccount ? "Chọn tài khoản đích" : "Chọn tài khoản nguồn";
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle(title)
+                .setItems(names, (dialog, which) -> {
+                    if (isToAccount) {
+                        newTxViewModel.selectToAccount(accounts.get(which));
+                    } else {
+                        newTxViewModel.selectAccount(accounts.get(which));
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 
     private void setupWalletPicker(View view) {
@@ -188,31 +270,35 @@ public class NewTransactionFragment extends Fragment {
             tvAmount.setText("0");
         }
 
-        // Reset all
-        btnTypeExpense.setCardBackgroundColor(Color.TRANSPARENT);
-        btnTypeIncome.setCardBackgroundColor(Color.TRANSPARENT);
-        btnTypeTransfer.setCardBackgroundColor(Color.TRANSPARENT);
+        // Reset all tabs to inactive state — use container color, not transparent
+        int inactiveBg = Color.parseColor("#E9E9F0");
+        int inactiveText = Color.parseColor("#6B6584");
+        float elevationActive = 4 * getResources().getDisplayMetrics().density;
 
-        btnTypeExpense.setCardElevation(0);
-        btnTypeIncome.setCardElevation(0);
-        btnTypeTransfer.setCardElevation(0);
+        btnTypeExpense.setCardBackgroundColor(inactiveBg);
+        btnTypeIncome.setCardBackgroundColor(inactiveBg);
+        btnTypeTransfer.setCardBackgroundColor(inactiveBg);
 
-        ((TextView)btnTypeExpense.getChildAt(0)).setTextColor(Color.parseColor("#6B6584"));
-        ((TextView)btnTypeIncome.getChildAt(0)).setTextColor(Color.parseColor("#6B6584"));
-        ((TextView)btnTypeTransfer.getChildAt(0)).setTextColor(Color.parseColor("#6B6584"));
+        btnTypeExpense.setCardElevation(0f);
+        btnTypeIncome.setCardElevation(0f);
+        btnTypeTransfer.setCardElevation(0f);
+
+        tvTypeExpense.setTextColor(inactiveText);
+        tvTypeIncome.setTextColor(inactiveText);
+        tvTypeTransfer.setTextColor(inactiveText);
 
         if (state.selectedType == Transaction.Type.EXPENSE) {
             btnTypeExpense.setCardBackgroundColor(Color.parseColor("#E76E60"));
-            btnTypeExpense.setCardElevation(2);
-            ((TextView)btnTypeExpense.getChildAt(0)).setTextColor(Color.WHITE);
+            btnTypeExpense.setCardElevation(elevationActive);
+            tvTypeExpense.setTextColor(Color.WHITE);
         } else if (state.selectedType == Transaction.Type.INCOME) {
             btnTypeIncome.setCardBackgroundColor(Color.parseColor("#4ADE80"));
-            btnTypeIncome.setCardElevation(2);
-            ((TextView)btnTypeIncome.getChildAt(0)).setTextColor(Color.WHITE);
-        } else {
+            btnTypeIncome.setCardElevation(elevationActive);
+            tvTypeIncome.setTextColor(Color.WHITE);
+        } else if (state.selectedType == Transaction.Type.TRANSFER) {
             btnTypeTransfer.setCardBackgroundColor(Color.parseColor("#735BF2"));
-            btnTypeTransfer.setCardElevation(2);
-            ((TextView)btnTypeTransfer.getChildAt(0)).setTextColor(Color.WHITE);
+            btnTypeTransfer.setCardElevation(elevationActive);
+            tvTypeTransfer.setTextColor(Color.WHITE);
         }
 
         if (state.note.isEmpty()) {
@@ -225,18 +311,27 @@ public class NewTransactionFragment extends Fragment {
 
         tvDatePreview.setText(formatDateDisplay(state.timestampMs));
 
-        // Render wallet name
+        // Render wallet name (EXPENSE / INCOME)
         if (tvWalletPreview != null) {
             tvWalletPreview.setText(state.selectedAccountName);
         }
+        // Render from/to accounts (TRANSFER)
+        if (tvFromAccountPreview != null) {
+            tvFromAccountPreview.setText(state.selectedAccountName);
+        }
+        if (tvToAccountPreview != null) {
+            tvToAccountPreview.setText(state.selectedToAccountName);
+        }
+
+        updateSectionVisibility(state.selectedType);
 
         if (currentCategoryType != state.selectedType) {
             currentCategoryType = state.selectedType;
-            refreshCategories();
+            refreshCategories(true);
         }
     }
 
-    private void refreshCategories() {
+    private void refreshCategories(boolean typeChanged) {
         if (getView() == null) return;
         RecyclerView rvCategories = getView().findViewById(R.id.rv_categories);
         if (rvCategories == null) return;
@@ -247,27 +342,21 @@ public class NewTransactionFragment extends Fragment {
         NewTransactionViewModel.UiState state = newTxViewModel.getUiState().getValue();
         if (state == null) return;
 
-        String targetType = "";
-        if (state.selectedType == Transaction.Type.EXPENSE) targetType = "expense";
-        else if (state.selectedType == Transaction.Type.INCOME) targetType = "income";
-        // If transfer, maybe we still show expense or specific? Let's just match exact or show all if empty.
+        // Chi tiêu và Thu nhập dùng chung toàn bộ danh sách danh mục.
+        // TRANSFER có UI riêng (section_transfer), không dùng category grid.
+        List<Category> filtered = new ArrayList<>(allCategories);
 
-        java.util.List<Category> filtered = new java.util.ArrayList<>();
-        for (Category c : allCategories) {
-            if (c.isAddButton()) {
-                filtered.add(c);
-            } else {
-                String cType = c.getType() != null ? c.getType().toLowerCase() : "expense";
-                if (targetType.isEmpty() || cType.equals(targetType)) {
-                    filtered.add(c);
-                }
-            }
+        updateCategoryList(filtered, rvCategories);
+
+        // Reset về item đầu tiên khi người dùng đổi tab loại giao dịch
+        if (typeChanged && categoryAdapter != null) {
+            categoryAdapter.resetSelection();
         }
 
-        boolean isEditInit = categoryAdapter == null && appViewModel.getEditingTransaction() != null;
-        updateCategoryList(filtered, rvCategories);
-        if (isEditInit) {
-            categoryAdapter.selectCategoryByName(appViewModel.getEditingTransaction().getCategory());
+        // Áp dụng danh mục đang chờ chọn (chế độ chỉnh sửa)
+        if (pendingCategorySelection != null && categoryAdapter != null) {
+            categoryAdapter.selectCategoryByName(pendingCategorySelection);
+            pendingCategorySelection = null;
         }
     }
 
@@ -395,6 +484,52 @@ public class NewTransactionFragment extends Fragment {
         }
         view.findViewById(R.id.key_clear).setOnClickListener(v -> newTxViewModel.clearNumpad());
         view.findViewById(R.id.key_del).setOnClickListener(v -> newTxViewModel.deleteNumpad());
+    }
+
+    private void setupRecurring(View view) {
+        SwitchMaterial switchRecurring = view.findViewById(R.id.switch_recurring);
+        LinearLayout layoutInterval    = view.findViewById(R.id.layout_recur_interval);
+        Spinner spinnerInterval        = view.findViewById(R.id.spinner_recur_interval);
+
+        String[] intervalLabels = {"Hàng ngày", "Hàng tuần", "Hàng tháng", "Hàng năm"};
+        String[] intervalValues = {"DAILY",     "WEEKLY",    "MONTHLY",    "YEARLY"};
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_item, intervalLabels);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerInterval.setAdapter(adapter);
+
+        // Khôi phục trạng thái khi edit mode
+        NewTransactionViewModel.UiState state = newTxViewModel.getUiState().getValue();
+        if (state != null && state.isRecurring) {
+            switchRecurring.setChecked(true);
+            layoutInterval.setVisibility(View.VISIBLE);
+            if (state.recurInterval != null) {
+                for (int i = 0; i < intervalValues.length; i++) {
+                    if (intervalValues[i].equals(state.recurInterval)) {
+                        spinnerInterval.setSelection(i);
+                        break;
+                    }
+                }
+            }
+        }
+
+        switchRecurring.setOnCheckedChangeListener((btn, isChecked) -> {
+            layoutInterval.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            String selected = isChecked ? intervalValues[spinnerInterval.getSelectedItemPosition()] : null;
+            newTxViewModel.updateRecurring(isChecked, selected);
+        });
+
+        spinnerInterval.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View v, int pos, long id) {
+                if (switchRecurring.isChecked()) {
+                    newTxViewModel.updateRecurring(true, intervalValues[pos]);
+                }
+            }
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
     }
 
     @Override

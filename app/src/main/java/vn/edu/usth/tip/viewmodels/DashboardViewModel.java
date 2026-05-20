@@ -42,13 +42,11 @@ public class DashboardViewModel extends AndroidViewModel {
 
     public void loadDashboardSummary() {
         isLoading.setValue(true);
-        repository.fetchSummary(summaryData, errorMessage);
-        isLoading.setValue(false); // In real-world, we'd wait for API callback or use coroutines/RxJava for proper loading state.
+        repository.fetchSummary(summaryData, errorMessage, isLoading);
     }
 
     public void loadRecentTransactions(String period) {
         isLoading.setValue(true);
-        repository.fetchRecentTransactions(period, recentTransactionsData, errorMessage);
-        isLoading.setValue(false);
+        repository.fetchRecentTransactions(period, recentTransactionsData, errorMessage, isLoading);
     }
 }

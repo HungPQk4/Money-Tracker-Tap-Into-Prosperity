@@ -26,4 +26,6 @@ public class TransactionResponse {
     private Boolean isRecurring;
     private RecurrenceInterval recurInterval;
     private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt; // LWW clock — Android uses this for shouldSkipServerVersion()
+    private boolean deleted = false;  // true = server confirms deletion (ACK for soft-delete)
 }

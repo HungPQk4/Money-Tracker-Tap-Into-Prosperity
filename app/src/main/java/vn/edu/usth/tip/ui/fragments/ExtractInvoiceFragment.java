@@ -364,6 +364,8 @@ public class ExtractInvoiceFragment extends Fragment {
             String internalUri = saveImageToInternalStorage(Uri.parse(currentPhotoUri));
             if (internalUri != null) {
                 tx.setPhotoUri(internalUri);
+            } else {
+                Toast.makeText(getContext(), "Không thể lưu ảnh hóa đơn, giao dịch vẫn được lưu", Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -388,7 +390,7 @@ public class ExtractInvoiceFragment extends Fragment {
             is.close();
             return Uri.fromFile(file).toString();
         } catch (Exception e) {
-            e.printStackTrace();
+            android.util.Log.e("ExtractInvoice", "saveImageToInternalStorage failed: " + e.getMessage(), e);
             return null;
         }
     }

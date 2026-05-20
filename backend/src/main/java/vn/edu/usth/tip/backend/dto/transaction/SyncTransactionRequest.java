@@ -14,29 +14,35 @@ import java.util.UUID;
 
 /**
  * DTO cho mỗi bản ghi trong batch sync từ client.
- * Quan trọng: createdAt là bắt buộc — giữ đúng thời gian gốc khi nhập offline.
+ * Hỗ trợ 3 loại: INSERT mới (transactionId=null), EDIT LWW (transactionId!=null), DELETE (isDeleted=true).
  */
 @Data
 public class SyncTransactionRequest {
 
-    @NotNull private UUID accountId;
-    @NotNull private UUID categoryId;
+    // ── LWW fields ────────────────────────────────────────────────────────────
+    /** null = giao dịch mới (PATH B); non-null = edit đã tồn tại trên server (PATH A) */
+    private UUID transactionId;
+
+    /** ISO-8601 timestamp từ client. Dùng cho LWW: so sánh với server.updatedAt */
+    private OffsetDateTime clientUpdatedAt;
+
+    /** true = xóa mềm — server xóa record và trả ACK */
+    private boolean isDeleted = false;
+
+    // ── Transaction fields (null OK cho delete items) ─────────────────────────
+    private UUID accountId;
+    private UUID categoryId;
     private UUID goalId;
 
     /**
      * Giá trị tuyệt đối của giao dịch — LUÔN DƯƠNG.
-     * Chiều hướng (thu/chi) được xác định bởi field `type`.
-     * Ví dụ: chi tiêu 59.050đ → amount=59050, type="expense"
+     * Bắt buộc cho PATH A và PATH B. Null chỉ hợp lệ khi isDeleted=true.
      */
-    @NotNull
-    @DecimalMin(value = "0.01", message = "amount phải lớn hơn 0")
     private BigDecimal amount;
 
-
-    @NotNull private TransactionType type;
+    private TransactionType type;
     private String note;
-
-    @NotNull private LocalDate transactionDate;
+    private LocalDate transactionDate;
 
     /**
      * Thời điểm tạo thực tế ở phía client (offline timestamp).

@@ -37,7 +37,13 @@ public class SyncBatchRequest {
          */
         private String createdAt;
 
-        private Boolean isRecurring = false;
+        private boolean isRecurring = false;
+        private String recurInterval; // "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"
+
+        // LWW fields
+        private UUID transactionId;   // null = giao dịch mới; non-null = edit đã có trên server
+        private String clientUpdatedAt; // ISO-8601 UTC cho LWW comparison
+        private boolean isDeleted = false; // soft delete signal
 
         public SyncItem(UUID accountId, UUID categoryId, BigDecimal amount,
                         String type, String note, String transactionDate, String createdAt) {
@@ -50,13 +56,28 @@ public class SyncBatchRequest {
             this.createdAt = createdAt;
         }
 
-        public UUID getAccountId()       { return accountId; }
-        public UUID getCategoryId()      { return categoryId; }
-        public BigDecimal getAmount()    { return amount; }
-        public String getType()          { return type; }
-        public String getNote()          { return note; }
+        public SyncItem(UUID transactionId, UUID accountId, UUID categoryId, BigDecimal amount,
+                        String type, String note, String transactionDate, String createdAt,
+                        String clientUpdatedAt) {
+            this(accountId, categoryId, amount, type, note, transactionDate, createdAt);
+            this.transactionId = transactionId;
+            this.clientUpdatedAt = clientUpdatedAt;
+        }
+
+        public UUID getAccountId()         { return accountId; }
+        public UUID getCategoryId()        { return categoryId; }
+        public BigDecimal getAmount()      { return amount; }
+        public String getType()            { return type; }
+        public String getNote()            { return note; }
         public String getTransactionDate() { return transactionDate; }
-        public String getCreatedAt()     { return createdAt; }
-        public Boolean getIsRecurring()  { return isRecurring; }
+        public String getCreatedAt()       { return createdAt; }
+        public boolean isRecurring()        { return isRecurring; }
+        public String getRecurInterval()    { return recurInterval; }
+        public UUID getTransactionId()      { return transactionId; }
+        public String getClientUpdatedAt()  { return clientUpdatedAt; }
+        public boolean isDeleted()          { return isDeleted; }
+        public void setDeleted(boolean deleted) { isDeleted = deleted; }
+        public void setRecurring(boolean recurring) { isRecurring = recurring; }
+        public void setRecurInterval(String recurInterval) { this.recurInterval = recurInterval; }
     }
 }

@@ -17,8 +17,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class Transaction {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private UUID id; // Client-generated UUID (Offline-First) — no @GeneratedValue
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -76,8 +75,18 @@ public class Transaction {
         }
     }
 
+    // Không lưu vào DB — báo hiệu @PreUpdate rằng timestamp của client đã được set thủ công
+    @Transient
+    private boolean isClientSync = false;
+
+    public void setClientSync(boolean clientSync) { this.isClientSync = clientSync; }
+
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = OffsetDateTime.now();
+        if (!isClientSync) {
+            // Thao tác thông thường (admin, web) → auto-stamp now()
+            updatedAt = OffsetDateTime.now();
+        }
+        // isClientSync=true → giữ nguyên timestamp client (LWW PATH A)
     }
 }
