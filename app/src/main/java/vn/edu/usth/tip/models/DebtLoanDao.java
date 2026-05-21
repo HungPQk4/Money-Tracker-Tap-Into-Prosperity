@@ -39,4 +39,11 @@ public interface DebtLoanDao {
     // Tính tổng tiền 'OWED TO ME' (những mục mình cho vay)
     @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_LENT)
     LiveData<Long> getTotalOwedToMe();
+
+    // Sync versions dùng cho widget (chạy trên background thread, không có LiveData)
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_I_OWE)
+    long getTotalIOweSync();
+
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_LENT)
+    long getTotalOwedToMeSync();
 }

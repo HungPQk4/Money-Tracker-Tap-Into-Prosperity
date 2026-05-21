@@ -178,6 +178,13 @@ public class NewTransactionFragment extends Fragment {
                 tvWalletPreview.setText("Không tải được ví");
             }
         });
+
+        appViewModel.deleteCategoryError.observe(getViewLifecycleOwner(), msg -> {
+            if (msg != null) {
+                Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                appViewModel.deleteCategoryError.setValue(null); // reset
+            }
+        });
     }
 
     private void updateSectionVisibility(Transaction.Type type) {
@@ -342,9 +349,16 @@ public class NewTransactionFragment extends Fragment {
         NewTransactionViewModel.UiState state = newTxViewModel.getUiState().getValue();
         if (state == null) return;
 
-        // Chi tiêu và Thu nhập dùng chung toàn bộ danh sách danh mục.
-        // TRANSFER có UI riêng (section_transfer), không dùng category grid.
-        List<Category> filtered = new ArrayList<>(allCategories);
+        // Dedup by name: loại bỏ các category trùng tên còn sót trong DB
+        // (nút "Thêm" dùng ID làm key vì nó không có tên duy nhất)
+        java.util.LinkedHashMap<String, Category> dedupMap = new java.util.LinkedHashMap<>();
+        for (Category c : allCategories) {
+            String key = c.isAddButton()
+                    ? c.getId()
+                    : (c.getName() != null ? c.getName().trim().toLowerCase() : c.getId());
+            dedupMap.putIfAbsent(key, c);
+        }
+        List<Category> filtered = new ArrayList<>(dedupMap.values());
 
         updateCategoryList(filtered, rvCategories);
 
@@ -466,6 +480,14 @@ public class NewTransactionFragment extends Fragment {
                     });
                     sheet.show(getChildFragmentManager(), "add_category");
                 }
+            });
+            categoryAdapter.setOnLongClickListener(category -> {
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Xóa danh mục")
+                    .setMessage("Xóa \"" + category.getName() + "\"?\nCác giao dịch liên quan sẽ được chuyển sang \"Khác\".")
+                    .setPositiveButton("Xóa", (d, w) -> appViewModel.deleteCategory(category))
+                    .setNegativeButton("Huỷ", null)
+                    .show();
             });
             rv.setAdapter(categoryAdapter);
         } else {

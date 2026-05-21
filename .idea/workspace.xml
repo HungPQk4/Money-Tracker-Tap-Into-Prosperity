@@ -35,6 +35,11 @@
           <theme>@style/Theme.Tip</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/widget_background.xml">
+        <config>
+          <theme>@style/Theme.Tip</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/activity_analysis.xml">
         <config>
           <theme>@style/Theme.Tip</theme>
@@ -225,6 +230,11 @@
           <theme>@style/Theme.Tip</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/widget_balance.xml">
+        <config>
+          <theme>@style/Theme.Tip</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/menu/bottom_nav_menu.xml">
         <config>
           <theme>@style/Theme.Tip</theme>
@@ -268,61 +278,31 @@
   <component name="ChangeListManager">
     <list default="true" id="f55769a6-fd56-4461-a5db-104b39f830ca" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/checksums/checksums.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/md5-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/checksums/md5-checksums.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/sha1-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/checksums/sha1-checksums.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/navEditor.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/navEditor.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OCR.txt" beforeDir="false" afterPath="$PROJECT_DIR$/OCR.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/AppDatabase.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/AppDatabase.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/CategoryAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/CategoryAdapter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/GoalAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/GoalAdapter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/TransactionAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/adapters/TransactionAdapter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/InsightsFragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/InsightsFragment.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/engine/AnomalyDetector.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/engine/AnomalyDetector.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/engine/BudgetForecaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/engine/BudgetForecaster.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/engine/GoalAdvisor.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/engine/GoalAdvisor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/engine/PatternAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/insights/engine/PatternAnalyzer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/Transaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/Transaction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/Category.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/Category.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/CategoryDao.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/CategoryDao.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/DebtLoanDao.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/DebtLoanDao.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/TransactionDao.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/models/TransactionDao.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/RetrofitClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/RetrofitClient.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/requests/SyncBatchRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/requests/SyncBatchRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/TransactionDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/TransactionDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/AccountRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/AccountRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/BudgetsRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/BudgetsRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/FinancialDtos.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/network/responses/FinancialDtos.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/CategoriesRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/CategoriesRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/DashboardRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/DashboardRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/DebtsRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/DebtsRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/GoalsRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/GoalsRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/TransactionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/TransactionRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/WalletsRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/repositories/WalletsRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/activities/MainActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/activities/MainActivity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/ExtractInvoiceFragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/ExtractInvoiceFragment.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/NewTransactionFragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/NewTransactionFragment.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/TransactionDetailSheet.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/TransactionDetailSheet.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/WalletManagementFragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/ui/fragments/WalletManagementFragment.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/utils/TokenManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/utils/TokenManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/AccountViewModel.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/AccountViewModel.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/AppViewModel.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/AppViewModel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/DashboardViewModel.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/DashboardViewModel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/NewTransactionViewModel.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/vn/edu/usth/tip/viewmodels/NewTransactionViewModel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_new_transaction.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_new_transaction.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/item_transaction.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/item_transaction.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/dto/transaction/SyncTransactionRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/dto/transaction/SyncTransactionRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/dto/transaction/TransactionResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/dto/transaction/TransactionResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Transaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/models/Transaction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/CategoryRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/CategoryRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/TransactionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/repositories/TransactionRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/TransactionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/TransactionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/CategoryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/vn/edu/usth/tip/backend/services/CategoryService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/build/reports/problems/problems-report.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -333,7 +313,7 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[LocalEmulator::path=C:\Users\QM\.android\avd\Medium_Phone.avd]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[PhysicalDevice::serial=3f3ec969]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -384,23 +364,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Android App.app.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "SHELLCHECK.PATH": "C:\\Users\\QM\\AppData\\Roaming\\Google\\AndroidStudio2025.2.2\\plugins\\Shell Script\\shellcheck.exe",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "com.google.services.firebase.aqiPopupShown": "true",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Android App.app.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;SHELLCHECK.PATH&quot;: &quot;C:\\Users\\QM\\AppData\\Roaming\\Google\\AndroidStudio2025.2.2\\plugins\\Shell Script\\shellcheck.exe&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;com.google.services.firebase.aqiPopupShown&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
       <module name="tip.app" />
@@ -499,13 +479,13 @@
       <map>
         <entry key="vn.edu.usth.tip.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1778659442865" />
+            <CheckInfo lastCheckTimestamp="1779335784731" />
           </value>
         </entry>
         <entry />
         <entry key="vn.edu.usth.tip">
           <value>
-            <CheckInfo lastCheckTimestamp="1778659442802" />
+            <CheckInfo lastCheckTimestamp="1779335784759" />
           </value>
         </entry>
       </map>

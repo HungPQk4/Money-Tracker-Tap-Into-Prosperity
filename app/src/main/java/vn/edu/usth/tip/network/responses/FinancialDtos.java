@@ -21,16 +21,20 @@ public class FinancialDtos {
 
     public static class CategoryDto {
         private UUID id;
+        private UUID userId;
         private String name;
-        private String type; // INCOME, EXPENSE
+        private String type; // income, expense
         private String icon;
         private String colorHex;
+        private Boolean isSystem;
 
         public UUID getId() { return id; }
+        public UUID getUserId() { return userId; }
         public String getName() { return name; }
         public String getType() { return type; }
         public String getIcon() { return icon; }
         public String getColorHex() { return colorHex; }
+        public Boolean getIsSystem() { return isSystem; }
     }
 
     public static class BudgetDto {

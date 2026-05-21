@@ -30,6 +30,9 @@ public class Category {
     @ColumnInfo(name = "is_system")
     private boolean isSystem;
 
+    @ColumnInfo(name = "user_id")
+    private String userId;
+
     // Tên field = tên cột trong SQLite → Room map trực tiếp, không cần @ColumnInfo
     private boolean isAddButton;
 
@@ -78,6 +81,7 @@ public class Category {
     public String getColorHex() { return colorHex; }
     public String getType() { return type; }
     public boolean isSystem() { return isSystem; }
+    public String getUserId() { return userId; }
     public boolean isAddButton() { return isAddButton; }
 
     public void setId(@NonNull String id) { this.id = id; }
@@ -86,5 +90,6 @@ public class Category {
     public void setColorHex(String colorHex) { this.colorHex = colorHex; }
     public void setType(String type) { this.type = type; }
     public void setSystem(boolean system) { isSystem = system; }
+    public void setUserId(String userId) { this.userId = userId; }
     public void setAddButton(boolean addButton) { isAddButton = addButton; }
 }

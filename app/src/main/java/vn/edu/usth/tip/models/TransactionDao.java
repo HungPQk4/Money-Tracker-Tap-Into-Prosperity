@@ -24,6 +24,9 @@ public interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE isDeleted = 0")
     List<Transaction> getAllTransactionsSync();
 
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY timestampMs DESC LIMIT :limit")
+    List<Transaction> getRecentTransactionsSync(int limit);
+
     /**
      * Lọc giao dịch theo khoảng [fromMs, toMs].
      * Dùng cho filter Hôm nay / Tuần này / Tháng này trên Dashboard.
@@ -49,6 +52,10 @@ public interface TransactionDao {
                               String title, String category, String walletName,
                               long amountVnd, String type, String note,
                               long timestampMs, long serverTs);
+
+    /** Reassign orphan transactions when a user category is deleted */
+    @Query("UPDATE transactions SET category = :newCatName WHERE category = :oldCatName AND isDeleted = 0")
+    void reassignCategory(String oldCatName, String newCatName);
 
     @Query("UPDATE transactions SET isSynced = 0")
     void resetSyncStatus();

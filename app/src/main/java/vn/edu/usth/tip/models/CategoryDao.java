@@ -19,6 +19,13 @@ public interface CategoryDao {
     @Query("SELECT * FROM categories")
     List<Category> getAllCategoriesSync();
 
+    /** System categories (user_id IS NULL) + categories owned by the given user */
+    @Query("SELECT * FROM categories WHERE user_id IS NULL OR user_id = :userId")
+    LiveData<List<Category>> getCategoriesForUser(String userId);
+
+    @Query("SELECT * FROM categories WHERE user_id IS NULL OR user_id = :userId")
+    List<Category> getCategoriesForUserSync(String userId);
+
     @Query("SELECT * FROM categories WHERE name = :name LIMIT 1")
     Category findByNameSync(String name);
 

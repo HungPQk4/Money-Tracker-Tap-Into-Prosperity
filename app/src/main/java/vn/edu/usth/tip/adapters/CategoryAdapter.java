@@ -23,13 +23,22 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
         void onAddCategoryClick();
     }
 
+    public interface OnCategoryLongClickListener {
+        void onCategoryLongClick(Category category);
+    }
+
     private List<Category> categories;
     private final OnCategoryClickListener listener;
+    private OnCategoryLongClickListener longClickListener;
     private int selectedPosition = 0; // "Ăn uống" is first by default
 
     public CategoryAdapter(List<Category> categories, OnCategoryClickListener listener) {
         this.categories = categories;
         this.listener = listener;
+    }
+
+    public void setOnLongClickListener(OnCategoryLongClickListener l) {
+        this.longClickListener = l;
     }
 
     @NonNull
@@ -75,6 +84,14 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
                 notifyItemChanged(selectedPosition);
                 if (listener != null) listener.onCategoryClick(cat);
             }
+        });
+
+        holder.itemView.setOnLongClickListener(v -> {
+            if (!cat.isAddButton() && !cat.isSystem() && cat.getUserId() != null
+                    && longClickListener != null) {
+                longClickListener.onCategoryLongClick(cat);
+            }
+            return true;
         });
     }
 

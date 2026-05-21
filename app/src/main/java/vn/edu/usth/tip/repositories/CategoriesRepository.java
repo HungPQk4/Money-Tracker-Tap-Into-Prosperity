@@ -96,25 +96,32 @@ public class CategoriesRepository {
         }
     }
 
-    public void deleteOnline(String categoryId) {
+    public void deleteOnline(String categoryId, @androidx.annotation.Nullable DeleteCallback callback) {
         try {
             UUID id = UUID.fromString(categoryId);
             financialApi.deleteCategory(id).enqueue(new Callback<Void>() {
                 @Override public void onResponse(Call<Void> call, Response<Void> response) {
                     if (response.isSuccessful()) {
                         android.util.Log.d("CAT_SYNC", "Delete success!");
+                        if (callback != null) callback.onSuccess();
                     } else {
-                        android.util.Log.e("CAT_SYNC", "Delete error: " + response.code() + " " + response.message());
+                        String msg = response.code() + " " + response.message();
+                        android.util.Log.e("CAT_SYNC", "Delete error: " + msg);
+                        if (callback != null) callback.onError(msg);
                     }
                 }
                 @Override public void onFailure(Call<Void> call, Throwable t) {
                     android.util.Log.e("CAT_SYNC", "Delete failed: " + t.getMessage());
+                    if (callback != null) callback.onError(t.getMessage());
                 }
             });
         } catch (Exception e) {
             android.util.Log.e("CAT_SYNC", "Delete UUID parse error: " + e.getMessage());
+            if (callback != null) callback.onError(e.getMessage());
         }
     }
+
+    public interface DeleteCallback { void onSuccess(); void onError(String msg); }
 
     public void sync(SyncCallback callback) {
         if (!NetworkUtils.isConnected(appContext)) {
@@ -168,9 +175,17 @@ public class CategoriesRepository {
                             }
                         }
 
-                        // 2. Kéo dữ liệu từ server về — xóa duplicate cũ + insertAll trong 1 transaction
-                        final List<Category> toInsert = new java.util.ArrayList<>();
+                        // 2. Kéo dữ liệu từ server về — dedup server trước, sau đó insertAll trong 1 transaction
+                        // Server có thể trả về nhiều category cùng tên/type với UUID khác nhau (do push nhiều lần);
+                        // chỉ giữ item đầu tiên của mỗi cặp name+type để tránh duplicate trong local DB.
+                        java.util.LinkedHashMap<String, CategoryDto> dedupMap = new java.util.LinkedHashMap<>();
                         for (CategoryDto dto : serverCategories) {
+                            String nameKey = dto.getName() != null ? dto.getName().trim().toLowerCase() : "";
+                            String typeKey = dto.getType() != null ? dto.getType().trim().toLowerCase() : "expense";
+                            dedupMap.putIfAbsent(nameKey + "|" + typeKey, dto);
+                        }
+                        final List<Category> toInsert = new java.util.ArrayList<>();
+                        for (CategoryDto dto : dedupMap.values()) {
                             toInsert.add(convertToModel(dto));
                         }
 
@@ -203,16 +218,38 @@ public class CategoriesRepository {
         });
     }
 
+    private static final java.util.Map<String, String> NAME_ICON_MAP;
+    static {
+        NAME_ICON_MAP = new java.util.HashMap<>();
+        NAME_ICON_MAP.put("ăn uống", "🍜");
+        NAME_ICON_MAP.put("di chuyển", "🛵");
+        NAME_ICON_MAP.put("mua sắm", "🛒");
+        NAME_ICON_MAP.put("giải trí", "🎬");
+        NAME_ICON_MAP.put("sức khỏe", "💊");
+        NAME_ICON_MAP.put("hóa đơn", "🧾");
+        NAME_ICON_MAP.put("gia đình", "👨‍👩‍👧");
+        NAME_ICON_MAP.put("lương", "💰");
+        NAME_ICON_MAP.put("thưởng", "🎁");
+        NAME_ICON_MAP.put("thu nhập khác", "💵");
+    }
+
     private Category convertToModel(CategoryDto dto) {
-        return new Category(
+        String icon = dto.getIcon();
+        if (icon == null || icon.isEmpty()) {
+            String key = dto.getName() != null ? dto.getName().trim().toLowerCase() : "";
+            icon = NAME_ICON_MAP.getOrDefault(key, "📂");
+        }
+        Category c = new Category(
             dto.getId().toString(),
             dto.getName(),
-            dto.getIcon() != null ? dto.getIcon() : "📂",
+            icon,
             dto.getColorHex() != null ? dto.getColorHex() : "#6C5CE7",
             dto.getType() != null ? dto.getType() : "expense",
-            true,  // is_system = true (tất cả dữ liệu từ server đều là system)
-            false  // is_add_button = false
+            Boolean.TRUE.equals(dto.getIsSystem()),
+            false
         );
+        c.setUserId(dto.getUserId() != null ? dto.getUserId().toString() : null);
+        return c;
     }
 
     public interface SyncCallback { void onSuccess(); void onError(String msg); }

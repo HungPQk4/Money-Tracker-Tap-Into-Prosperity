@@ -431,7 +431,7 @@ Dùng int constants (`TYPE_I_OWE = 0`, `TYPE_LENT = 1`), không dùng enum. ✅ 
 - [ ] **Real-time Sync**: WebSocket/SSE thay vì polling ⚠️ chưa xử lý
 - [ ] **Multi-device**: Đồng bộ giữa nhiều thiết bị ⚠️ chưa xử lý
 - [ ] **Biometric Auth**: Fingerprint/FaceID ⚠️ chưa xử lý
-- [ ] **Widget**: Home screen widget hiển thị số dư ⚠️ chưa xử lý
+- [x] **Widget**: Home screen widget hiển thị số dư ✅ ok — BalanceWidgetProvider hiển thị tổng tài sản + tài sản ròng, nút "+" mở thêm giao dịch nhanh, tự cập nhật khi có thay đổi dữ liệu
 - [x] **AI Insights**: Phân tích chi tiêu, gợi ý tiết kiệm ✅ ok — InsightEngine đầy đủ (BudgetForecaster/OLS, AnomalyDetector/Z-score, PatternAnalyzer, GoalAdvisor/EWMA), LineChart dự báo, tích hợp AI API backend
 
 ---

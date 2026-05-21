@@ -1,15 +1,18 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import vn.edu.usth.tip.backend.dto.category.CategoryResponse;
 import vn.edu.usth.tip.backend.dto.category.CreateCategoryRequest;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.Category;
 import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.repositories.CategoryRepository;
+import vn.edu.usth.tip.backend.repositories.TransactionRepository;
 import vn.edu.usth.tip.backend.repositories.UserRepository;
 
 import java.util.List;
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
 
     public CategoryResponse createCategory(CreateCategoryRequest req) {
@@ -54,12 +58,21 @@ public class CategoryService {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
-        return getCategoriesByUser(user.getId());
+        return categoryRepository.findSystemAndUserCategories(user.getId())
+                .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @Transactional
     public void deleteCategory(UUID id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
+        if (Boolean.TRUE.equals(category.getIsSystem())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot delete system category");
+        }
+        // Reassign orphan transactions to system "Khác" before deleting (avoids FK violation)
+        Category fallback = categoryRepository.findByNameAndUserIsNull("Khác")
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "name", "Khác"));
+        transactionRepository.reassignCategoryId(id, fallback.getId());
         categoryRepository.delete(category);
     }
 

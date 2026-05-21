@@ -56,6 +56,20 @@ public class MainActivity extends AppCompatActivity {
         setupBottomNav();
         setupFab();
         setupSessionExpiry();
+        handleWidgetIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        handleWidgetIntent(intent);
+    }
+
+    private void handleWidgetIntent(android.content.Intent intent) {
+        if (intent != null && intent.getBooleanExtra("open_new_transaction", false)) {
+            intent.removeExtra("open_new_transaction");
+            navController.navigate(R.id.newTransactionFragment);
+        }
     }
 
     /**

@@ -31,7 +31,7 @@ import vn.edu.usth.tip.models.GoalDao;
 @Database(
         entities = {Transaction.class, Category.class, Wallet.class,
                 Budget.class, DebtLoan.class, Goal.class},
-        version = 14,
+        version = 16,
         exportSchema = false
 )
 @TypeConverters({Converters.class})
@@ -56,6 +56,9 @@ public abstract class AppDatabase extends RoomDatabase {
     public static final String CAT_BILLS_INC  = "b1000000-0000-0000-0000-000000000003";
     public static final String CAT_FAMILY_INC = "b1000000-0000-0000-0000-000000000004";
     public static final String CAT_OTHER_INC  = "b1000000-0000-0000-0000-000000000005";
+
+    // Expense catch-all
+    public static final String CAT_OTHER_EXP  = "a1000000-0000-0000-0000-000000000008";
 
     // Wallets
     public static final String WALLET_CASH    = "w1000000-0000-0000-0000-000000000001";
@@ -83,7 +86,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "money_tracker_database")
-                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                             .fallbackToDestructiveMigration()
                             .addCallback(sRoomDatabaseCallback)
                             .build();
@@ -114,6 +117,23 @@ public abstract class AppDatabase extends RoomDatabase {
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("DELETE FROM categories");
             database.execSQL("DELETE FROM wallets");
+        }
+    };
+
+    // 15→16: thêm user_id vào categories để phân biệt system vs user categories
+    static final Migration MIGRATION_15_16 = new Migration(15, 16) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE categories ADD COLUMN user_id TEXT");
+        }
+    };
+
+    // 14→15: cập nhật icon đúng cho "Hóa đơn" và "Gia đình"
+    static final Migration MIGRATION_14_15 = new Migration(14, 15) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("UPDATE categories SET icon = '🧾' WHERE name = 'Hóa đơn'");
+            database.execSQL("UPDATE categories SET icon = '👨‍👩‍👧' WHERE name = 'Gia đình'");
         }
     };
 
@@ -207,14 +227,15 @@ public abstract class AppDatabase extends RoomDatabase {
         insertCat(db, CAT_SHOPPING,   "Mua sắm",       "🛒", "#3B82F6", "expense");
         insertCat(db, CAT_FUN,        "Giải trí",      "🎬", "#6B7280", "expense");
         insertCat(db, CAT_HEALTH,     "Sức khỏe",      "💊", "#EF4444", "expense");
-        insertCat(db, CAT_BILLS_EXP,  "Hóa đơn",       "⚡", "#F59E0B", "expense");
-        insertCat(db, CAT_FAMILY_EXP, "Gia đình",      "❤️", "#EC4899", "expense");
+        insertCat(db, CAT_BILLS_EXP,  "Hóa đơn",       "🧾", "#F59E0B", "expense");
+        insertCat(db, CAT_FAMILY_EXP, "Gia đình",      "👨‍👩‍👧", "#EC4899", "expense");
+        insertCat(db, CAT_OTHER_EXP,  "Khác",          "📦", "#6B7280", "expense");
 
         // Thu nhập (income)
         insertCat(db, CAT_SALARY,     "Lương",         "💰", "#22C55E", "income");
         insertCat(db, CAT_BONUS,      "Thưởng",        "🎁", "#F59E0B", "income");
-        insertCat(db, CAT_BILLS_INC,  "Hóa đơn",       "⚡", "#3B82F6", "income");
-        insertCat(db, CAT_FAMILY_INC, "Gia đình",      "❤️", "#EC4899", "income");
+        insertCat(db, CAT_BILLS_INC,  "Hóa đơn",       "🧾", "#3B82F6", "income");
+        insertCat(db, CAT_FAMILY_INC, "Gia đình",      "👨‍👩‍👧", "#EC4899", "income");
         insertCat(db, CAT_OTHER_INC,  "Thu nhập khác", "💵", "#6B7280", "income");
     }
 

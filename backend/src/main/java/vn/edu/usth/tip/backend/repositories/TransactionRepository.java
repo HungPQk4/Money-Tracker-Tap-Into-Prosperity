@@ -44,6 +44,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<Transaction> findByUser_IdAndTransactionDateGreaterThanEqualOrderByTransactionDateDescCreatedAtDesc(
             UUID userId, LocalDate since);
 
+    /** Chuyển tất cả giao dịch từ category cũ sang category mới (tránh FK violation khi xóa category) */
+    @Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE Transaction t SET t.category.id = :newCatId WHERE t.category.id = :oldCatId")
+    void reassignCategoryId(@Param("oldCatId") UUID oldCatId, @Param("newCatId") UUID newCatId);
+
     /**
      * Kiểm tra trùng khi sync (legacy PATH B): cùng user + amount + ngày + loại + category + note.
      * Dùng native query để tránh issue với OffsetDateTime trong JPQL.

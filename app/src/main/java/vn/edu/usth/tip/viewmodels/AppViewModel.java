@@ -39,11 +39,14 @@ import java.util.List;
 import java.util.UUID;
 
 import vn.edu.usth.tip.repositories.BudgetsRepository;
+import vn.edu.usth.tip.widget.BalanceWidgetProvider;
 import vn.edu.usth.tip.repositories.CategoriesRepository;
 import vn.edu.usth.tip.repositories.DebtsRepository;
 import vn.edu.usth.tip.repositories.GoalsRepository;
 import vn.edu.usth.tip.repositories.TransactionRepository;
 import vn.edu.usth.tip.repositories.WalletsRepository;
+import vn.edu.usth.tip.utils.NetworkUtils;
+import vn.edu.usth.tip.utils.TokenManager;
 
 /**
  * ViewModel chia sẻ giữa các Fragment (Financial Engine).
@@ -104,6 +107,7 @@ public class AppViewModel extends AndroidViewModel {
     private Transaction.Type defaultNewTransactionType = Transaction.Type.EXPENSE;
 
     private final MutableLiveData<Boolean> isSyncingTransactions = new MutableLiveData<>(false);
+    public final MutableLiveData<String> deleteCategoryError = new MutableLiveData<>();
 
     public LiveData<Boolean> getIsSyncingTransactions() {
         return isSyncingTransactions;
@@ -126,7 +130,10 @@ public class AppViewModel extends AndroidViewModel {
         debtsRepository = new DebtsRepository(application);
 
         transactionsLiveData = transactionDao.getAllTransactions();
-        categoriesLiveData = categoryDao.getAllCategories();
+        String currentUserId = new TokenManager(application).getUserId();
+        categoriesLiveData = (currentUserId != null)
+                ? categoryDao.getCategoriesForUser(currentUserId)
+                : categoryDao.getAllCategories();
         walletsDbLiveData = walletDao.getAllWallets();
         budgetsLiveData = budgetDao.getAllBudgets();
         goalsLiveData = goalDao.getAllGoalsSorted();
@@ -149,6 +156,9 @@ public class AppViewModel extends AndroidViewModel {
         categoriesLiveData.observeForever(categories -> {
             initializeDefaultCategories();
         });
+
+        // Dọn dẹp duplicate categories còn sót trong DB trước khi sync
+        cleanupDuplicateCategories();
 
         // Sync dữ liệu từ server ngay khi khởi động
         syncAllData();
@@ -322,8 +332,46 @@ public class AppViewModel extends AndroidViewModel {
     // ── DAO Operations ──────────────────────────────────────────────
     public void addCategory(Category category) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
+            // Chặn trùng tên — không cho phép 2 danh mục cùng tên tồn tại trong DB
+            Category existing = categoryDao.findByNameNoCase(category.getName());
+            if (existing != null && !existing.isAddButton()) return;
             categoryDao.insert(category);
             categoriesRepository.addOnline(category);
+        });
+    }
+
+    public void deleteCategory(Category category) {
+        if (category.isSystem() || category.getUserId() == null) return;
+        if (!NetworkUtils.isConnected(getApplication())) {
+            deleteCategoryError.postValue("Cần kết nối internet để xóa danh mục");
+            return;
+        }
+        categoriesRepository.deleteOnline(category.getId(), new CategoriesRepository.DeleteCallback() {
+            @Override public void onSuccess() {
+                AppDatabase.databaseWriteExecutor.execute(() -> {
+                    transactionDao.reassignCategory(category.getName(), "Khác");
+                    categoryDao.delete(category);
+                });
+            }
+            @Override public void onError(String msg) {
+                deleteCategoryError.postValue("Xóa thất bại: " + msg);
+            }
+        });
+    }
+
+    private void cleanupDuplicateCategories() {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            List<Category> all = categoryDao.getAllCategoriesSync();
+            if (all == null) return;
+            java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+            for (Category c : all) {
+                if (c.isAddButton()) continue;
+                String key = (c.getName() != null ? c.getName().trim().toLowerCase() : c.getId())
+                        + "|" + (c.getType() != null ? c.getType().trim().toLowerCase() : "expense");
+                if (!seen.add(key)) {
+                    categoryDao.deleteById(c.getId());
+                }
+            }
         });
     }
 
@@ -333,6 +381,7 @@ public class AppViewModel extends AndroidViewModel {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             transactionDao.insert(tx);
             enqueueSync();
+            BalanceWidgetProvider.sendUpdateBroadcast(getApplication());
         });
     }
 
@@ -342,6 +391,7 @@ public class AppViewModel extends AndroidViewModel {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             transactionDao.insert(tx); // INSERT OR REPLACE
             enqueueSync();
+            BalanceWidgetProvider.sendUpdateBroadcast(getApplication());
         });
     }
 
@@ -352,6 +402,7 @@ public class AppViewModel extends AndroidViewModel {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             transactionDao.insert(tx); // soft delete — push lên server trước khi hard delete
             enqueueSync();
+            BalanceWidgetProvider.sendUpdateBroadcast(getApplication());
         });
     }
 
@@ -375,6 +426,7 @@ public class AppViewModel extends AndroidViewModel {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             walletDao.insert(w);
             walletsRepository.addOnline(w);
+            BalanceWidgetProvider.sendUpdateBroadcast(getApplication());
         });
     }
 
@@ -382,6 +434,7 @@ public class AppViewModel extends AndroidViewModel {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             walletDao.update(w);
             walletsRepository.updateOnline(w);
+            BalanceWidgetProvider.sendUpdateBroadcast(getApplication());
         });
     }
 
@@ -389,6 +442,7 @@ public class AppViewModel extends AndroidViewModel {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             walletDao.delete(w);
             walletsRepository.deleteOnline(w.getId());
+            BalanceWidgetProvider.sendUpdateBroadcast(getApplication());
         });
     }
 
@@ -505,6 +559,7 @@ public class AppViewModel extends AndroidViewModel {
         walletsRepository.sync(new WalletsRepository.SyncCallback() {
             @Override
             public void onSuccess() {
+                BalanceWidgetProvider.sendUpdateBroadcast(getApplication());
             }
 
             @Override
