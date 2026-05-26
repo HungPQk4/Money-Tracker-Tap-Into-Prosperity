@@ -2,7 +2,9 @@ package vn.edu.usth.tip.repositories;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import retrofit2.Call;
@@ -15,12 +17,16 @@ import vn.edu.usth.tip.models.Category;
 import vn.edu.usth.tip.models.CategoryDao;
 import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.RetrofitClient;
+import vn.edu.usth.tip.network.responses.DeltaResponse;
 import vn.edu.usth.tip.network.responses.FinancialDtos.BudgetDto;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
+import vn.edu.usth.tip.utils.SyncPrefs;
 import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
 public class BudgetsRepository {
+    private final Context appContext;
+    private final AppDatabase db;
     private final BudgetDao budgetDao;
     private final CategoryDao categoryDao;
     private final FinancialApi financialApi;
@@ -28,10 +34,11 @@ public class BudgetsRepository {
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
     public BudgetsRepository(Context context) {
-        AppDatabase db = AppDatabase.getDatabase(context);
+        this.appContext = context.getApplicationContext();
+        this.db = AppDatabase.getDatabase(appContext);
         this.budgetDao = db.budgetDao();
         this.categoryDao = db.categoryDao();
-        this.tokenManager = new TokenManager(context);
+        this.tokenManager = new TokenManager(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 
@@ -376,6 +383,55 @@ public class BudgetsRepository {
             android.util.Log.w("BUDGET_SYNC", "Category '" + categoryName + "' has fake UUID: " + category.getId());
             return null;
         }
+    }
+
+    public boolean syncDeltaBlocking() throws IOException {
+        String cursor      = SyncPrefs.getCursor(appContext, SyncPrefs.KEY_BUDGET);
+        String untilTs     = null;
+        String lastUpdAt   = null;
+        String lastIdStr   = null;
+        String finalCursor = null;
+
+        while (true) {
+            Response<DeltaResponse<BudgetDto>> resp = financialApi
+                    .getBudgetsDelta(cursor, untilTs, lastUpdAt, lastIdStr, 500)
+                    .execute();
+            if (!resp.isSuccessful() || resp.body() == null) {
+                if (resp.code() >= 500) return true;
+                break;
+            }
+            DeltaResponse<BudgetDto> page = resp.body();
+            if (untilTs == null) untilTs = page.getSyncTimestamp();
+            finalCursor = page.getSyncTimestamp();
+
+            List<BudgetDto> items = page.getItems();
+            if (items != null && !items.isEmpty()) {
+                List<Budget>  toInsert = new ArrayList<>();
+                List<String>  toDelete = new ArrayList<>();
+                for (BudgetDto dto : items) {
+                    if (dto.isDeleted()) {
+                        if (dto.getId() != null) toDelete.add(dto.getId().toString());
+                        continue;
+                    }
+                    toInsert.add(convertToModel(dto));
+                }
+                db.runInTransaction(() -> {
+                    for (String id : toDelete) budgetDao.deleteById(id);
+                    for (Budget b : toInsert)  budgetDao.insert(b);
+                });
+            }
+
+            if (!page.isHasMore()) break;
+            if (items != null && !items.isEmpty()) {
+                BudgetDto last = items.get(items.size() - 1);
+                lastUpdAt = last.getUpdatedAt();
+                lastIdStr = last.getId() != null ? last.getId().toString() : null;
+            }
+        }
+
+        if (finalCursor != null)
+            SyncPrefs.setCursor(appContext, SyncPrefs.KEY_BUDGET, finalCursor);
+        return false;
     }
 
     public interface SyncCallback { void onSuccess(); void onError(String msg); }

@@ -27,5 +27,7 @@ public interface GoalDao {
     
     @Query("SELECT * FROM goals")
     List<Goal> getAllGoalsSync();
-    
+
+    @Query("DELETE FROM goals WHERE id = :id")
+    void deleteById(String id);
 }

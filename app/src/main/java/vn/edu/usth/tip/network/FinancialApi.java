@@ -9,7 +9,9 @@ import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
+import retrofit2.http.Query;
 import vn.edu.usth.tip.network.requests.FinancialRequests.CreateAccountRequest;
+import vn.edu.usth.tip.network.responses.DeltaResponse;
 import vn.edu.usth.tip.network.requests.FinancialRequests.CreateBudgetRequest;
 import vn.edu.usth.tip.network.requests.FinancialRequests.CreateCategoryRequest;
 import vn.edu.usth.tip.network.requests.FinancialRequests.CreateDebtRequest;
@@ -34,6 +36,14 @@ public interface FinancialApi {
     @DELETE("accounts/{id}")
     Call<Void> deleteAccount(@Path("id") UUID id);
 
+    @GET("accounts/delta")
+    Call<DeltaResponse<AccountDto>> getAccountsDelta(
+            @Query("updatedSince") String updatedSince,
+            @Query("untilTimestamp") String untilTimestamp,
+            @Query("lastUpdatedAt") String lastUpdatedAt,
+            @Query("lastId") String lastId,
+            @Query("limit") int limit);
+
     @GET("categories")
     Call<List<CategoryDto>> getAllCategories();
 
@@ -45,6 +55,14 @@ public interface FinancialApi {
 
     @DELETE("categories/{id}")
     Call<Void> deleteCategory(@Path("id") UUID id);
+
+    @GET("categories/delta")
+    Call<DeltaResponse<CategoryDto>> getCategoriesDelta(
+            @Query("updatedSince") String updatedSince,
+            @Query("untilTimestamp") String untilTimestamp,
+            @Query("lastUpdatedAt") String lastUpdatedAt,
+            @Query("lastId") String lastId,
+            @Query("limit") int limit);
 
     @GET("budgets")
     Call<List<BudgetDto>> getAllBudgets();
@@ -58,6 +76,14 @@ public interface FinancialApi {
     @DELETE("budgets/{id}")
     Call<Void> deleteBudget(@Path("id") UUID id);
 
+    @GET("budgets/delta")
+    Call<DeltaResponse<BudgetDto>> getBudgetsDelta(
+            @Query("updatedSince") String updatedSince,
+            @Query("untilTimestamp") String untilTimestamp,
+            @Query("lastUpdatedAt") String lastUpdatedAt,
+            @Query("lastId") String lastId,
+            @Query("limit") int limit);
+
     @GET("goals")
     Call<List<GoalDto>> getAllGoals();
 
@@ -69,6 +95,14 @@ public interface FinancialApi {
 
     @DELETE("goals/{id}")
     Call<Void> deleteGoal(@Path("id") UUID id);
+
+    @GET("goals/delta")
+    Call<DeltaResponse<GoalDto>> getGoalsDelta(
+            @Query("updatedSince") String updatedSince,
+            @Query("untilTimestamp") String untilTimestamp,
+            @Query("lastUpdatedAt") String lastUpdatedAt,
+            @Query("lastId") String lastId,
+            @Query("limit") int limit);
 
     @GET("debts")
     Call<List<DebtDto>> getAllDebts();

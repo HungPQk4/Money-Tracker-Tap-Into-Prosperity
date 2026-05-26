@@ -2,7 +2,9 @@ package vn.edu.usth.tip.repositories;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import retrofit2.Call;
@@ -13,9 +15,11 @@ import vn.edu.usth.tip.models.Goal;
 import vn.edu.usth.tip.models.GoalDao;
 import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.RetrofitClient;
+import vn.edu.usth.tip.network.responses.DeltaResponse;
 import vn.edu.usth.tip.network.responses.FinancialDtos.GoalDto;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
 import vn.edu.usth.tip.utils.NetworkUtils;
+import vn.edu.usth.tip.utils.SyncPrefs;
 import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
@@ -157,6 +161,55 @@ public class GoalsRepository {
             targetDate,
             "#6C5CE7" // Color mặc định
         );
+    }
+
+    public boolean syncDeltaBlocking() throws IOException {
+        String cursor      = SyncPrefs.getCursor(appContext, SyncPrefs.KEY_GOAL);
+        String untilTs     = null;
+        String lastUpdAt   = null;
+        String lastIdStr   = null;
+        String finalCursor = null;
+
+        while (true) {
+            Response<DeltaResponse<GoalDto>> resp = financialApi
+                    .getGoalsDelta(cursor, untilTs, lastUpdAt, lastIdStr, 500)
+                    .execute();
+            if (!resp.isSuccessful() || resp.body() == null) {
+                if (resp.code() >= 500) return true;
+                break;
+            }
+            DeltaResponse<GoalDto> page = resp.body();
+            if (untilTs == null) untilTs = page.getSyncTimestamp();
+            finalCursor = page.getSyncTimestamp();
+
+            List<GoalDto> items = page.getItems();
+            if (items != null && !items.isEmpty()) {
+                List<Goal>   toInsert = new ArrayList<>();
+                List<String> toDelete = new ArrayList<>();
+                for (GoalDto dto : items) {
+                    if (dto.isDeleted()) {
+                        if (dto.getId() != null) toDelete.add(dto.getId().toString());
+                        continue;
+                    }
+                    toInsert.add(convertToModel(dto));
+                }
+                db.runInTransaction(() -> {
+                    for (String id : toDelete) goalDao.deleteById(id);
+                    for (Goal g : toInsert)    goalDao.insert(g);
+                });
+            }
+
+            if (!page.isHasMore()) break;
+            if (items != null && !items.isEmpty()) {
+                GoalDto last = items.get(items.size() - 1);
+                lastUpdAt = last.getUpdatedAt();
+                lastIdStr = last.getId() != null ? last.getId().toString() : null;
+            }
+        }
+
+        if (finalCursor != null)
+            SyncPrefs.setCursor(appContext, SyncPrefs.KEY_GOAL, finalCursor);
+        return false;
     }
 
     public interface SyncCallback { void onSuccess(); void onError(String msg); }

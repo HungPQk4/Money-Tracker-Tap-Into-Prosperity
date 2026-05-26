@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.dto.transaction.CreateTransactionRequest;
 import vn.edu.usth.tip.backend.dto.transaction.SyncRequest;
 import vn.edu.usth.tip.backend.dto.transaction.SyncResponse;
@@ -40,6 +41,17 @@ public class TransactionController {
             @Valid @RequestBody SyncRequest req) {
         SyncResponse response = transactionService.syncTransactions(req);
         return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(response);
+    }
+
+    // ─── Delta sync — cursor-based incremental pull ───────────────────────────
+    @GetMapping("/delta")
+    public ResponseEntity<DeltaResponse<TransactionResponse>> getDelta(
+            @RequestParam(required = false) String updatedSince,
+            @RequestParam(required = false) String untilTimestamp,
+            @RequestParam(required = false) String lastUpdatedAt,
+            @RequestParam(required = false) UUID lastId,
+            @RequestParam(defaultValue = "500") int limit) {
+        return ResponseEntity.ok(transactionService.getDelta(updatedSince, untilTimestamp, lastUpdatedAt, lastId, limit));
     }
 
     // ─── Lấy giao dịch 30 ngày gần nhất (của user hiện tại qua JWT) ──────────

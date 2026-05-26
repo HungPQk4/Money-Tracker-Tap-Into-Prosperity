@@ -1,18 +1,23 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.account.AccountRequest;
 import vn.edu.usth.tip.backend.dto.account.AccountResponse;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.Account;
 import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.repositories.AccountRepository;
 import vn.edu.usth.tip.backend.repositories.UserRepository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -93,7 +98,10 @@ public class AccountService {
             throw new RuntimeException("Bạn không có quyền xóa ví này");
         }
 
-        accountRepository.delete(account);
+        OffsetDateTime now = OffsetDateTime.now();
+        account.setDeletedAt(now);
+        account.setUpdatedAt(now);
+        accountRepository.save(account);
     }
 
     private AccountResponse mapToResponse(Account account) {
@@ -108,6 +116,27 @@ public class AccountService {
         response.setIncludeInTotal(account.getIncludeInTotal());
         response.setIsDefault(account.getIsDefault());
         response.setIsActive(account.getIsActive());
+        response.setUpdatedAt(account.getUpdatedAt());
+        response.setDeleted(account.getDeletedAt() != null);
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public DeltaResponse<AccountResponse> getDelta(String updatedSince, String untilTimestamp,
+                                                    String lastUpdatedAt, UUID lastId, int limit) {
+        User user = getCurrentUser();
+        OffsetDateTime since = updatedSince != null
+                ? OffsetDateTime.parse(updatedSince)
+                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+        OffsetDateTime until = untilTimestamp != null
+                ? OffsetDateTime.parse(untilTimestamp)
+                : OffsetDateTime.now();
+        OffsetDateTime cursorTs = lastUpdatedAt != null ? OffsetDateTime.parse(lastUpdatedAt) : null;
+        Slice<Account> slice = accountRepository.findDelta(
+                user.getId(), since, until, cursorTs, lastId, PageRequest.of(0, limit));
+        return new DeltaResponse<>(
+                slice.getContent().stream().map(this::mapToResponse).toList(),
+                slice.hasNext(),
+                until.toString());
     }
 }

@@ -22,4 +22,6 @@ public class DebtResponse {
     private DebtStatus status;
     private String note;
     private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
+    private boolean deleted = false;
 }

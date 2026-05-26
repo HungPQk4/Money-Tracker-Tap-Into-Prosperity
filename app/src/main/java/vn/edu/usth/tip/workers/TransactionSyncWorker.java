@@ -8,19 +8,16 @@ import androidx.work.WorkerParameters;
 
 import java.io.IOException;
 
+import vn.edu.usth.tip.repositories.BudgetsRepository;
+import vn.edu.usth.tip.repositories.GoalsRepository;
 import vn.edu.usth.tip.repositories.TransactionRepository;
 
 /**
- * Background worker that pushes unsynced transactions to the server.
+ * Background worker: full multi-device sync (push → pull delta in FK order).
+ * Order: push → categories → accounts → budgets → goals → transactions.
  *
- * Uses WorkManager with CONNECTED constraint so it only runs when there is
- * a network — and with EXPONENTIAL backoff so 5xx errors self-heal without
- * hammering the server.
- *
- * doWork() MUST be synchronous.  All network calls inside the Repository
- * use Retrofit .execute() (blocking) rather than .enqueue() (async).
- * Using .enqueue() here would cause doWork() to return Result.success()
- * before the API call finishes, letting the OS kill the network thread.
+ * Uses WorkManager with CONNECTED constraint + EXPONENTIAL backoff.
+ * doWork() MUST be synchronous — all network calls use Retrofit .execute().
  */
 public class TransactionSyncWorker extends Worker {
 
@@ -31,12 +28,28 @@ public class TransactionSyncWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-        TransactionRepository repo = new TransactionRepository(getApplicationContext());
+        Context ctx = getApplicationContext();
+        TransactionRepository txRepo      = new TransactionRepository(ctx);
+        BudgetsRepository     budgetRepo  = new BudgetsRepository(ctx);
+        GoalsRepository       goalRepo    = new GoalsRepository(ctx);
         try {
-            boolean shouldRetry = repo.pushUnsyncedBatchSync();
-            return shouldRetry ? Result.retry() : Result.success();
+            // Phase 1: push unsynced data, pull categories + accounts (master data)
+            boolean retry = txRepo.fullSyncPhase1();
+            if (retry) return Result.retry();
+
+            // Pull entities that depend on categories/accounts
+            retry = budgetRepo.syncDeltaBlocking();
+            if (retry) return Result.retry();
+
+            retry = goalRepo.syncDeltaBlocking();
+            if (retry) return Result.retry();
+
+            // Pull transactions last (depends on categories + accounts)
+            retry = txRepo.pullDeltaTransactionsSync();
+            if (retry) return Result.retry();
+
+            return Result.success();
         } catch (IOException e) {
-            // Network lost mid-request — WorkManager will retry with backoff
             android.util.Log.w("TxSyncWorker", "Network error, will retry: " + e.getMessage());
             return Result.retry();
         } catch (Exception e) {

@@ -11,12 +11,16 @@ public class FinancialDtos {
         private BigDecimal balance;
         private String type; // CASH, BANK, EWALLET, etc.
         private boolean isDefault;
+        private String updatedAt;   // ISO-8601, for delta sync
+        private boolean deleted;    // true = soft-deleted on server
 
         public UUID getId() { return id; }
         public String getName() { return name; }
         public BigDecimal getBalance() { return balance; }
         public String getType() { return type; }
         public boolean isDefault() { return isDefault; }
+        public String getUpdatedAt() { return updatedAt; }
+        public boolean isDeleted() { return deleted; }
     }
 
     public static class CategoryDto {
@@ -27,6 +31,8 @@ public class FinancialDtos {
         private String icon;
         private String colorHex;
         private Boolean isSystem;
+        private String updatedAt;   // ISO-8601, for delta sync
+        private boolean deleted;    // true = soft-deleted on server
 
         public UUID getId() { return id; }
         public UUID getUserId() { return userId; }
@@ -35,6 +41,8 @@ public class FinancialDtos {
         public String getIcon() { return icon; }
         public String getColorHex() { return colorHex; }
         public Boolean getIsSystem() { return isSystem; }
+        public String getUpdatedAt() { return updatedAt; }
+        public boolean isDeleted() { return deleted; }
     }
 
     public static class BudgetDto {
@@ -57,6 +65,10 @@ public class FinancialDtos {
         public String getPeriodType() { return periodType; }
         public String getPeriodStart() { return periodStart; }
         public String getPeriodEnd() { return periodEnd; }
+        private String updatedAt;
+        private boolean deleted;
+        public String getUpdatedAt() { return updatedAt; }
+        public boolean isDeleted() { return deleted; }
     }
 
     public static class GoalDto {
@@ -65,12 +77,16 @@ public class FinancialDtos {
         private BigDecimal targetAmount;
         private BigDecimal currentAmount;
         private String targetDate;
+        private String updatedAt;
+        private boolean deleted;
 
         public UUID getId() { return id; }
         public String getName() { return name; }
         public BigDecimal getTargetAmount() { return targetAmount; }
         public BigDecimal getCurrentAmount() { return currentAmount; }
         public String getTargetDate() { return targetDate; }
+        public String getUpdatedAt() { return updatedAt; }
+        public boolean isDeleted() { return deleted; }
     }
 
     public static class DebtDto {

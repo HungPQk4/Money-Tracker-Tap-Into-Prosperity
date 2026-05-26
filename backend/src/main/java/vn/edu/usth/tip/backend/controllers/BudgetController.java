@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.usth.tip.backend.dto.budget.BudgetResponse;
 import vn.edu.usth.tip.backend.dto.budget.CreateBudgetRequest;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.services.BudgetService;
 
 import java.util.List;
@@ -43,5 +44,15 @@ public class BudgetController {
     public ResponseEntity<Void> deleteBudget(@PathVariable UUID id) {
         budgetService.deleteBudget(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/delta")
+    public ResponseEntity<DeltaResponse<BudgetResponse>> getDelta(
+            @RequestParam(required = false) String updatedSince,
+            @RequestParam(required = false) String untilTimestamp,
+            @RequestParam(required = false) String lastUpdatedAt,
+            @RequestParam(required = false) UUID lastId,
+            @RequestParam(defaultValue = "500") int limit) {
+        return ResponseEntity.ok(budgetService.getDelta(updatedSince, untilTimestamp, lastUpdatedAt, lastId, limit));
     }
 }

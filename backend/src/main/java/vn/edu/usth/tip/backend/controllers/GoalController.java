@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.dto.goal.CreateGoalRequest;
 import vn.edu.usth.tip.backend.dto.goal.GoalResponse;
 import vn.edu.usth.tip.backend.services.GoalService;
@@ -45,5 +46,15 @@ public class GoalController {
     public ResponseEntity<Void> deleteGoal(@PathVariable UUID id) {
         goalService.deleteGoal(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/delta")
+    public ResponseEntity<DeltaResponse<GoalResponse>> getDelta(
+            @RequestParam(required = false) String updatedSince,
+            @RequestParam(required = false) String untilTimestamp,
+            @RequestParam(required = false) String lastUpdatedAt,
+            @RequestParam(required = false) UUID lastId,
+            @RequestParam(defaultValue = "500") int limit) {
+        return ResponseEntity.ok(goalService.getDelta(updatedSince, untilTimestamp, lastUpdatedAt, lastId, limit));
     }
 }

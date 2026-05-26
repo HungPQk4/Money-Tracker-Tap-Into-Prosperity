@@ -14,6 +14,10 @@ import vn.edu.usth.tip.backend.models.*;
 import vn.edu.usth.tip.backend.models.enums.TransactionType;
 import vn.edu.usth.tip.backend.repositories.*;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -145,7 +149,7 @@ public class TransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", "id", id));
         // ─── Hoàn nguyên số dư account ─────────────────────────────────────
         Account account = tx.getAccount();
-        if (account != null && tx.getAmount() != null) {
+        if (account != null && tx.getAmount() != null && tx.getDeletedAt() == null) {
             BigDecimal currentBalance = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
             if (TransactionType.income == tx.getType()) {
                 account.setBalance(currentBalance.subtract(tx.getAmount()));
@@ -154,7 +158,11 @@ public class TransactionService {
             }
             accountRepository.save(account);
         }
-        transactionRepository.delete(tx);
+        OffsetDateTime now = OffsetDateTime.now();
+        tx.setDeletedAt(now);
+        tx.setUpdatedAt(now);
+        tx.setClientSync(true);
+        transactionRepository.save(tx);
     }
 
     // =========================================================================
@@ -177,8 +185,14 @@ public class TransactionService {
             if (item.isDeleted() && item.getTransactionId() != null) {
                 transactionRepository.findByIdAndUser_Id(item.getTransactionId(), user.getId())
                         .ifPresent(existing -> {
-                            reverseBalanceEffect(existing.getAccount(), existing.getType(), existing.getAmount());
-                            transactionRepository.delete(existing);
+                            if (existing.getDeletedAt() == null) {
+                                reverseBalanceEffect(existing.getAccount(), existing.getType(), existing.getAmount());
+                                OffsetDateTime nowDel = OffsetDateTime.now();
+                                existing.setDeletedAt(nowDel);
+                                existing.setUpdatedAt(nowDel);
+                                existing.setClientSync(true);
+                                transactionRepository.save(existing);
+                            }
                         });
                 // BẮT BUỘC ACK — nếu không có, Android không nhận ack → zombie spam
                 TransactionResponse ack = new TransactionResponse();
@@ -373,6 +387,32 @@ public class TransactionService {
         res.setRecurInterval(tx.getRecurInterval());
         res.setCreatedAt(tx.getCreatedAt());
         res.setUpdatedAt(tx.getUpdatedAt());
+        res.setDeleted(tx.getDeletedAt() != null);
         return res;
+    }
+
+    // =========================================================================
+    //  DELTA SYNC — GET /api/transactions/delta
+    // =========================================================================
+
+    @Transactional(readOnly = true)
+    public DeltaResponse<TransactionResponse> getDelta(String updatedSince, String untilTimestamp,
+                                                        String lastUpdatedAt, UUID lastId, int limit) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        OffsetDateTime since = updatedSince != null
+                ? OffsetDateTime.parse(updatedSince)
+                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+        OffsetDateTime until = untilTimestamp != null
+                ? OffsetDateTime.parse(untilTimestamp)
+                : OffsetDateTime.now();
+        OffsetDateTime cursorTs = lastUpdatedAt != null ? OffsetDateTime.parse(lastUpdatedAt) : null;
+        Slice<Transaction> slice = transactionRepository.findDelta(
+                user.getId(), since, until, cursorTs, lastId, PageRequest.of(0, limit));
+        return new DeltaResponse<>(
+                slice.getContent().stream().map(this::toResponse).toList(),
+                slice.hasNext(),
+                until.toString());
     }
 }

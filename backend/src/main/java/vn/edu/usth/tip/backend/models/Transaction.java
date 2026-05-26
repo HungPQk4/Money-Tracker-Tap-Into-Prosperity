@@ -3,6 +3,7 @@ package vn.edu.usth.tip.backend.models;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 import vn.edu.usth.tip.backend.models.enums.RecurrenceInterval;
 import vn.edu.usth.tip.backend.models.enums.TransactionType;
 
@@ -63,6 +64,9 @@ public class Transaction {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
+
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
 
     @PrePersist
     protected void onCreate() {

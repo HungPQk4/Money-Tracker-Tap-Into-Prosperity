@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.usth.tip.backend.dto.category.CategoryResponse;
 import vn.edu.usth.tip.backend.dto.category.CreateCategoryRequest;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.services.CategoryService;
 
 import java.util.List;
@@ -38,5 +39,15 @@ public class CategoryController {
     public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/delta")
+    public ResponseEntity<DeltaResponse<CategoryResponse>> getDelta(
+            @RequestParam(required = false) String updatedSince,
+            @RequestParam(required = false) String untilTimestamp,
+            @RequestParam(required = false) String lastUpdatedAt,
+            @RequestParam(required = false) UUID lastId,
+            @RequestParam(defaultValue = "500") int limit) {
+        return ResponseEntity.ok(categoryService.getDelta(updatedSince, untilTimestamp, lastUpdatedAt, lastId, limit));
     }
 }

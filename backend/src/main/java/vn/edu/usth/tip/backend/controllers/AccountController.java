@@ -6,9 +6,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.usth.tip.backend.dto.account.AccountRequest;
 import vn.edu.usth.tip.backend.dto.account.AccountResponse;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.services.AccountService;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/accounts")
@@ -20,6 +22,16 @@ public class AccountController {
     @GetMapping
     public ResponseEntity<List<AccountResponse>> getAllAccounts() {
         return ResponseEntity.ok(accountService.getAllAccounts());
+    }
+
+    @GetMapping("/delta")
+    public ResponseEntity<DeltaResponse<AccountResponse>> getDelta(
+            @RequestParam(required = false) String updatedSince,
+            @RequestParam(required = false) String untilTimestamp,
+            @RequestParam(required = false) String lastUpdatedAt,
+            @RequestParam(required = false) UUID lastId,
+            @RequestParam(defaultValue = "500") int limit) {
+        return ResponseEntity.ok(accountService.getDelta(updatedSince, untilTimestamp, lastUpdatedAt, lastId, limit));
     }
 
     @PostMapping

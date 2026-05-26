@@ -110,7 +110,8 @@ Money-Tracker-Tap-Into-Prosperity/
 │       │   ├── activities/       # Splash, Login, Signup, Main
 │       │   └── fragments/        # Dashboard, Wallets, Transactions, Goals...
 │       └── utils/
-│           └── TokenManager.java # SharedPreferences JWT storage
+│           ├── TokenManager.java # SharedPreferences JWT storage
+│           └── SyncPrefs.java    # Server-cursor storage cho delta sync
 │
 ├── backend/                      # Spring Boot REST API
 │   └── src/main/java/vn/edu/usth/tip/backend/
@@ -188,24 +189,38 @@ Có `fallbackToDestructiveMigration()` — nếu mất migration sẽ xóa toàn
 
 ## 🔄 Luồng đồng bộ dữ liệu
 
-### 1. Transaction Sync (phức tạp nhất)
+### 1. Multi-device Delta Sync (TransactionSyncWorker) ✅
 
 ```
-syncTransactions()
+TransactionSyncWorker.doWork()
   │
-  ├─ 1. resetSyncStatus() — đặt tất cả isSynced = false
+  ├─ Phase 1 — txRepo.fullSyncPhase1()
+  │   ├─ pushUnsyncedBatchSync()    ← PUSH giao dịch offline lên server
+  │   ├─ refreshCategoriesSync()    ← PULL delta categories (cursor-based)
+  │   └─ refreshAccountsSync()      ← PULL delta accounts/wallets
   │
-  ├─ 2. pushUnsyncedToServer() — đẩy dữ liệu offline lên
-  │     ├─ Lấy tất cả tx có isSynced=false
-  │     ├─ resolveAccountId() — tìm UUID wallet (tự sync nếu cần)
-  │     ├─ resolveCategoryId() — tìm UUID category (tự sync nếu cần)
-  │     ├─ POST /api/transactions/sync (batch)
-  │     └─ Xóa bản nháp cũ, insert bản từ server
-  │
-  └─ 3. pullFromServer() — kéo 30 ngày gần nhất về
-        ├─ GET /api/transactions/recent?days=30
-        ├─ Xóa record đã sync nhưng server không còn
-        └─ Upsert từng record từ server
+  ├─ budgetRepo.syncDeltaBlocking() ← PULL delta budgets (sau categories)
+  ├─ goalRepo.syncDeltaBlocking()   ← PULL delta goals (sau accounts)
+  └─ txRepo.pullDeltaTransactionsSync() ← PULL delta transactions (cuối)
+```
+
+**Thiết kế delta sync:**
+- **Server là nguồn thời gian duy nhất.** Server trả về `syncTimestamp`; client lưu vào `SyncPrefs` và dùng làm `updatedSince` cho phiên sau.
+- **Cursor-based pagination**: `lastUpdatedAt + lastId` làm cursor thay vì OFFSET. `untilTimestamp` đóng băng tập dữ liệu từ trang đầu để tránh pagination drift.
+- **Soft delete toàn bộ entity**: Mọi entity có `deletedAt`. Khi xóa: set cả `deletedAt = now` VÀ `updatedAt = now` để query `WHERE updatedAt > :since` bắt được.
+- **LWW conflict resolution**: Client so sánh `serverUpdatedAtMs` với `local.updatedAtMs`. Server mới hơn → ghi đè local; local mới hơn → giữ local, đẩy lên ở PUSH phase sau.
+- **`db.runInTransaction()`** bọc toàn bộ write của mỗi trang — atomic, không ở trạng thái nửa vời.
+- **Thứ tự PULL theo FK dependency**: categories → accounts → budgets → goals → transactions.
+
+### 2. Transaction Sync (real-time, từng giao dịch)
+
+```
+addTransactionOnline() / updateTransactionOnline()
+  ├─ Ghi vào Room ngay (isSynced=true)
+  ├─ resolveAccountId() / resolveCategoryId()
+  └─ POST /api/transactions hoặc PUT /api/transactions/{id}
+     └─ onSuccess: replace Room record với server version (UUID thật)
+     └─ onFailure:  revertToUnsynced() → isSynced=false → Worker sẽ push sau
 ```
 
 **Quy tắc quan trọng:**
@@ -213,13 +228,12 @@ syncTransactions()
 - Server có CHECK constraint `amount > 0`.
 - `createdAt` giữ nguyên thời gian gốc từ client khi batch sync.
 
-### 2. Wallet/Category Sync
+### 3. Wallet/Category Auto-resolve
 
 - **Auto-resolve**: Khi tạo transaction mà wallet/category chỉ có local ID → tự động sync lên Neon trước, nhận UUID → dùng UUID đó.
-- **Pull sync**: Khi app khởi động, `syncAllData()` gọi tất cả repository sync song song.
-- **Dedup logic**: Khi pull wallets, nếu tìm thấy wallet cùng tên nhưng khác ID → xóa bản cũ, insert bản mới.
+- **Dedup logic**: Khi pull wallets/categories, nếu tìm thấy record cùng tên nhưng khác ID → xóa bản cũ, insert bản mới.
 
-### 3. Optimistic UI
+### 4. Optimistic UI
 
 Dashboard hiển thị **optimistic data**: số liệu từ PostgreSQL + các giao dịch chưa sync (isSynced=false) để UI luôn phản ánh hành động user ngay lập tức.
 
@@ -355,21 +369,28 @@ Goals tab hiển thị popup menu với 3 lựa chọn: Goals, Budgets, Debts & 
 | Method | Path | Mô tả |
 |--------|------|-------|
 | POST | `/api/transactions` | Tạo giao dịch |
-| POST | `/api/transactions/sync` | Batch sync offline |
+| POST | `/api/transactions/sync` | Batch push offline data |
 | GET | `/api/transactions/recent?days=N` | N ngày gần nhất |
-| GET | `/api/transactions/user/{userId}` | Theo user |
 | PUT | `/api/transactions/{id}` | Cập nhật |
-| DELETE | `/api/transactions/{id}` | Xóa |
+| DELETE | `/api/transactions/{id}` | Soft delete |
+| GET | `/api/transactions/delta` | Delta sync (cursor-based) |
 
 ### Financial (Authenticated)
 | Method | Path | Mô tả |
 |--------|------|-------|
 | GET/POST/PUT/DELETE | `/api/accounts/*` | CRUD Wallets |
+| GET | `/api/accounts/delta` | Delta sync accounts |
 | GET/POST/PUT/DELETE | `/api/categories/*` | CRUD Categories |
+| GET | `/api/categories/delta` | Delta sync categories |
 | GET/POST/PUT/DELETE | `/api/budgets/*` | CRUD Budgets |
+| GET | `/api/budgets/delta` | Delta sync budgets |
 | GET/POST/PUT/DELETE | `/api/goals/*` | CRUD Goals |
+| GET | `/api/goals/delta` | Delta sync goals |
 | GET/POST/PUT/DELETE | `/api/debts/*` | CRUD Debts |
+| GET | `/api/debts/delta` | Delta sync debts |
 | GET | `/api/dashboard/summary` | Tổng hợp tháng |
+
+**Delta endpoint params**: `?updatedSince=&untilTimestamp=&lastUpdatedAt=&lastId=&limit=500`
 
 ### Kết nối
 
@@ -420,17 +441,16 @@ Dùng int constants (`TYPE_I_OWE = 0`, `TYPE_LENT = 1`), không dùng enum. ✅ 
 - [x] **Multi-currency Support**: Backend có `currencyCode` (default VND), cần mở rộng UI ✅ ok — `Transaction` entity có `currencyCode`, `Wallet` entity có `currencyCode` mặc định VND
 - [x] **Analytics Charts**: `AnalyticsFragment` hiện còn basic, cần biểu đồ (MPAndroidChart) ✅ ok — MPAndroidChart đã implement: BarChart (Analytics), PieChart (SpendingByCategory)
 - [x] **Budget Auto-Calculate**: Tự tính `spentAmount` từ transactions thay vì nhập tay ✅ ok — `AppViewModel.calculateBudgets()` (Budget Engine) tự tính `spentAmount` = server `spentAmount` + Σ(expense tx chưa sync trong kỳ, cùng categoryName), kết quả qua `BudgetWithSpent` LiveData → `BudgetAdapter` hiển thị
-- [ ] **Export Data**: Xuất CSV/PDF báo cáo tài chính ⚠️ chưa xử lý
-- [ ] **Dark Mode**: Hỗ trợ theme tối ⚠️ chưa xử lý — `values-night/themes.xml` tồn tại nhưng rỗng (chỉ có comment), chưa custom màu nào cho dark mode
-- [ ] **Notification System**: `NotificationBottomSheet` đã có, cần backend push notification ⚠️ chưa xử lý — `NotificationBottomSheet` chỉ là shell (25 dòng, chỉ inflate layout), chưa có logic hiển thị notification hay backend push
-- [ ] **Profile Management**: `ProfileFragment` hiện còn skeleton ⚠️ chưa xử lý — chỉ có 26 dòng, inflate layout, không có logic nào
+- [ ] **Export Data**: Xuất CSV/PDF báo cáo tài chính ⚠️ chưa xử lý — không có file nào liên quan, chưa bắt đầu
+- [ ] **Dark Mode**: Hỗ trợ theme tối ⚠️ chưa tùy chỉnh — app dùng `Theme.Material3.DayNight.NoActionBar` nên tự follow dark mode hệ thống, nhưng `values-night/themes.xml` chỉ có 7 dòng placeholder, chưa override màu nào
+- [ ] **Notification System**: Push notification ⚠️ chưa xử lý — `NotificationBottomSheet.java` (24 dòng) chỉ inflate layout; layout hardcode 2 item mẫu; không có FCM, không có `google-services.json`, không có Firebase dependency
+- [ ] **Profile Management**: `ProfileFragment` hiện còn skeleton ⚠️ chưa xử lý — `ProfileFragment.java` (25 dòng) chỉ inflate layout; `fragment_profile.xml` chỉ có 1 TextView "Profile Fragment", không có UI hay logic nào
+- [ ] **Cloud Deployment (Koyeb)**: Deploy backend lên Koyeb thay vì localhost ⚠️ đã có kế hoạch, chưa thực hiện — cần: externalize secrets ra env vars, tạo Dockerfile multi-stage (eclipse-temurin:21), cấu hình `server.port=${PORT:8080}`, cập nhật BASE_URL trên Android từ `10.0.2.2:8080` sang domain Koyeb
+- [x] **Multi-device Sync**: Đồng bộ dữ liệu giữa nhiều thiết bị cùng tài khoản ✅ ok — đã implement đầy đủ: soft delete (`deletedAt`) trên tất cả 6 entity; `updatedAt` cho Category; `DeltaResponse<T>` DTO dùng chung; endpoint `/delta` (cursor-based, `Slice<T>`, không `COUNT(*)`) trên tất cả 6 controller; `SyncPrefs.java` lưu server cursor; `getDelta()` trong Retrofit API; `TransactionSyncWorker` pull theo đúng thứ tự FK (categories → accounts → budgets → goals → transactions); LWW conflict resolution (`serverTs > localTs` → server thắng; local mới hơn → giữ local); `db.runInTransaction()` atomic mỗi page
 
 ### Dài hạn
 
-- [ ] **Cloud Deployment**: Deploy backend lên cloud thay vì localhost ⚠️ chưa xử lý
 - [ ] **Real-time Sync**: WebSocket/SSE thay vì polling ⚠️ chưa xử lý
-- [ ] **Multi-device**: Đồng bộ giữa nhiều thiết bị ⚠️ chưa xử lý
-- [ ] **Biometric Auth**: Fingerprint/FaceID ⚠️ chưa xử lý
 - [x] **Widget**: Home screen widget hiển thị số dư ✅ ok — BalanceWidgetProvider hiển thị tổng tài sản + tài sản ròng, nút "+" mở thêm giao dịch nhanh, tự cập nhật khi có thay đổi dữ liệu
 - [x] **AI Insights**: Phân tích chi tiêu, gợi ý tiết kiệm ✅ ok — InsightEngine đầy đủ (BudgetForecaster/OLS, AnomalyDetector/Z-score, PatternAnalyzer, GoalAdvisor/EWMA), LineChart dự báo, tích hợp AI API backend
 

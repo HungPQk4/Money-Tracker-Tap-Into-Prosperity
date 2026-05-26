@@ -1,11 +1,14 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.budget.BudgetResponse;
 import vn.edu.usth.tip.backend.dto.budget.CreateBudgetRequest;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.Budget;
 import vn.edu.usth.tip.backend.models.Category;
@@ -14,6 +17,7 @@ import vn.edu.usth.tip.backend.repositories.BudgetRepository;
 import vn.edu.usth.tip.backend.repositories.CategoryRepository;
 import vn.edu.usth.tip.backend.repositories.UserRepository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -60,7 +64,10 @@ public class BudgetService {
     public void deleteBudget(UUID id) {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget", "id", id));
-        budgetRepository.delete(budget);
+        OffsetDateTime now = OffsetDateTime.now();
+        budget.setDeletedAt(now);
+        budget.setUpdatedAt(now);
+        budgetRepository.save(budget);
     }
 
     public BudgetResponse updateBudget(UUID id, CreateBudgetRequest req) {
@@ -94,6 +101,29 @@ public class BudgetService {
         res.setPeriodEnd(b.getPeriodEnd());
         res.setAlertThreshold(b.getAlertThreshold());
         res.setCreatedAt(b.getCreatedAt());
+        res.setUpdatedAt(b.getUpdatedAt());
+        res.setDeleted(b.getDeletedAt() != null);
         return res;
+    }
+
+    @Transactional(readOnly = true)
+    public DeltaResponse<BudgetResponse> getDelta(String updatedSince, String untilTimestamp,
+                                                   String lastUpdatedAt, UUID lastId, int limit) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        OffsetDateTime since = updatedSince != null
+                ? OffsetDateTime.parse(updatedSince)
+                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+        OffsetDateTime until = untilTimestamp != null
+                ? OffsetDateTime.parse(untilTimestamp)
+                : OffsetDateTime.now();
+        OffsetDateTime cursorTs = lastUpdatedAt != null ? OffsetDateTime.parse(lastUpdatedAt) : null;
+        Slice<Budget> slice = budgetRepository.findDelta(
+                user.getId(), since, until, cursorTs, lastId, PageRequest.of(0, limit));
+        return new DeltaResponse<>(
+                slice.getContent().stream().map(this::toResponse).toList(),
+                slice.hasNext(),
+                until.toString());
     }
 }

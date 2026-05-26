@@ -1,9 +1,12 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.dto.goal.CreateGoalRequest;
 import vn.edu.usth.tip.backend.dto.goal.GoalResponse;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
@@ -14,6 +17,7 @@ import vn.edu.usth.tip.backend.repositories.GoalRepository;
 import vn.edu.usth.tip.backend.repositories.UserRepository;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -67,7 +71,10 @@ public class GoalService {
     public void deleteGoal(UUID id) {
         Goal goal = goalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Goal", "id", id));
-        goalRepository.delete(goal);
+        OffsetDateTime now = OffsetDateTime.now();
+        goal.setDeletedAt(now);
+        goal.setUpdatedAt(now);
+        goalRepository.save(goal);
     }
 
     private GoalResponse toResponse(Goal g) {
@@ -82,6 +89,29 @@ public class GoalService {
         res.setIcon(g.getIcon());
         res.setColorHex(g.getColorHex());
         res.setCreatedAt(g.getCreatedAt());
+        res.setUpdatedAt(g.getUpdatedAt());
+        res.setDeleted(g.getDeletedAt() != null);
         return res;
+    }
+
+    @Transactional(readOnly = true)
+    public DeltaResponse<GoalResponse> getDelta(String updatedSince, String untilTimestamp,
+                                                 String lastUpdatedAt, UUID lastId, int limit) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        OffsetDateTime since = updatedSince != null
+                ? OffsetDateTime.parse(updatedSince)
+                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+        OffsetDateTime until = untilTimestamp != null
+                ? OffsetDateTime.parse(untilTimestamp)
+                : OffsetDateTime.now();
+        OffsetDateTime cursorTs = lastUpdatedAt != null ? OffsetDateTime.parse(lastUpdatedAt) : null;
+        Slice<Goal> slice = goalRepository.findDelta(
+                user.getId(), since, until, cursorTs, lastId, PageRequest.of(0, limit));
+        return new DeltaResponse<>(
+                slice.getContent().stream().map(this::toResponse).toList(),
+                slice.hasNext(),
+                until.toString());
     }
 }

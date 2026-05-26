@@ -31,10 +31,12 @@ import vn.edu.usth.tip.network.requests.CreateTransactionRequest;
 import vn.edu.usth.tip.network.requests.SyncBatchRequest;
 import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
+import vn.edu.usth.tip.network.responses.DeltaResponse;
 import vn.edu.usth.tip.network.responses.FinancialDtos.AccountDto;
 import vn.edu.usth.tip.network.responses.FinancialDtos.CategoryDto;
 import vn.edu.usth.tip.network.responses.SyncBatchResponse;
 import vn.edu.usth.tip.network.responses.TransactionDto;
+import vn.edu.usth.tip.utils.SyncPrefs;
 import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
@@ -978,6 +980,227 @@ public class TransactionRepository {
     /** Post runnable về Main thread an toàn */
     private void runOnMain(Runnable action) {
         new android.os.Handler(android.os.Looper.getMainLooper()).post(action);
+    }
+
+    // =========================================================================
+    //  FULL SYNC — dùng bởi TransactionSyncWorker
+    //  Thứ tự FK: categories → accounts → transactions
+    //  Trả về true nếu cần retry (5xx), false nếu thành công.
+    // =========================================================================
+
+    /**
+     * Phase 1 of full sync: push unsynced local data, then pull master data (categories + accounts).
+     * The Worker calls pullDeltaTransactionsSync() last so budgets/goals (which depend on categories
+     * and accounts) can be pulled in between by their own repositories.
+     */
+    public boolean fullSyncPhase1() throws IOException {
+        boolean retryNeeded = pushUnsyncedBatchSync();
+        if (retryNeeded) return true;
+        refreshCategoriesSync();
+        refreshAccountsSync();
+        return false;
+    }
+
+    private void refreshCategoriesSync() throws IOException {
+        String cursor      = SyncPrefs.getCursor(appContext, SyncPrefs.KEY_CATEGORY);
+        String untilTs     = null;
+        String lastUpdAt   = null;
+        String lastIdStr   = null;
+        String finalCursor = null;
+
+        while (true) {
+            Response<DeltaResponse<CategoryDto>> resp = financialApi
+                    .getCategoriesDelta(cursor, untilTs, lastUpdAt, lastIdStr, 500)
+                    .execute();
+            if (!resp.isSuccessful() || resp.body() == null) {
+                if (resp.code() >= 500) throw new IOException("Categories delta server error: " + resp.code());
+                break;
+            }
+            DeltaResponse<CategoryDto> page = resp.body();
+            if (untilTs == null) untilTs = page.getSyncTimestamp();
+            finalCursor = page.getSyncTimestamp();
+
+            List<CategoryDto> items = page.getItems();
+            if (items != null && !items.isEmpty()) {
+                db.runInTransaction(() -> {
+                    for (CategoryDto dto : items) {
+                        if (dto.isDeleted()) {
+                            if (dto.getId() != null) categoryDao.deleteById(dto.getId().toString());
+                            continue;
+                        }
+                        categoryDao.insert(new Category(
+                                dto.getId().toString(),
+                                dto.getName(),
+                                dto.getIcon()     != null ? dto.getIcon()     : "📂",
+                                dto.getColorHex() != null ? dto.getColorHex() : "#6C5CE7",
+                                dto.getType()     != null ? dto.getType()     : "expense",
+                                true, false
+                        ));
+                    }
+                });
+            }
+
+            if (!page.isHasMore()) break;
+            if (items != null && !items.isEmpty()) {
+                CategoryDto last = items.get(items.size() - 1);
+                lastUpdAt = last.getUpdatedAt();
+                lastIdStr = last.getId() != null ? last.getId().toString() : null;
+            }
+        }
+
+        if (finalCursor != null)
+            SyncPrefs.setCursor(appContext, SyncPrefs.KEY_CATEGORY, finalCursor);
+    }
+
+    private void refreshAccountsSync() throws IOException {
+        String cursor      = SyncPrefs.getCursor(appContext, SyncPrefs.KEY_ACCOUNT);
+        String untilTs     = null;
+        String lastUpdAt   = null;
+        String lastIdStr   = null;
+        String finalCursor = null;
+
+        while (true) {
+            Response<DeltaResponse<AccountDto>> resp = financialApi
+                    .getAccountsDelta(cursor, untilTs, lastUpdAt, lastIdStr, 500)
+                    .execute();
+            if (!resp.isSuccessful() || resp.body() == null) {
+                if (resp.code() >= 500) throw new IOException("Accounts delta server error: " + resp.code());
+                break;
+            }
+            DeltaResponse<AccountDto> page = resp.body();
+            if (untilTs == null) untilTs = page.getSyncTimestamp();
+            finalCursor = page.getSyncTimestamp();
+
+            List<AccountDto> items = page.getItems();
+            if (items != null && !items.isEmpty()) {
+                db.runInTransaction(() -> {
+                    for (AccountDto dto : items) {
+                        if (dto.isDeleted()) {
+                            if (dto.getId() != null) walletDao.deleteById(dto.getId().toString());
+                            continue;
+                        }
+                        Wallet.Type wType = Wallet.Type.CASH;
+                        if (dto.getType() != null) {
+                            String t = dto.getType().toLowerCase();
+                            if (t.equals("bank"))            wType = Wallet.Type.BANK;
+                            else if (t.equals("e_wallet"))   wType = Wallet.Type.EWALLET;
+                            else if (t.equals("investment")) wType = Wallet.Type.INVESTMENT;
+                        }
+                        walletDao.insert(new Wallet(
+                                dto.getId().toString(),
+                                dto.getName(),
+                                dto.getBalance() != null ? dto.getBalance().longValue() : 0,
+                                "💳",
+                                android.graphics.Color.parseColor("#4A90E2"),
+                                wType,
+                                true
+                        ));
+                    }
+                });
+            }
+
+            if (!page.isHasMore()) break;
+            if (items != null && !items.isEmpty()) {
+                AccountDto last = items.get(items.size() - 1);
+                lastUpdAt = last.getUpdatedAt();
+                lastIdStr = last.getId() != null ? last.getId().toString() : null;
+            }
+        }
+
+        if (finalCursor != null)
+            SyncPrefs.setCursor(appContext, SyncPrefs.KEY_ACCOUNT, finalCursor);
+    }
+
+    public boolean pullDeltaTransactionsSync() throws IOException {
+        String cursor      = SyncPrefs.getCursor(appContext, SyncPrefs.KEY_TX);
+        String untilTs     = null;
+        String lastUpdAt   = null;
+        String lastIdStr   = null;
+        String finalCursor = null;
+
+        while (true) {
+            Response<DeltaResponse<TransactionDto>> resp = transactionApi
+                    .getDelta(cursor, untilTs, lastUpdAt, lastIdStr, 500)
+                    .execute();
+            if (!resp.isSuccessful() || resp.body() == null) {
+                if (resp.code() >= 500) return true; // 5xx → retry
+                break; // 4xx → skip
+            }
+            DeltaResponse<TransactionDto> page = resp.body();
+            if (untilTs == null) untilTs = page.getSyncTimestamp();
+            finalCursor = page.getSyncTimestamp();
+
+            List<TransactionDto> items = page.getItems();
+            if (items != null && !items.isEmpty()) {
+                // Pre-convert outside runInTransaction (convertToModel throws ParseException)
+                List<Transaction>  toUpsert = new ArrayList<>();
+                Map<String, Long>  toDelete = new HashMap<>(); // id → serverUpdatedAtMs
+                for (TransactionDto dto : items) {
+                    if (dto.isDeleted()) {
+                        if (dto.getId() != null)
+                            toDelete.put(dto.getId().toString(), parseServerUpdatedAt(dto.getUpdatedAt()));
+                        continue;
+                    }
+                    try {
+                        toUpsert.add(convertToModel(dto));
+                    } catch (Exception e) {
+                        android.util.Log.w("TX_DELTA", "Skip id=" + dto.getId() + ": " + e.getMessage());
+                    }
+                }
+
+                // Snapshot local for LWW (read-only, outside transaction)
+                List<Transaction> localAll = transactionDao.getAllTransactionsSync();
+                Map<String, Transaction> localById = new HashMap<>();
+                if (localAll != null) {
+                    for (Transaction t : localAll) localById.put(t.getId(), t);
+                }
+
+                db.runInTransaction(() -> {
+                    // Soft-delete propagation with LWW
+                    for (Map.Entry<String, Long> entry : toDelete.entrySet()) {
+                        String delId    = entry.getKey();
+                        long   serverTs = entry.getValue();
+                        Transaction existing = localById.get(delId);
+                        if (existing == null) continue;
+                        if (!existing.isSynced()) {
+                            long localTs = existing.getUpdatedAtMs() > 0
+                                    ? existing.getUpdatedAtMs() : existing.getTimestampMs();
+                            if (serverTs >= localTs) transactionDao.deleteById(delId);
+                            // else: local is newer — keep it; PUSH will reconcile
+                        } else {
+                            transactionDao.deleteById(delId);
+                        }
+                    }
+
+                    // Upsert with LWW
+                    for (Transaction serverTx : toUpsert) {
+                        Transaction local = localById.get(serverTx.getId());
+                        if (local != null) {
+                            serverTx.setPhotoUri(local.getPhotoUri());
+                            if (hasActualTime(local.getTimestampMs()))
+                                serverTx.setTimestampMs(local.getTimestampMs());
+                            if (!local.isSynced()) {
+                                long localTs = local.getUpdatedAtMs() > 0
+                                        ? local.getUpdatedAtMs() : local.getTimestampMs();
+                                if (serverTx.getUpdatedAtMs() <= localTs) continue; // local wins
+                            }
+                        }
+                        transactionDao.insert(serverTx);
+                    }
+                });
+            }
+
+            if (!page.isHasMore()) break;
+            if (items != null && !items.isEmpty()) {
+                TransactionDto last = items.get(items.size() - 1);
+                lastUpdAt = last.getUpdatedAt();
+                lastIdStr = last.getId() != null ? last.getId().toString() : null;
+            }
+        }
+
+        if (finalCursor != null)
+            SyncPrefs.setCursor(appContext, SyncPrefs.KEY_TX, finalCursor);
+        return false; // success
     }
 
     // =========================================================================

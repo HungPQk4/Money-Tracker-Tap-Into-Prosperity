@@ -12,6 +12,7 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 import vn.edu.usth.tip.network.requests.CreateTransactionRequest;
 import vn.edu.usth.tip.network.requests.SyncBatchRequest;
+import vn.edu.usth.tip.network.responses.DeltaResponse;
 import vn.edu.usth.tip.network.responses.SyncBatchResponse;
 import vn.edu.usth.tip.network.responses.TransactionDto;
 
@@ -41,4 +42,16 @@ public interface TransactionApi {
 
     @DELETE("transactions/{id}")
     Call<Void> deleteTransaction(@Path("id") UUID id);
+
+    /**
+     * Delta sync — cursor-based incremental pull.
+     * Server trả về syncTimestamp; client dùng làm updatedSince cho phiên tiếp theo.
+     */
+    @GET("transactions/delta")
+    Call<DeltaResponse<TransactionDto>> getDelta(
+            @Query("updatedSince") String updatedSince,
+            @Query("untilTimestamp") String untilTimestamp,
+            @Query("lastUpdatedAt") String lastUpdatedAt,
+            @Query("lastId") String lastId,
+            @Query("limit") int limit);
 }

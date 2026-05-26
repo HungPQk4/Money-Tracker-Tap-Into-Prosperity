@@ -37,7 +37,21 @@
       "Bash(Select-Object -First 30)",
       "Bash(xargs grep -l \"Scheduled\\\\|schedule\\\\|recurring\")",
       "Bash(xargs grep -l \"@Scheduled\\\\|@Async\\\\|JobExecutor\\\\|recurring\")",
-      "Bash(xargs grep -l \"Recurring\")"
+      "Bash(xargs grep -l \"Recurring\")",
+      "Bash(Get-ChildItem -Path \"F:\\\\Money-Tracker-Tap-Into-Prosperity\\\\backend\" -Recurse -Depth 2 -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -Property FullName, PSIsContainer)",
+      "Bash(Get-ChildItem -Path \"F:\\\\Money-Tracker-Tap-Into-Prosperity\" -Force)",
+      "Bash(Select-Object Name, Mode)",
+      "Bash(grep -r \"env\\\\|ENV\\\\|\\\\${\" \"F:\\\\Money-Tracker-Tap-Into-Prosperity\\\\backend\\\\src\\\\main\\\\resources\")",
+      "Bash(Get-ChildItem -Path \"F:\\\\Money-Tracker-Tap-Into-Prosperity\\\\app\\\\src\\\\main\\\\java\\\\vn\\\\edu\\\\usth\\\\tip\" -Recurse -File -Filter \"*.java\")",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Get-ChildItem -Path \"F:\\\\Money-Tracker-Tap-Into-Prosperity\\\\backend\\\\src\\\\main\\\\java\\\\vn\\\\edu\\\\usth\\\\tip\\\\backend\" -Recurse -Directory)",
+      "Bash(Get-ChildItem -Path \"F:\\\\Money-Tracker-Tap-Into-Prosperity\\\\app\\\\src\\\\main\\\\java\\\\vn\\\\edu\\\\usth\\\\tip\" -Recurse -Filter \"*.java\")",
+      "Bash(Sort-Object Name)",
+      "Bash(./gradlew compileJava --console=plain)",
+      "Bash(./gradlew :backend:compileJava)",
+      "Bash(./gradlew projects *)",
+      "Bash(./gradlew compileJava)"
     ]
   }
 }

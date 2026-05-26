@@ -21,4 +21,6 @@ public class BudgetResponse {
     private LocalDate periodEnd;
     private Short alertThreshold;
     private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
+    private boolean deleted = false;
 }

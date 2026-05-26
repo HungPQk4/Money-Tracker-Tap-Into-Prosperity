@@ -27,4 +27,7 @@ public interface BudgetDao {
 
     @Query("SELECT * FROM budgets")
     List<Budget> getAllBudgetsSync();
+
+    @Query("DELETE FROM budgets WHERE id = :id")
+    void deleteById(String id);
 }

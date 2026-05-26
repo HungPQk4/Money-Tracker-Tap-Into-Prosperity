@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.dto.debt.CreateDebtRequest;
 import vn.edu.usth.tip.backend.dto.debt.DebtResponse;
 import vn.edu.usth.tip.backend.services.DebtService;
@@ -43,5 +44,15 @@ public class DebtController {
     public ResponseEntity<Void> deleteDebt(@PathVariable UUID id) {
         debtService.deleteDebt(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/delta")
+    public ResponseEntity<DeltaResponse<DebtResponse>> getDelta(
+            @RequestParam(required = false) String updatedSince,
+            @RequestParam(required = false) String untilTimestamp,
+            @RequestParam(required = false) String lastUpdatedAt,
+            @RequestParam(required = false) UUID lastId,
+            @RequestParam(defaultValue = "500") int limit) {
+        return ResponseEntity.ok(debtService.getDelta(updatedSince, untilTimestamp, lastUpdatedAt, lastId, limit));
     }
 }

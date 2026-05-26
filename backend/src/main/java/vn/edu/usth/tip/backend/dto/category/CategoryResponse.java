@@ -17,4 +17,6 @@ public class CategoryResponse {
     private String colorHex;
     private Boolean isSystem;
     private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
+    private boolean deleted = false;
 }
