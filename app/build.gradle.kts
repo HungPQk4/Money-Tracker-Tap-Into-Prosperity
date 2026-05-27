@@ -84,6 +84,9 @@ dependencies {
     // WorkManager — background sync with network constraint + exponential backoff
     implementation("androidx.work:work-runtime:2.9.0")
 
+    // Encrypted storage for JWT token
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // Java 8+ API desugaring for API < 26 (java.time.Instant, DateTimeFormatter)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

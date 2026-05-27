@@ -1,24 +1,85 @@
-# Compiled class file
+# =============================================================================
+#  ROOT — Gradle wrapper & build
+# =============================================================================
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# =============================================================================
+#  ANDROID (app/)
+# =============================================================================
+app/build/
+app/release/
+*.apk
+*.aab
+*.dex
+*.ap_
+
+# Signing keystores — NEVER commit these
+*.jks
+*.keystore
+
+# =============================================================================
+#  SPRING BOOT BACKEND (backend/)
+# =============================================================================
+backend/build/
+backend/error.log
+backend/startup.log
+backend/startup_update.log
+HELP.md
+
+# Credentials / secrets — keep a template (application.properties.example)
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-prod.properties
+backend/src/main/resources/application-local.properties
+
+# =============================================================================
+#  JAVA / KOTLIN
+# =============================================================================
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
 *.zip
 *.tar.gz
 *.rar
+*.ctxt
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# =============================================================================
+#  IDE — IntelliJ / Android Studio
+# =============================================================================
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# VS Code
+.vscode/
+
+# =============================================================================
+#  LOCAL CONFIG — machine-specific, never commit
+# =============================================================================
+local.properties
+*.env
+.env*
+!.env.example
+
+# =============================================================================
+#  LOGS & TEMP
+# =============================================================================
+*.log
+logcat.txt
+OCR.txt
 hs_err_pid*
 replay_pid*
+.mtj.tmp/
+
+# =============================================================================
+#  OS
+# =============================================================================
+.DS_Store
+Thumbs.db
+desktop.ini

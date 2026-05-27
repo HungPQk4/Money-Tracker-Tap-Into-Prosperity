@@ -3,9 +3,10 @@ package vn.edu.usth.tip.backend.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import vn.edu.usth.tip.backend.dto.budget.BudgetResponse;
 import vn.edu.usth.tip.backend.dto.budget.CreateBudgetRequest;
 import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
@@ -15,7 +16,9 @@ import vn.edu.usth.tip.backend.models.Category;
 import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.repositories.BudgetRepository;
 import vn.edu.usth.tip.backend.repositories.CategoryRepository;
-import vn.edu.usth.tip.backend.repositories.UserRepository;
+import vn.edu.usth.tip.backend.utils.BudgetConstants;
+import vn.edu.usth.tip.backend.utils.SecurityUtils;
+import vn.edu.usth.tip.backend.utils.SyncConstants;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -27,14 +30,15 @@ import java.util.stream.Collectors;
 public class BudgetService {
 
     private final BudgetRepository budgetRepository;
-    private final UserRepository userRepository;
+    private final SecurityUtils securityUtils;
     private final CategoryRepository categoryRepository;
 
+    @Transactional
     public BudgetResponse createBudget(CreateBudgetRequest req) {
-        User user = userRepository.findById(req.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", req.getUserId()));
+        User user = securityUtils.getCurrentUser();
         Category category = categoryRepository.findById(req.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategoryId()));
+
         Budget budget = new Budget();
         budget.setUser(user);
         budget.setCategory(category);
@@ -43,7 +47,8 @@ public class BudgetService {
         budget.setPeriodType(req.getPeriodType());
         budget.setPeriodStart(req.getPeriodStart());
         budget.setPeriodEnd(req.getPeriodEnd());
-        budget.setAlertThreshold(req.getAlertThreshold() != null ? req.getAlertThreshold() : 80);
+        budget.setAlertThreshold(req.getAlertThreshold() != null ? req.getAlertThreshold() : BudgetConstants.ALERT_THRESHOLD_PERCENT);
+
         return toResponse(budgetRepository.save(budget));
     }
 
@@ -55,66 +60,69 @@ public class BudgetService {
 
     @Transactional(readOnly = true)
     public List<BudgetResponse> getAllBudgets() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
-        return getBudgetsByUser(user.getId());
+        return getBudgetsByUser(securityUtils.getCurrentUser().getId());
     }
 
+    @Transactional
     public void deleteBudget(UUID id) {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget", "id", id));
+        if (!budget.getUser().getId().equals(securityUtils.getCurrentUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         OffsetDateTime now = OffsetDateTime.now();
         budget.setDeletedAt(now);
         budget.setUpdatedAt(now);
         budgetRepository.save(budget);
     }
 
+    @Transactional
     public BudgetResponse updateBudget(UUID id, CreateBudgetRequest req) {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget", "id", id));
-        
+        if (!budget.getUser().getId().equals(securityUtils.getCurrentUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+
         Category category = categoryRepository.findById(req.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategoryId()));
-                
+
         budget.setCategory(category);
         budget.setAmount(req.getAmount());
         budget.setSpentAmount(req.getSpentAmount() != null ? req.getSpentAmount() : java.math.BigDecimal.ZERO);
         budget.setPeriodType(req.getPeriodType());
         budget.setPeriodStart(req.getPeriodStart());
         budget.setPeriodEnd(req.getPeriodEnd());
-        budget.setAlertThreshold(req.getAlertThreshold() != null ? req.getAlertThreshold() : 80);
-        
+        budget.setAlertThreshold(req.getAlertThreshold() != null ? req.getAlertThreshold() : BudgetConstants.ALERT_THRESHOLD_PERCENT);
+
         return toResponse(budgetRepository.save(budget));
     }
 
-    private BudgetResponse toResponse(Budget b) {
+    private BudgetResponse toResponse(Budget budget) {
         BudgetResponse res = new BudgetResponse();
-        res.setId(b.getId());
-        res.setUserId(b.getUser().getId());
-        res.setCategoryId(b.getCategory().getId());
-        res.setCategoryName(b.getCategory().getName());
-        res.setAmount(b.getAmount());
-        res.setSpentAmount(b.getSpentAmount());
-        res.setPeriodType(b.getPeriodType());
-        res.setPeriodStart(b.getPeriodStart());
-        res.setPeriodEnd(b.getPeriodEnd());
-        res.setAlertThreshold(b.getAlertThreshold());
-        res.setCreatedAt(b.getCreatedAt());
-        res.setUpdatedAt(b.getUpdatedAt());
-        res.setDeleted(b.getDeletedAt() != null);
+        res.setId(budget.getId());
+        res.setUserId(budget.getUser().getId());
+        res.setCategoryId(budget.getCategory().getId());
+        res.setCategoryName(budget.getCategory().getName());
+        res.setAmount(budget.getAmount());
+        res.setSpentAmount(budget.getSpentAmount());
+        res.setPeriodType(budget.getPeriodType());
+        res.setPeriodStart(budget.getPeriodStart());
+        res.setPeriodEnd(budget.getPeriodEnd());
+        res.setAlertThreshold(budget.getAlertThreshold());
+        res.setCreatedAt(budget.getCreatedAt());
+        res.setUpdatedAt(budget.getUpdatedAt());
+        res.setDeleted(budget.getDeletedAt() != null);
         return res;
     }
 
     @Transactional(readOnly = true)
     public DeltaResponse<BudgetResponse> getDelta(String updatedSince, String untilTimestamp,
                                                    String lastUpdatedAt, UUID lastId, int limit) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        User user = securityUtils.getCurrentUser();
         OffsetDateTime since = updatedSince != null
                 ? OffsetDateTime.parse(updatedSince)
-                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+                : OffsetDateTime.parse(SyncConstants.EPOCH_CURSOR);
         OffsetDateTime until = untilTimestamp != null
                 ? OffsetDateTime.parse(untilTimestamp)
                 : OffsetDateTime.now();

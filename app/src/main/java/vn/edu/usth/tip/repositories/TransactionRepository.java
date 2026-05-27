@@ -741,13 +741,7 @@ public class TransactionRepository {
             if (userIdStr == null) return null;
             UUID userId = UUID.fromString(userIdStr);
 
-            String neonType = switch (wallet.getType()) {
-                case CASH -> "cash";
-                case BANK -> "bank";
-                case EWALLET -> "e_wallet";
-                case INVESTMENT -> "investment";
-                default -> "cash";
-            };
+            String neonType = vn.edu.usth.tip.utils.WalletTypeConverter.toApiString(wallet.getType());
 
             FinancialRequests.CreateAccountRequest req = new FinancialRequests.CreateAccountRequest(
                     userId, wallet.getName(), neonType, new java.math.BigDecimal(wallet.getBalanceVnd())
@@ -1079,13 +1073,7 @@ public class TransactionRepository {
                             if (dto.getId() != null) walletDao.deleteById(dto.getId().toString());
                             continue;
                         }
-                        Wallet.Type wType = Wallet.Type.CASH;
-                        if (dto.getType() != null) {
-                            String t = dto.getType().toLowerCase();
-                            if (t.equals("bank"))            wType = Wallet.Type.BANK;
-                            else if (t.equals("e_wallet"))   wType = Wallet.Type.EWALLET;
-                            else if (t.equals("investment")) wType = Wallet.Type.INVESTMENT;
-                        }
+                        Wallet.Type wType = vn.edu.usth.tip.utils.WalletTypeConverter.fromApiString(dto.getType(), Wallet.Type.CASH);
                         walletDao.insert(new Wallet(
                                 dto.getId().toString(),
                                 dto.getName(),

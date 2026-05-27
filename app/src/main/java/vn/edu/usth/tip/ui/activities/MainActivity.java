@@ -1,6 +1,7 @@
 package vn.edu.usth.tip.ui.activities;
 
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.utils.AnimationConstants;
 import vn.edu.usth.tip.utils.AnimUtils;
 import vn.edu.usth.tip.utils.SessionManager;
 
@@ -166,27 +167,25 @@ public class MainActivity extends AppCompatActivity {
         View icon = tab.getChildAt(0);
         if (icon != null) icon.animate().cancel();
 
-        // Toàn bộ tab nhảy lên 7dp rồi spring về
         tab.animate()
                 .translationY(dpToPx(-7f))
-                .setDuration(180)
-                .setInterpolator(new OvershootInterpolator(2.5f))
+                .setDuration(AnimationConstants.NAV_SLIDE_UP_DURATION_MS)
+                .setInterpolator(new OvershootInterpolator(AnimationConstants.NAV_OVERSHOOT_TENSION))
                 .withEndAction(() -> tab.animate()
                         .translationY(0f)
-                        .setDuration(220)
-                        .setInterpolator(new DecelerateInterpolator(1.5f))
+                        .setDuration(AnimationConstants.NAV_SLIDE_DOWN_DURATION_MS)
+                        .setInterpolator(new DecelerateInterpolator(AnimationConstants.NAV_DECELERATE_FACTOR))
                         .start())
                 .start();
 
-        // Icon: bounce scale mạnh với overshoot
         if (icon != null) {
             icon.animate()
                     .scaleX(1.4f).scaleY(1.4f)
-                    .setDuration(160)
-                    .setInterpolator(new OvershootInterpolator(4f))
+                    .setDuration(AnimationConstants.NAV_ICON_SCALE_DURATION_MS)
+                    .setInterpolator(new OvershootInterpolator(AnimationConstants.NAV_ICON_OVERSHOOT_TENSION))
                     .withEndAction(() -> icon.animate()
                             .scaleX(1f).scaleY(1f)
-                            .setDuration(140)
+                            .setDuration(AnimationConstants.NAV_ICON_RESET_DURATION_MS)
                             .setInterpolator(new DecelerateInterpolator())
                             .start())
                     .start();
@@ -200,13 +199,13 @@ public class MainActivity extends AppCompatActivity {
             icon.animate().cancel();
             icon.animate()
                     .scaleX(1f).scaleY(1f)
-                    .setDuration(120)
+                    .setDuration(AnimationConstants.NAV_DEACTIVATE_DURATION_MS)
                     .setInterpolator(new DecelerateInterpolator())
                     .start();
         }
         tab.animate()
                 .translationY(0f)
-                .setDuration(120)
+                .setDuration(AnimationConstants.NAV_DEACTIVATE_DURATION_MS)
                 .setInterpolator(new DecelerateInterpolator())
                 .start();
     }

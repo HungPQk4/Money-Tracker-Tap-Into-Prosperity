@@ -1,18 +1,16 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.dashboard.DashboardSummaryDto;
 import vn.edu.usth.tip.backend.dto.transaction.TransactionResponse;
-import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.Transaction;
 import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.models.enums.TransactionType;
 import vn.edu.usth.tip.backend.repositories.AccountRepository;
 import vn.edu.usth.tip.backend.repositories.TransactionRepository;
-import vn.edu.usth.tip.backend.repositories.UserRepository;
+import vn.edu.usth.tip.backend.utils.SecurityUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,17 +23,11 @@ public class DashboardService {
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
-    private final UserRepository userRepository;
-
-    private User getCurrentUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
-    }
+    private final SecurityUtils securityUtils;
 
     @Transactional(readOnly = true)
     public DashboardSummaryDto getDashboardSummary() {
-        User user = getCurrentUser();
+        User user = securityUtils.getCurrentUser();
 
         BigDecimal netWorth = accountRepository.getTotalBalanceByUserId(user.getId());
 
@@ -57,7 +49,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public List<TransactionResponse> getRecentTransactions(String period) {
-        User user = getCurrentUser();
+        User user = securityUtils.getCurrentUser();
         LocalDate now = LocalDate.now();
         LocalDate startDate;
 
@@ -73,10 +65,10 @@ public class DashboardService {
         List<Transaction> transactions = transactionRepository
                 .findByUser_IdAndTransactionDateBetweenOrderByTransactionDateDesc(user.getId(), startDate, now);
 
-        return transactions.stream().map(this::mapToResponse).collect(Collectors.toList());
+        return transactions.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    private TransactionResponse mapToResponse(Transaction tx) {
+    private TransactionResponse toResponse(Transaction tx) {
         TransactionResponse dto = new TransactionResponse();
         dto.setId(tx.getId());
         dto.setUserId(tx.getUser().getId());

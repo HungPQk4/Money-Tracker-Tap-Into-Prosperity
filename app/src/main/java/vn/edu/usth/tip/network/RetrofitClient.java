@@ -22,7 +22,7 @@ public class RetrofitClient {
                 .writeTimeout(30, TimeUnit.SECONDS);
         if (BuildConfig.DEBUG) {
             HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+            logging.setLevel(HttpLoggingInterceptor.Level.HEADERS);
             httpClient.addInterceptor(logging);
         }
 
@@ -57,8 +57,8 @@ public class RetrofitClient {
         return retrofit.create(serviceClass);
     }
 
-    // AI Insight API — timeout nới lỏng 30s vì Claude/Gemini mất 5-15s sinh text
-    // KHÔNG tái dùng instance thường (readTimeout chỉ 60s có thể fail với LLM slow)
+    // Separate client for AI Insight API: 30s read timeout because Gemini/Claude inference takes 5–15s.
+    // Re-using the default client (60s read) risks flaky failures when the LLM is slow.
     public static InsightApi createAiInsightService(TokenManager tokenManager) {
         OkHttpClient.Builder aiClientBuilder = new OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
@@ -66,7 +66,7 @@ public class RetrofitClient {
                 .writeTimeout(15, TimeUnit.SECONDS);
         if (BuildConfig.DEBUG) {
             HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+            logging.setLevel(HttpLoggingInterceptor.Level.HEADERS);
             aiClientBuilder.addInterceptor(logging);
         }
         OkHttpClient aiClient = aiClientBuilder
@@ -97,7 +97,7 @@ public class RetrofitClient {
                     .writeTimeout(30, TimeUnit.SECONDS);
             if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-                logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+                logging.setLevel(HttpLoggingInterceptor.Level.HEADERS);
                 authClientBuilder.addInterceptor(logging);
             }
             OkHttpClient client = authClientBuilder

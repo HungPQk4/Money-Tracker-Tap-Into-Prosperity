@@ -3,7 +3,6 @@ package vn.edu.usth.tip.backend.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.account.AccountRequest;
@@ -13,7 +12,8 @@ import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.Account;
 import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.repositories.AccountRepository;
-import vn.edu.usth.tip.backend.repositories.UserRepository;
+import vn.edu.usth.tip.backend.utils.SecurityUtils;
+import vn.edu.usth.tip.backend.utils.SyncConstants;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -24,24 +24,18 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AccountService {
     private final AccountRepository accountRepository;
-    private final UserRepository userRepository;
-
-    private User getCurrentUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
-    }
+    private final SecurityUtils securityUtils;
 
     @Transactional(readOnly = true)
     public List<AccountResponse> getAllAccounts() {
-        User user = getCurrentUser();
+        User user = securityUtils.getCurrentUser();
         List<Account> accounts = accountRepository.findByUserId(user.getId());
-        return accounts.stream().map(this::mapToResponse).collect(Collectors.toList());
+        return accounts.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Transactional
     public AccountResponse createAccount(AccountRequest request) {
-        User user = getCurrentUser();
+        User user = securityUtils.getCurrentUser();
         Account account = new Account();
         account.setUser(user);
         account.setName(request.getName());
@@ -54,12 +48,12 @@ public class AccountService {
         account.setIsActive(true);
         
         Account savedAccount = accountRepository.save(account);
-        return mapToResponse(savedAccount);
+        return toResponse(savedAccount);
     }
 
     @Transactional
     public AccountResponse updateAccount(java.util.UUID id, AccountRequest request) {
-        User user = getCurrentUser();
+        User user = securityUtils.getCurrentUser();
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account", "id", id.toString()));
 
@@ -85,12 +79,12 @@ public class AccountService {
         }
 
         Account updatedAccount = accountRepository.save(account);
-        return mapToResponse(updatedAccount);
+        return toResponse(updatedAccount);
     }
 
     @Transactional
     public void deleteAccount(java.util.UUID id) {
-        User user = getCurrentUser();
+        User user = securityUtils.getCurrentUser();
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account", "id", id.toString()));
 
@@ -104,30 +98,30 @@ public class AccountService {
         accountRepository.save(account);
     }
 
-    private AccountResponse mapToResponse(Account account) {
-        AccountResponse response = new AccountResponse();
-        response.setId(account.getId());
-        response.setName(account.getName());
-        response.setType(account.getType());
-        response.setBalance(account.getBalance());
-        response.setCurrencyCode(account.getCurrencyCode());
-        response.setColorHex(account.getColorHex());
-        response.setIcon(account.getIcon());
-        response.setIncludeInTotal(account.getIncludeInTotal());
-        response.setIsDefault(account.getIsDefault());
-        response.setIsActive(account.getIsActive());
-        response.setUpdatedAt(account.getUpdatedAt());
-        response.setDeleted(account.getDeletedAt() != null);
-        return response;
+    private AccountResponse toResponse(Account acc) {
+        AccountResponse res = new AccountResponse();
+        res.setId(acc.getId());
+        res.setName(acc.getName());
+        res.setType(acc.getType());
+        res.setBalance(acc.getBalance());
+        res.setCurrencyCode(acc.getCurrencyCode());
+        res.setColorHex(acc.getColorHex());
+        res.setIcon(acc.getIcon());
+        res.setIncludeInTotal(acc.getIncludeInTotal());
+        res.setIsDefault(acc.getIsDefault());
+        res.setIsActive(acc.getIsActive());
+        res.setUpdatedAt(acc.getUpdatedAt());
+        res.setDeleted(acc.getDeletedAt() != null);
+        return res;
     }
 
     @Transactional(readOnly = true)
     public DeltaResponse<AccountResponse> getDelta(String updatedSince, String untilTimestamp,
                                                     String lastUpdatedAt, UUID lastId, int limit) {
-        User user = getCurrentUser();
+        User user = securityUtils.getCurrentUser();
         OffsetDateTime since = updatedSince != null
                 ? OffsetDateTime.parse(updatedSince)
-                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+                : OffsetDateTime.parse(SyncConstants.EPOCH_CURSOR);
         OffsetDateTime until = untilTimestamp != null
                 ? OffsetDateTime.parse(untilTimestamp)
                 : OffsetDateTime.now();
@@ -135,7 +129,7 @@ public class AccountService {
         Slice<Account> slice = accountRepository.findDelta(
                 user.getId(), since, until, cursorTs, lastId, PageRequest.of(0, limit));
         return new DeltaResponse<>(
-                slice.getContent().stream().map(this::mapToResponse).toList(),
+                slice.getContent().stream().map(this::toResponse).toList(),
                 slice.hasNext(),
                 until.toString());
     }

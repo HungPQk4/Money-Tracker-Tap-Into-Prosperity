@@ -1,5 +1,6 @@
 package vn.edu.usth.tip.backend.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,38 +36,19 @@ public class AccountController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createAccount(@RequestBody AccountRequest request) {
-        try {
-            AccountResponse newAccount = accountService.createAccount(request);
-            return new ResponseEntity<>(newAccount, HttpStatus.CREATED);
-        } catch (Exception e) {
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Tạo tài khoản thất bại: " + e.getMessage());
-        }
+    public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody AccountRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(accountService.createAccount(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateAccount(@PathVariable java.util.UUID id, @RequestBody AccountRequest request) {
-        try {
-            AccountResponse updatedAccount = accountService.updateAccount(id, request);
-            return ResponseEntity.ok(updatedAccount);
-        } catch (Exception e) {
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Cập nhật tài khoản thất bại: " + e.getMessage());
-        }
+    public ResponseEntity<AccountResponse> updateAccount(@PathVariable UUID id,
+                                                          @Valid @RequestBody AccountRequest request) {
+        return ResponseEntity.ok(accountService.updateAccount(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteAccount(@PathVariable java.util.UUID id) {
-        try {
-            accountService.deleteAccount(id);
-            return ResponseEntity.ok("Xóa ví thành công");
-        } catch (Exception e) {
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Xóa ví thất bại: " + e.getMessage());
-        }
+    public ResponseEntity<Void> deleteAccount(@PathVariable UUID id) {
+        accountService.deleteAccount(id);
+        return ResponseEntity.noContent().build();
     }
 }

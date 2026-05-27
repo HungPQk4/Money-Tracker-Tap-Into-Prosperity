@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
@@ -28,6 +29,9 @@ import vn.edu.usth.tip.viewmodels.AppViewModel;
 import vn.edu.usth.tip.viewmodels.DashboardViewModel;
 
 public class AnalyticsFragment extends Fragment {
+
+    private static final int BAR_MAX_HEIGHT_DP = 120;
+    private static final int BAR_SLIVER_DP     = 4;
 
     private DashboardViewModel dashboardViewModel;
     private AppViewModel appViewModel;
@@ -153,10 +157,9 @@ public class AnalyticsFragment extends Fragment {
 
         insightViewModel.generateInsights();
 
-        // ── Setup SwipeRefreshLayout ────────────────────────────────────
         SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout_analytics);
         if (swipeRefreshLayout != null) {
-            swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#735BF2"));
+            swipeRefreshLayout.setColorSchemeColors(ContextCompat.getColor(requireContext(), R.color.brand_primary));
             swipeRefreshLayout.setOnRefreshListener(() -> {
                 if (dashboardViewModel != null) dashboardViewModel.loadDashboardSummary();
                 if (insightViewModel != null) insightViewModel.generateInsights();
@@ -254,8 +257,7 @@ public class AnalyticsFragment extends Fragment {
 
         if (getContext() == null) return;
         float density = getResources().getDisplayMetrics().density;
-        int maxDp = 120; // Maximum bar height
-        int maxPx = (int) (maxDp * density);
+        int maxPx = (int) (BAR_MAX_HEIGHT_DP * density);
 
         for (int i = 0; i < 6; i++) {
             if (tvMonths[i] != null) tvMonths[i].setText(monthLabels[i]);
@@ -264,8 +266,8 @@ public class AnalyticsFragment extends Fragment {
             int expPx = maxVal == 0 ? 0 : (int) ((expenses[i] * maxPx) / maxVal);
 
             // Give a sliver if there's > 0 amount so it's not totally invisible
-            if (incomes[i] > 0 && incPx < 4) incPx = 4;
-            if (expenses[i] > 0 && expPx < 4) expPx = 4;
+            if (incomes[i]  > 0 && incPx < BAR_SLIVER_DP) incPx = BAR_SLIVER_DP;
+            if (expenses[i] > 0 && expPx < BAR_SLIVER_DP) expPx = BAR_SLIVER_DP;
 
             if (cvIncomes[i] != null) {
                 ViewGroup.LayoutParams lp = cvIncomes[i].getLayoutParams();

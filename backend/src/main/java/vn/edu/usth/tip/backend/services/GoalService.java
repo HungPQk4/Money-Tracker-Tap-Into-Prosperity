@@ -3,9 +3,10 @@ package vn.edu.usth.tip.backend.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.dto.goal.CreateGoalRequest;
 import vn.edu.usth.tip.backend.dto.goal.GoalResponse;
@@ -14,7 +15,8 @@ import vn.edu.usth.tip.backend.models.Goal;
 import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.models.enums.GoalStatus;
 import vn.edu.usth.tip.backend.repositories.GoalRepository;
-import vn.edu.usth.tip.backend.repositories.UserRepository;
+import vn.edu.usth.tip.backend.utils.SecurityUtils;
+import vn.edu.usth.tip.backend.utils.SyncConstants;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -27,11 +29,11 @@ import java.util.stream.Collectors;
 public class GoalService {
 
     private final GoalRepository goalRepository;
-    private final UserRepository userRepository;
+    private final SecurityUtils securityUtils;
 
+    @Transactional
     public GoalResponse createGoal(CreateGoalRequest req) {
-        User user = userRepository.findById(req.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", req.getUserId()));
+        User user = securityUtils.getCurrentUser();
         Goal goal = new Goal();
         goal.setUser(user);
         goal.setName(req.getName());
@@ -52,15 +54,16 @@ public class GoalService {
 
     @Transactional(readOnly = true)
     public List<GoalResponse> getAllGoals() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
-        return getGoalsByUser(user.getId());
+        return getGoalsByUser(securityUtils.getCurrentUser().getId());
     }
 
+    @Transactional
     public GoalResponse updateProgress(UUID id, BigDecimal amount) {
         Goal goal = goalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Goal", "id", id));
+        if (!goal.getUser().getId().equals(securityUtils.getCurrentUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         goal.setCurrentAmount(goal.getCurrentAmount().add(amount));
         if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
             goal.setStatus(GoalStatus.completed);
@@ -68,41 +71,43 @@ public class GoalService {
         return toResponse(goalRepository.save(goal));
     }
 
+    @Transactional
     public void deleteGoal(UUID id) {
         Goal goal = goalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Goal", "id", id));
+        if (!goal.getUser().getId().equals(securityUtils.getCurrentUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         OffsetDateTime now = OffsetDateTime.now();
         goal.setDeletedAt(now);
         goal.setUpdatedAt(now);
         goalRepository.save(goal);
     }
 
-    private GoalResponse toResponse(Goal g) {
+    private GoalResponse toResponse(Goal goal) {
         GoalResponse res = new GoalResponse();
-        res.setId(g.getId());
-        res.setUserId(g.getUser().getId());
-        res.setName(g.getName());
-        res.setTargetAmount(g.getTargetAmount());
-        res.setCurrentAmount(g.getCurrentAmount());
-        res.setDeadline(g.getDeadline());
-        res.setStatus(g.getStatus());
-        res.setIcon(g.getIcon());
-        res.setColorHex(g.getColorHex());
-        res.setCreatedAt(g.getCreatedAt());
-        res.setUpdatedAt(g.getUpdatedAt());
-        res.setDeleted(g.getDeletedAt() != null);
+        res.setId(goal.getId());
+        res.setUserId(goal.getUser().getId());
+        res.setName(goal.getName());
+        res.setTargetAmount(goal.getTargetAmount());
+        res.setCurrentAmount(goal.getCurrentAmount());
+        res.setDeadline(goal.getDeadline());
+        res.setStatus(goal.getStatus());
+        res.setIcon(goal.getIcon());
+        res.setColorHex(goal.getColorHex());
+        res.setCreatedAt(goal.getCreatedAt());
+        res.setUpdatedAt(goal.getUpdatedAt());
+        res.setDeleted(goal.getDeletedAt() != null);
         return res;
     }
 
     @Transactional(readOnly = true)
     public DeltaResponse<GoalResponse> getDelta(String updatedSince, String untilTimestamp,
                                                  String lastUpdatedAt, UUID lastId, int limit) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        User user = securityUtils.getCurrentUser();
         OffsetDateTime since = updatedSince != null
                 ? OffsetDateTime.parse(updatedSince)
-                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+                : OffsetDateTime.parse(SyncConstants.EPOCH_CURSOR);
         OffsetDateTime until = untilTimestamp != null
                 ? OffsetDateTime.parse(untilTimestamp)
                 : OffsetDateTime.now();

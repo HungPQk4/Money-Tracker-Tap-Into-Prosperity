@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,6 +16,8 @@ import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.repositories.CategoryRepository;
 import vn.edu.usth.tip.backend.repositories.TransactionRepository;
 import vn.edu.usth.tip.backend.repositories.UserRepository;
+import vn.edu.usth.tip.backend.utils.SecurityUtils;
+import vn.edu.usth.tip.backend.utils.SyncConstants;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -30,6 +31,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final SecurityUtils securityUtils;
 
     public CategoryResponse createCategory(CreateCategoryRequest req) {
         Category category = new Category();
@@ -59,9 +61,7 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        User user = securityUtils.getCurrentUser();
         return categoryRepository.findSystemAndUserCategories(user.getId())
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
@@ -83,31 +83,29 @@ public class CategoryService {
         categoryRepository.save(category);
     }
 
-    private CategoryResponse toResponse(Category c) {
+    private CategoryResponse toResponse(Category category) {
         CategoryResponse res = new CategoryResponse();
-        res.setId(c.getId());
-        res.setUserId(c.getUser() != null ? c.getUser().getId() : null);
-        res.setParentId(c.getParent() != null ? c.getParent().getId() : null);
-        res.setName(c.getName());
-        res.setType(c.getType());
-        res.setIcon(c.getIcon());
-        res.setColorHex(c.getColorHex());
-        res.setIsSystem(c.getIsSystem());
-        res.setCreatedAt(c.getCreatedAt());
-        res.setUpdatedAt(c.getUpdatedAt());
-        res.setDeleted(c.getDeletedAt() != null);
+        res.setId(category.getId());
+        res.setUserId(category.getUser() != null ? category.getUser().getId() : null);
+        res.setParentId(category.getParent() != null ? category.getParent().getId() : null);
+        res.setName(category.getName());
+        res.setType(category.getType());
+        res.setIcon(category.getIcon());
+        res.setColorHex(category.getColorHex());
+        res.setIsSystem(category.getIsSystem());
+        res.setCreatedAt(category.getCreatedAt());
+        res.setUpdatedAt(category.getUpdatedAt());
+        res.setDeleted(category.getDeletedAt() != null);
         return res;
     }
 
     @Transactional(readOnly = true)
     public DeltaResponse<CategoryResponse> getDelta(String updatedSince, String untilTimestamp,
                                                      String lastUpdatedAt, UUID lastId, int limit) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        User user = securityUtils.getCurrentUser();
         OffsetDateTime since = updatedSince != null
                 ? OffsetDateTime.parse(updatedSince)
-                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+                : OffsetDateTime.parse(SyncConstants.EPOCH_CURSOR);
         OffsetDateTime until = untilTimestamp != null
                 ? OffsetDateTime.parse(untilTimestamp)
                 : OffsetDateTime.now();

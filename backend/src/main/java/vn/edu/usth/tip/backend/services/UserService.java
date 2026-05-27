@@ -1,6 +1,7 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.edu.usth.tip.backend.dto.user.CreateUserRequest;
 import vn.edu.usth.tip.backend.dto.user.UserResponse;
@@ -15,11 +16,12 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UserResponse createUser(CreateUserRequest req) {
         User user = new User();
         user.setEmail(req.getEmail());
-        user.setPasswordHash(req.getPassword()); // TODO: hash password before saving
+        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         user.setFullName(req.getFullName());
         user.setAvatarUrl(req.getAvatarUrl());
         user.setCurrencyCode(req.getCurrencyCode());

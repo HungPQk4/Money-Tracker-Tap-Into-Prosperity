@@ -48,7 +48,7 @@ public class Category {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at", nullable = false, columnDefinition = "TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP")
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
     @Column(name = "deleted_at")

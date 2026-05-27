@@ -16,6 +16,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
@@ -74,17 +75,15 @@ public class WalletManagementFragment extends Fragment
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setAdapter(adapter);
 
-        // Lắng nghe AccountViewModel
         accountViewModel.getAccountsData().observe(getViewLifecycleOwner(), accountResponses -> {
             if (accountResponses == null) return;
-            
-            // Map remote AccountResponse to local Wallet
+
             List<Wallet> newWallets = new ArrayList<>();
             long totalNetWorth = 0;
             int includedCount = 0;
             
             for (AccountResponse response : accountResponses) {
-                int defaultColor = android.graphics.Color.parseColor("#735BF2");
+                int defaultColor = ContextCompat.getColor(requireContext(), R.color.brand_primary);
                 try {
                     if (response.getColorHex() != null) {
                         defaultColor = android.graphics.Color.parseColor(response.getColorHex());
@@ -93,14 +92,7 @@ public class WalletManagementFragment extends Fragment
                     android.util.Log.w("WalletManagement", "Invalid color hex '" + response.getColorHex() + "', using default: " + e.getMessage());
                 }
 
-                Wallet.Type mappedType = Wallet.Type.OTHER;
-                if(response.getType() != null) {
-                   String t = response.getType().toLowerCase();
-                   if(t.equals("bank")) mappedType = Wallet.Type.BANK;
-                   else if(t.equals("cash")) mappedType = Wallet.Type.CASH;
-                   else if(t.equals("e_wallet")) mappedType = Wallet.Type.EWALLET;
-                   else if(t.equals("investment")) mappedType = Wallet.Type.INVESTMENT;
-                }
+                Wallet.Type mappedType = vn.edu.usth.tip.utils.WalletTypeConverter.fromApiString(response.getType(), Wallet.Type.OTHER);
 
                 Wallet w = new Wallet(
                         response.getId(),
@@ -121,10 +113,8 @@ public class WalletManagementFragment extends Fragment
 
             currentWallets = newWallets;
             adapter.updateData(applySorted(currentWallets));
-            
-            // Update Summary
+
             tvSummaryCount.setText(currentWallets.size() + " ví");
-            
             if (tvSummaryIncluded != null) {
                 tvSummaryIncluded.setText(includedCount + "/" + currentWallets.size());
             }
@@ -132,26 +122,22 @@ public class WalletManagementFragment extends Fragment
             String formattedTotal = String.format("₫%,.0f", (double) totalNetWorth).replace(",", ".");
             tvSummaryTotal.setText(formattedTotal);
 
-            // Update toolbar total
             View toolbar = getView();
             if (toolbar != null) {
                 TextView tvToolbar = toolbar.findViewById(R.id.tv_total_balance);
                 if (tvToolbar != null) tvToolbar.setText(formattedTotal);
             }
 
-            // Update Empty State
             boolean empty = currentWallets.isEmpty();
             emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
             rv.setVisibility(empty ? View.GONE : View.VISIBLE);
         });
 
-        // Tải dữ liệu từ server
         accountViewModel.loadAccounts();
 
-        // ── Setup SwipeRefreshLayout ────────────────────────────────────
         SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout_wallet);
         if (swipeRefreshLayout != null) {
-            swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#735BF2"));
+            swipeRefreshLayout.setColorSchemeColors(ContextCompat.getColor(requireContext(), R.color.brand_primary));
             swipeRefreshLayout.setOnRefreshListener(() -> {
                 accountViewModel.loadAccounts();
                 swipeRefreshLayout.setRefreshing(false);
@@ -167,7 +153,6 @@ public class WalletManagementFragment extends Fragment
             }
         });
 
-        // Lắng nghe kết quả cập nhật ví
         accountViewModel.getUpdatedAccountData().observe(getViewLifecycleOwner(), accountResponse -> {
             if (accountResponse != null) {
                 accountViewModel.loadAccounts();
@@ -176,7 +161,6 @@ public class WalletManagementFragment extends Fragment
             }
         });
 
-        // Lắng nghe kết quả xóa ví
         accountViewModel.getDeleteSuccessData().observe(getViewLifecycleOwner(), success -> {
             if (success != null && success) {
                 accountViewModel.loadAccounts();
@@ -185,20 +169,13 @@ public class WalletManagementFragment extends Fragment
             }
         });
 
-        // Lắng nghe lỗi để hiển thị nếu tạo ví thất bại
-        // Sau – hiển thị lâu hơn và clear error sau khi hiển thị
         accountViewModel.getErrorMessage().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
-                android.widget.Toast.makeText(
-                        getContext(),
-                        error,
-                        android.widget.Toast.LENGTH_LONG // ✅ Đổi thành LONG để đọc kịp
-                ).show();
-                accountViewModel.clearErrorMessage(); // ✅ Clear để không hiện lại
+                android.widget.Toast.makeText(getContext(), error, android.widget.Toast.LENGTH_LONG).show();
+                accountViewModel.clearErrorMessage(); // clear so the same error doesn't re-appear on next observe
             }
         });
 
-        // FAB
         ExtendedFloatingActionButton fab = view.findViewById(R.id.fab_add_wallet);
         fab.setOnClickListener(v -> AnimUtils.bounceClick(v, this::openAddWalletSheet));
 
@@ -220,11 +197,7 @@ public class WalletManagementFragment extends Fragment
                     public void onWalletUpdated(Wallet updated, int pos) {
                         vn.edu.usth.tip.network.requests.AccountRequest req = new vn.edu.usth.tip.network.requests.AccountRequest();
                         req.setName(updated.getName());
-                        String t = "cash";
-                        if(updated.getType() == Wallet.Type.BANK) t = "bank";
-                        else if(updated.getType() == Wallet.Type.EWALLET) t = "e_wallet";
-                        else if(updated.getType() == Wallet.Type.INVESTMENT) t = "investment";
-                        req.setType(t);
+                        req.setType(vn.edu.usth.tip.utils.WalletTypeConverter.toApiString(updated.getType()));
                         req.setBalance(updated.getBalanceVnd());
                         req.setIcon(updated.getIcon());
                         req.setIncludeInTotal(updated.isIncludedInTotal());
@@ -275,11 +248,7 @@ public class WalletManagementFragment extends Fragment
         wallet.setIncludedInTotal(included);
         vn.edu.usth.tip.network.requests.AccountRequest req = new vn.edu.usth.tip.network.requests.AccountRequest();
         req.setName(wallet.getName());
-        String t = "cash";
-        if(wallet.getType() == Wallet.Type.BANK) t = "bank";
-        else if(wallet.getType() == Wallet.Type.EWALLET) t = "e_wallet";
-        else if(wallet.getType() == Wallet.Type.INVESTMENT) t = "investment";
-        req.setType(t);
+        req.setType(vn.edu.usth.tip.utils.WalletTypeConverter.toApiString(wallet.getType()));
         req.setBalance(wallet.getBalanceVnd());
         req.setIcon(wallet.getIcon());
         req.setIncludeInTotal(included);
@@ -347,13 +316,7 @@ public class WalletManagementFragment extends Fragment
         AddWalletBottomSheet sheet = AddWalletBottomSheet.newInstance(wallet -> {
             vn.edu.usth.tip.network.requests.AccountRequest req = new vn.edu.usth.tip.network.requests.AccountRequest();
             req.setName(wallet.getName());
-            
-            String t = "cash";
-            if(wallet.getType() == Wallet.Type.BANK) t = "bank";
-            else if(wallet.getType() == Wallet.Type.EWALLET) t = "e_wallet";
-            else if(wallet.getType() == Wallet.Type.INVESTMENT) t = "investment";
-            req.setType(t);
-            
+            req.setType(vn.edu.usth.tip.utils.WalletTypeConverter.toApiString(wallet.getType()));
             req.setBalance(wallet.getBalanceVnd());
             req.setIcon(wallet.getIcon());
             req.setIncludeInTotal(wallet.isIncludedInTotal());

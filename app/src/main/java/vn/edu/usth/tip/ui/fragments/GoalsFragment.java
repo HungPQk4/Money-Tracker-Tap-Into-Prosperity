@@ -8,6 +8,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -58,7 +59,6 @@ public class GoalsFragment extends Fragment {
             }));
         }
 
-        // Setup RecyclerView
         RecyclerView rvGoals = view.findViewById(R.id.rv_goals);
         if (rvGoals != null) {
             rvGoals.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -72,10 +72,9 @@ public class GoalsFragment extends Fragment {
             });
         }
 
-        // ── Setup SwipeRefreshLayout ────────────────────────────────────
         SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout_goals);
         if (swipeRefreshLayout != null) {
-            swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#735BF2"));
+            swipeRefreshLayout.setColorSchemeColors(ContextCompat.getColor(requireContext(), R.color.brand_primary));
             swipeRefreshLayout.setOnRefreshListener(() -> {
                 if (viewModel != null) {
                     viewModel.syncAllData();

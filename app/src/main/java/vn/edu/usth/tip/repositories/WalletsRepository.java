@@ -34,14 +34,7 @@ public class WalletsRepository {
     }
 
     private String mapTypeToNeon(Wallet.Type type) {
-        if (type == null) return "cash";
-        switch (type) {
-            case CASH:       return "cash";
-            case BANK:       return "bank";
-            case EWALLET:    return "e_wallet";
-            case INVESTMENT: return "investment";
-            default:         return "cash";
-        }
+        return vn.edu.usth.tip.utils.WalletTypeConverter.toApiString(type);
     }
 
     public void addOnline(Wallet w) {

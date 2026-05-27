@@ -417,7 +417,6 @@ public class NewTransactionFragment extends Fragment {
                 int month = utcCal.get(Calendar.MONTH);
                 int day   = utcCal.get(Calendar.DAY_OF_MONTH);
 
-                // Lấy giờ:phút hiện tại của giao dịch để làm giá trị mặc định
                 Calendar existingCal = Calendar.getInstance();
                 existingCal.setTimeInMillis(currentTs);
                 int initHour   = existingCal.get(Calendar.HOUR_OF_DAY);

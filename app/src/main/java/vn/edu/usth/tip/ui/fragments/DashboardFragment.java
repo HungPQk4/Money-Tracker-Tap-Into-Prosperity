@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.navigation.Navigation;
@@ -52,15 +53,21 @@ public class DashboardFragment extends BaseFragment {
     // ── Tab views ─────────────────────────────────────────────────────
     private TextView tabToday, tabWeek, tabMonth;
 
-    // ── Theo dõi LiveData hiện tại từ Room để hủy observer khi đổi tab ─
     private LiveData<List<Transaction>> currentTxLiveData = null;
     private Observer<List<Transaction>> txObserver = null;
 
     // ── Colors ────────────────────────────────────────────────────────
-    private static final int COLOR_TAB_ACTIVE   = Color.parseColor("#735BF2");
+    private int colorTabActive; // resolved from R.color.brand_primary in onViewCreated
     private static final int COLOR_TAB_TEXT_ON  = Color.WHITE;
     private static final int COLOR_TAB_TEXT_OFF = Color.parseColor("#9CA3AF");
     private static final int COLOR_TAB_BG_OFF   = Color.TRANSPARENT;
+
+    // ── Greeting hour ranges ──────────────────────────────────────────
+    private static final int GREETING_MORNING_START   = 5;
+    private static final int GREETING_NOON_START      = 12;
+    private static final int GREETING_AFTERNOON_START = 14;
+    private static final int GREETING_EVENING_START   = 18;
+    private static final int GREETING_NIGHT_START     = 22;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
@@ -75,13 +82,13 @@ public class DashboardFragment extends BaseFragment {
             dashboardViewModel.loadDashboardSummary();
         }
         if (accountViewModel != null) {
-            accountViewModel.loadAccounts(); // Tải lại số dư ví tích lũy từ PostgreSQL
+            accountViewModel.loadAccounts();
         }
         if (tabToday != null) {
             selectTab(currentTab);
         }
-        // Đồng bộ giao dịch chưa sync → sau đó reload lại số dư ví từ server
-        // để đảm bảo tài sản ví = tích lũy tất cả giao dịch (kể cả tháng trước)
+        // Sync unsynced transactions first, then reload wallet balances to ensure
+        // wallet balance = cumulative of all transactions (including prior months).
         if (viewModel != null) {
             viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
                 @Override
@@ -103,12 +110,20 @@ public class DashboardFragment extends BaseFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        colorTabActive   = ContextCompat.getColor(requireContext(), R.color.brand_primary);
         dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
         accountViewModel   = new ViewModelProvider(requireActivity()).get(vn.edu.usth.tip.viewmodels.AccountViewModel.class);
         insightViewModel   = new ViewModelProvider(this).get(InsightViewModel.class);
 
-        // ── AI Insight Card ───────────────────────────────────────────
-        View cardInsight = view.findViewById(R.id.card_ai_insight_dashboard);
+        setupInsightCard(view);
+        setupTransactionList(view);
+        setupRefreshLayout(view);
+        setupObservers(view);
+        setupHeaderAndActions(view);
+    }
+
+    private void setupInsightCard(View view) {
+        View cardInsight    = view.findViewById(R.id.card_ai_insight_dashboard);
         TextView tvInsightTitle = view.findViewById(R.id.tv_dashboard_insight_title);
         TextView tvInsightBody  = view.findViewById(R.id.tv_dashboard_insight_body);
 
@@ -129,8 +144,9 @@ public class DashboardFragment extends BaseFragment {
         });
 
         insightViewModel.generateInsights();
+    }
 
-        // ── Setup RecyclerView & Adapter ─────────────────────────────────
+    private void setupTransactionList(View view) {
         txAdapter = new TransactionAdapter(new ArrayList<>(), tx -> {
             TransactionDetailSheet sheet = TransactionDetailSheet.newInstance(tx,
                     new TransactionDetailSheet.OnTransactionActionListener() {
@@ -152,77 +168,69 @@ public class DashboardFragment extends BaseFragment {
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setAdapter(txAdapter);
         emptyState = view.findViewById(R.id.layout_tx_empty);
+    }
 
-        // ── Setup SwipeRefreshLayout ────────────────────────────────────
+    private void setupRefreshLayout(View view) {
         SwipeRefreshLayout swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
-        if (swipeRefreshLayout != null) {
-            swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#735BF2"));
-            swipeRefreshLayout.setOnRefreshListener(() -> {
-                // Tải lại các dữ liệu cơ bản ngay lập tức
-                if (dashboardViewModel != null) dashboardViewModel.loadDashboardSummary();
-                if (accountViewModel != null) accountViewModel.loadAccounts();
-                if (tabToday != null) selectTab(currentTab);
+        if (swipeRefreshLayout == null) return;
 
-                // Đồng bộ các giao dịch (nếu có) và tải lại lần nữa để chắc chắn
-                if (insightViewModel != null) insightViewModel.generateInsights();
-                if (viewModel != null) {
-                    viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
-                        @Override
-                        public void onSuccess() {
-                            if (getActivity() != null) {
-                                getActivity().runOnUiThread(() -> {
-                                    dashboardViewModel.loadDashboardSummary();
-                                    accountViewModel.loadAccounts();
-                                    swipeRefreshLayout.setRefreshing(false);
-                                });
-                            }
+        swipeRefreshLayout.setColorSchemeColors(colorTabActive);
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            if (dashboardViewModel != null) dashboardViewModel.loadDashboardSummary();
+            if (accountViewModel  != null) accountViewModel.loadAccounts();
+            if (tabToday != null) selectTab(currentTab);
+            if (insightViewModel  != null) insightViewModel.generateInsights();
+
+            if (viewModel != null) {
+                viewModel.syncTransactions(new TransactionRepository.SyncCallback() {
+                    @Override
+                    public void onSuccess() {
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                dashboardViewModel.loadDashboardSummary();
+                                accountViewModel.loadAccounts();
+                                swipeRefreshLayout.setRefreshing(false);
+                            });
                         }
-                        @Override
-                        public void onError(String message) {
-                            if (getActivity() != null) {
-                                getActivity().runOnUiThread(() -> swipeRefreshLayout.setRefreshing(false));
-                            }
+                    }
+                    @Override
+                    public void onError(String message) {
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> swipeRefreshLayout.setRefreshing(false));
                         }
-                    });
-                } else {
-                    swipeRefreshLayout.setRefreshing(false);
-                }
-            });
-        }
-
-        // ── Observe Wallet Data (PostgreSQL Source + Optimistic Local Tx) ──
-        // ── Observe Wallet Data (PostgreSQL Source + Optimistic Local Tx) ──
-        accountViewModel.getAccountsData().observe(getViewLifecycleOwner(), accounts -> {
-            updateOptimisticDashboard(view);
+                    }
+                });
+            } else {
+                swipeRefreshLayout.setRefreshing(false);
+            }
         });
+    }
 
-        viewModel.getTransactions().observe(getViewLifecycleOwner(), transactions -> {
-            updateOptimisticDashboard(view);
-        });
+    private void setupObservers(View view) {
+        accountViewModel.getAccountsData().observe(getViewLifecycleOwner(), accounts ->
+                updateOptimisticDashboard(view));
 
-        viewModel.getTotalIOwe().observe(getViewLifecycleOwner(), total -> {
-            updateOptimisticDashboard(view);
-        });
+        viewModel.getTransactions().observe(getViewLifecycleOwner(), transactions ->
+                updateOptimisticDashboard(view));
 
-        viewModel.getTotalOwedToMe().observe(getViewLifecycleOwner(), total -> {
-            updateOptimisticDashboard(view);
-        });
+        viewModel.getTotalIOwe().observe(getViewLifecycleOwner(), total ->
+                updateOptimisticDashboard(view));
 
-        // ── Observe Summary từ API (Thu chi tháng) ─────────────
+        viewModel.getTotalOwedToMe().observe(getViewLifecycleOwner(), total ->
+                updateOptimisticDashboard(view));
+
         dashboardViewModel.getSummaryData().observe(getViewLifecycleOwner(), summary -> {
             if (summary == null) return;
-            
             TextView tvGrowth = view.findViewById(R.id.tv_net_worth_growth);
             if (tvGrowth != null) tvGrowth.setText("Dữ liệu đồng bộ từ đám mây");
-
             updateOptimisticDashboard(view);
         });
+    }
 
-        // ── Greeting ──────────────────────────────────────────────────
+    private void setupHeaderAndActions(View view) {
         TextView tvGreeting = view.findViewById(R.id.tv_greeting);
         if (tvGreeting != null) tvGreeting.setText(buildGreeting());
 
-        // ── Header buttons ────────────────────────────────────────────
         View btnNotification = view.findViewById(R.id.btn_notification);
         if (btnNotification != null) {
             btnNotification.setOnClickListener(v -> {
@@ -234,11 +242,9 @@ public class DashboardFragment extends BaseFragment {
         View btnProfile = view.findViewById(R.id.btn_profile);
         if (btnProfile != null) {
             btnProfile.setOnClickListener(v ->
-                    Navigation.findNavController(v).navigate(R.id.action_dashboard_to_walletManagement)
-            );
+                    Navigation.findNavController(v).navigate(R.id.action_dashboard_to_walletManagement));
         }
 
-        // ── Quick Actions ─────────────────────────────────────────────
         View btnAddExpense = view.findViewById(R.id.btn_add_expense);
         if (btnAddExpense != null) {
             btnAddExpense.setOnClickListener(v -> AnimUtils.bounceClick(v, () -> {
@@ -269,7 +275,6 @@ public class DashboardFragment extends BaseFragment {
                             Navigation.findNavController(v).navigate(R.id.action_dashboard_to_budgets)));
         }
 
-        // ── Filter Tabs ───────────────────────────────────────────────
         tabToday = view.findViewById(R.id.tab_today);
         tabWeek  = view.findViewById(R.id.tab_week);
         tabMonth = view.findViewById(R.id.tab_month);
@@ -280,7 +285,6 @@ public class DashboardFragment extends BaseFragment {
 
         selectTab(TAB_TODAY);
 
-        // ── See All buttons ───────────────────────────────────────────
         View tvSeeAll = view.findViewById(R.id.tv_see_all);
         if (tvSeeAll != null) {
             tvSeeAll.setOnClickListener(v ->
@@ -293,23 +297,27 @@ public class DashboardFragment extends BaseFragment {
                     AnimUtils.bounceClick(v, () ->
                             Navigation.findNavController(v).navigate(R.id.action_dashboard_to_allTransactions)));
         }
-
     }
 
     private void updateOptimisticDashboard(View view) {
-        List<vn.edu.usth.tip.network.responses.AccountResponse> accounts = accountViewModel.getAccountsData().getValue();
-        List<Transaction> transactions = viewModel.getTransactions().getValue();
-        vn.edu.usth.tip.network.responses.DashboardSummary summary = dashboardViewModel.getSummaryData().getValue();
-
         if (view == null) return;
-        
-        TextView tvTotalAssets = view.findViewById(R.id.tv_total_assets);
-        TextView tvNetWorthInside = view.findViewById(R.id.tv_net_worth);
-        TextView tvMonthlyIncome = view.findViewById(R.id.tv_monthly_income);
-        TextView tvMonthlyExpense = view.findViewById(R.id.tv_monthly_expense);
-        TextView tvMonthlyTransfer = view.findViewById(R.id.tv_monthly_transfer);
 
-        // 1. Tính Tài sản ròng lạc quan (Optimistic Net Worth)
+        List<vn.edu.usth.tip.network.responses.AccountResponse> accounts =
+                accountViewModel.getAccountsData().getValue();
+        List<Transaction> transactions = viewModel.getTransactions().getValue();
+        vn.edu.usth.tip.network.responses.DashboardSummary summary =
+                dashboardViewModel.getSummaryData().getValue();
+
+        updateNetWorthDisplay(view, accounts, transactions);
+        updateMonthlySummaryDisplay(view, summary, transactions);
+    }
+
+    private void updateNetWorthDisplay(View view,
+            List<vn.edu.usth.tip.network.responses.AccountResponse> accounts,
+            List<Transaction> transactions) {
+        TextView tvTotalAssets    = view.findViewById(R.id.tv_total_assets);
+        TextView tvNetWorthInside = view.findViewById(R.id.tv_net_worth);
+
         long totalAssets = 0;
         if (accounts != null && !accounts.isEmpty()) {
             for (vn.edu.usth.tip.network.responses.AccountResponse acc : accounts) {
@@ -317,11 +325,12 @@ public class DashboardFragment extends BaseFragment {
                     long balance = acc.getBalance();
                     if (transactions != null) {
                         for (Transaction t : transactions) {
-                            if (!t.isSynced() && t.getWalletName() != null && t.getWalletName().equals(acc.getName())) {
-                                if (t.getType() == Transaction.Type.INCOME)        balance += t.getAmountVnd();
-                                else if (t.getType() == Transaction.Type.EXPENSE)  balance -= t.getAmountVnd();
-                                // TRANSFER: net effect trên tổng tài sản = 0 (trừ ví này, cộng ví kia)
-                                // Không điều chỉnh ở đây vì chỉ biết 1 walletName.
+                            if (!t.isSynced() && t.getWalletName() != null
+                                    && t.getWalletName().equals(acc.getName())) {
+                                if (t.getType() == Transaction.Type.INCOME)       balance += t.getAmountVnd();
+                                else if (t.getType() == Transaction.Type.EXPENSE) balance -= t.getAmountVnd();
+                                // TRANSFER: net effect on total assets = 0 (deduct one wallet, add another)
+                                // Not adjusted here because only one walletName is known.
                             }
                         }
                     }
@@ -329,19 +338,20 @@ public class DashboardFragment extends BaseFragment {
                 }
             }
         } else {
-            // Fallback: Sử dụng dữ liệu từ Room (AppViewModel EngineState) khi API chưa load
+            // Fallback to Room data (AppViewModel EngineState) when API not yet loaded.
             AppViewModel.EngineState engineState = viewModel.getEngineState().getValue();
             if (engineState != null && engineState.wallets != null) {
                 for (vn.edu.usth.tip.models.Wallet w : engineState.wallets) {
                     if (w.isIncludedInTotal()) {
                         long balance = w.getBalanceVnd();
-                        // Cộng thêm các giao dịch chưa sync vào số dư đã sync trong Room
+                        // Add unsynced transactions on top of the already-synced Room balance.
                         if (transactions != null) {
                             for (Transaction t : transactions) {
-                                if (!t.isSynced() && t.getWalletName() != null && t.getWalletName().equals(w.getName())) {
-                                    if (t.getType() == Transaction.Type.INCOME)        balance += t.getAmountVnd();
-                                    else if (t.getType() == Transaction.Type.EXPENSE)  balance -= t.getAmountVnd();
-                                    // TRANSFER: net effect trên tổng tài sản = 0 → bỏ qua
+                                if (!t.isSynced() && t.getWalletName() != null
+                                        && t.getWalletName().equals(w.getName())) {
+                                    if (t.getType() == Transaction.Type.INCOME)       balance += t.getAmountVnd();
+                                    else if (t.getType() == Transaction.Type.EXPENSE) balance -= t.getAmountVnd();
+                                    // TRANSFER: net effect = 0 → skip
                                 }
                             }
                         }
@@ -351,9 +361,9 @@ public class DashboardFragment extends BaseFragment {
             }
         }
 
-        Long iOwe      = viewModel.getTotalIOwe().getValue();
-        Long owedToMe  = viewModel.getTotalOwedToMe().getValue();
-        long netWorth  = totalAssets - (iOwe != null ? iOwe : 0) + (owedToMe != null ? owedToMe : 0);
+        Long iOwe     = viewModel.getTotalIOwe().getValue();
+        Long owedToMe = viewModel.getTotalOwedToMe().getValue();
+        long netWorth = totalAssets - (iOwe != null ? iOwe : 0) + (owedToMe != null ? owedToMe : 0);
 
         if (tvTotalAssets != null) {
             tvTotalAssets.setText(String.format("%,d", totalAssets).replace(",", "."));
@@ -361,11 +371,18 @@ public class DashboardFragment extends BaseFragment {
         if (tvNetWorthInside != null) {
             tvNetWorthInside.setText(String.format("%,d", netWorth).replace(",", "."));
         }
+    }
 
-        // 2. Tính Tổng hợp tháng lạc quan (Optimistic Monthly Summary)
+    private void updateMonthlySummaryDisplay(View view,
+            vn.edu.usth.tip.network.responses.DashboardSummary summary,
+            List<Transaction> transactions) {
+        TextView tvMonthlyIncome   = view.findViewById(R.id.tv_monthly_income);
+        TextView tvMonthlyExpense  = view.findViewById(R.id.tv_monthly_expense);
+        TextView tvMonthlyTransfer = view.findViewById(R.id.tv_monthly_transfer);
+
         if (summary != null) {
-            long optIncome = summary.getTotalIncomeThisMonth();
-            long optExpense = summary.getTotalExpenseThisMonth();
+            long optIncome   = summary.getTotalIncomeThisMonth();
+            long optExpense  = summary.getTotalExpenseThisMonth();
             long optTransfer = summary.getTotalTransferThisMonth();
 
             if (transactions != null) {
@@ -376,31 +393,25 @@ public class DashboardFragment extends BaseFragment {
 
                 for (Transaction t : transactions) {
                     if (!t.isSynced() && t.getTimestampMs() >= startOfMonth) {
-                        if (t.getType() == Transaction.Type.INCOME) optIncome += t.getAmountVnd();
-                        else if (t.getType() == Transaction.Type.EXPENSE) optExpense += t.getAmountVnd();
+                        if (t.getType() == Transaction.Type.INCOME)        optIncome   += t.getAmountVnd();
+                        else if (t.getType() == Transaction.Type.EXPENSE)  optExpense  += t.getAmountVnd();
                         else if (t.getType() == Transaction.Type.TRANSFER) optTransfer += t.getAmountVnd();
                     }
                 }
             }
 
-            if (tvMonthlyIncome != null) tvMonthlyIncome.setText("₫" + String.format("%,d", optIncome).replace(",", "."));
-            if (tvMonthlyExpense != null) tvMonthlyExpense.setText("₫" + String.format("%,d", optExpense).replace(",", "."));
+            if (tvMonthlyIncome   != null) tvMonthlyIncome.setText("₫"   + String.format("%,d", optIncome).replace(",", "."));
+            if (tvMonthlyExpense  != null) tvMonthlyExpense.setText("₫"  + String.format("%,d", optExpense).replace(",", "."));
             if (tvMonthlyTransfer != null) tvMonthlyTransfer.setText("₫" + String.format("%,d", optTransfer).replace(",", "."));
         } else {
-            // Fallback: Sử dụng dữ liệu từ Room (AppViewModel EngineState) khi API chưa load
+            // Fallback to Room data (AppViewModel EngineState) when API not yet loaded.
+            // Note: engineState.mIncome already reflects ALL transactions in Room (synced + unsynced),
+            // so no need to add unsynced ones again here.
             AppViewModel.EngineState engineState = viewModel.getEngineState().getValue();
             if (engineState != null) {
-                long optIncome = engineState.mIncome;
-                long optExpense = engineState.mExpense;
-                long optTransfer = engineState.mTransfer;
-
-                // Lưu ý: engineState.mIncome (trong AppViewModel) CHƯA tính các giao dịch unsynced
-                // Tuy nhiên, logic trong AppViewModel.calculateEngine() đã quét TẤT CẢ giao dịch trong Room (cả synced và unsynced)
-                // Nên KHÔNG CẦN cộng thêm t.isSynced() == false ở đây nữa! (Vì nó đã nằm trong transactionsLiveData)
-
-                if (tvMonthlyIncome != null) tvMonthlyIncome.setText("₫" + String.format("%,d", optIncome).replace(",", "."));
-                if (tvMonthlyExpense != null) tvMonthlyExpense.setText("₫" + String.format("%,d", optExpense).replace(",", "."));
-                if (tvMonthlyTransfer != null) tvMonthlyTransfer.setText("₫" + String.format("%,d", optTransfer).replace(",", "."));
+                if (tvMonthlyIncome   != null) tvMonthlyIncome.setText("₫"   + String.format("%,d", engineState.mIncome).replace(",", "."));
+                if (tvMonthlyExpense  != null) tvMonthlyExpense.setText("₫"  + String.format("%,d", engineState.mExpense).replace(",", "."));
+                if (tvMonthlyTransfer != null) tvMonthlyTransfer.setText("₫" + String.format("%,d", engineState.mTransfer).replace(",", "."));
             }
         }
     }
@@ -415,7 +426,7 @@ public class DashboardFragment extends BaseFragment {
                         : (tab == TAB_WEEK)  ? tabWeek
                         : tabMonth;
         if (active != null) {
-            active.setBackgroundColor(COLOR_TAB_ACTIVE);
+            active.setBackgroundColor(colorTabActive);
             active.setTextColor(COLOR_TAB_TEXT_ON);
         }
 
@@ -427,7 +438,7 @@ public class DashboardFragment extends BaseFragment {
         if (tab == TAB_TODAY) {
             to.add(Calendar.DAY_OF_MONTH, 1);
         } else if (tab == TAB_WEEK) {
-            int dayOfWeek = from.get(Calendar.DAY_OF_WEEK);
+            int dayOfWeek    = from.get(Calendar.DAY_OF_WEEK);
             int daysToMonday = (dayOfWeek == Calendar.SUNDAY) ? 6 : (dayOfWeek - Calendar.MONDAY);
             from.add(Calendar.DAY_OF_MONTH, -daysToMonday);
             to.set(Calendar.YEAR, from.get(Calendar.YEAR));
@@ -446,26 +457,16 @@ public class DashboardFragment extends BaseFragment {
             currentTxLiveData.removeObserver(txObserver);
         }
 
-        // --- Xóa data cũ và hiển thị loading để tránh giật/nhảy UI ---
-        if (txAdapter != null) {
-            txAdapter.setData(new ArrayList<>());
-        }
-        if (emptyState != null) {
-            emptyState.setVisibility(View.GONE);
-        }
+        // Clear stale data and show loading spinner to prevent UI flicker between tabs.
+        if (txAdapter != null) txAdapter.setData(new ArrayList<>());
+        if (emptyState != null) emptyState.setVisibility(View.GONE);
         View pbTransactions = getView() != null ? getView().findViewById(R.id.pb_transactions) : null;
-        if (pbTransactions != null) {
-            pbTransactions.setVisibility(View.VISIBLE);
-        }
+        if (pbTransactions != null) pbTransactions.setVisibility(View.VISIBLE);
 
         currentTxLiveData = viewModel.getTransactionsBetween(fromMs, toMs);
         txObserver = txList -> {
-            if (pbTransactions != null) {
-                pbTransactions.setVisibility(View.GONE);
-            }
-            if (txAdapter != null) {
-                txAdapter.setData(txList != null ? txList : new ArrayList<>());
-            }
+            if (pbTransactions != null) pbTransactions.setVisibility(View.GONE);
+            if (txAdapter != null) txAdapter.setData(txList != null ? txList : new ArrayList<>());
             if (emptyState != null) {
                 emptyState.setVisibility((txList == null || txList.isEmpty()) ? View.VISIBLE : View.GONE);
             }
@@ -475,10 +476,10 @@ public class DashboardFragment extends BaseFragment {
 
     private static String buildGreeting() {
         int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-        if (hour >= 5  && hour < 12) return "Bắt đầu ngày tài chính thật sáng suốt ✨";
-        if (hour >= 12 && hour < 14) return "Kiểm tra chi tiêu buổi sáng của bạn 📊";
-        if (hour >= 14 && hour < 18) return "Quản lý tài chính thông minh 💼";
-        if (hour >= 18 && hour < 22) return "Tổng kết tài chính hôm nay 🌆";
+        if (hour >= GREETING_MORNING_START   && hour < GREETING_NOON_START)      return "Bắt đầu ngày tài chính thật sáng suốt ✨";
+        if (hour >= GREETING_NOON_START      && hour < GREETING_AFTERNOON_START) return "Kiểm tra chi tiêu buổi sáng của bạn 📊";
+        if (hour >= GREETING_AFTERNOON_START && hour < GREETING_EVENING_START)   return "Quản lý tài chính thông minh 💼";
+        if (hour >= GREETING_EVENING_START   && hour < GREETING_NIGHT_START)     return "Tổng kết tài chính hôm nay 🌆";
         return "Lên kế hoạch tài chính cho ngày mai 🌙";
     }
 

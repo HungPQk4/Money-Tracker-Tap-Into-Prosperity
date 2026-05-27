@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import vn.edu.usth.tip.backend.dto.ai.InsightRequest;
 import vn.edu.usth.tip.backend.dto.ai.InsightResponse;
+import vn.edu.usth.tip.backend.utils.GeminiConstants;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -23,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Gọi Gemini để sinh câu văn tiếng Việt tự nhiên cho các insight tài chính.
- * Android đã tính toán số liệu on-device — service này chỉ "dress" bằng ngôn ngữ tự nhiên.
+ * Calls Gemini to generate natural-language Vietnamese insight sentences.
+ * Android computes the numbers on-device; this service only "dresses" them in language.
  */
 @Slf4j
 @Service
@@ -41,7 +42,7 @@ public class InsightService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(15))
+            .connectTimeout(Duration.ofSeconds(GeminiConstants.CONNECT_TIMEOUT_SECONDS))
             .build();
 
     public InsightResponse generateInsights(InsightRequest request) {
@@ -68,9 +69,6 @@ public class InsightService {
             && (req.getPatterns()     == null   || req.getPatterns().isEmpty());
     }
 
-    /**
-     * Xây dựng prompt với toàn bộ dữ liệu tài chính theo ngữ cảnh người Việt.
-     */
     private String buildPrompt(InsightRequest req) {
         StringBuilder sb = new StringBuilder();
         sb.append("Bạn là trợ lý tài chính của ứng dụng quản lý chi tiêu cá nhân tại Việt Nam.\n");
@@ -144,49 +142,7 @@ public class InsightService {
     }
 
     private String callGemini(String prompt) throws Exception {
-        String url = GEMINI_URL + "?key=" + apiKey;
-
-        // Schema cho mỗi insight item
-        Map<String, Object> itemProps = Map.of(
-            "type",          Map.of("type", "STRING"),
-            "referenceName", Map.of("type", "STRING"),
-            "title",         Map.of("type", "STRING"),
-            "body",          Map.of("type", "STRING")
-        );
-        Map<String, Object> itemSchema = Map.of(
-            "type",       "OBJECT",
-            "properties", itemProps,
-            "required",   List.of("type", "referenceName", "title", "body")
-        );
-
-        // Schema tổng
-        Map<String, Object> responseSchema = Map.of(
-            "type", "OBJECT",
-            "properties", Map.of(
-                "insights", Map.of("type", "ARRAY", "items", itemSchema)
-            ),
-            "required", List.of("insights")
-        );
-
-        Map<String, Object> generationConfig = Map.of(
-            "temperature",       0.4,   // Một chút sáng tạo cho câu văn tự nhiên
-            "responseMimeType",  "application/json",
-            "responseSchema",    responseSchema
-        );
-
-        Map<String, Object> requestBody = Map.of(
-            "contents", List.of(
-                Map.of("parts", List.of(Map.of("text", prompt)))
-            ),
-            "generationConfig", generationConfig
-        );
-
-        HttpRequest httpReq = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(30))
-                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestBody)))
-                .build();
+        HttpRequest httpReq = buildGeminiRequest(prompt);
 
         log.debug("Calling Gemini for insight generation...");
         HttpResponse<String> response = httpClient.send(httpReq, HttpResponse.BodyHandlers.ofString());
@@ -197,6 +153,43 @@ public class InsightService {
         }
 
         return response.body();
+    }
+
+    private HttpRequest buildGeminiRequest(String prompt) throws Exception {
+        // API key in URL param is required by the Gemini REST endpoint for server-to-server calls
+        String url = GEMINI_URL + "?key=" + apiKey;
+
+        Map<String, Object> itemSchema = Map.of(
+            "type",       "OBJECT",
+            "properties", Map.of(
+                "type",          Map.of("type", "STRING"),
+                "referenceName", Map.of("type", "STRING"),
+                "title",         Map.of("type", "STRING"),
+                "body",          Map.of("type", "STRING")
+            ),
+            "required", List.of("type", "referenceName", "title", "body")
+        );
+        Map<String, Object> responseSchema = Map.of(
+            "type", "OBJECT",
+            "properties", Map.of("insights", Map.of("type", "ARRAY", "items", itemSchema)),
+            "required", List.of("insights")
+        );
+        Map<String, Object> generationConfig = Map.of(
+            "temperature",      GeminiConstants.TEMPERATURE_CREATIVE,
+            "responseMimeType", "application/json",
+            "responseSchema",   responseSchema
+        );
+        Map<String, Object> requestBody = Map.of(
+            "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+            "generationConfig", generationConfig
+        );
+
+        return HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(GeminiConstants.READ_TIMEOUT_SECONDS))
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestBody)))
+                .build();
     }
 
     private InsightResponse parseResponse(String rawBody) throws Exception {

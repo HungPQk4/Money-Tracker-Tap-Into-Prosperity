@@ -1,7 +1,6 @@
 package vn.edu.usth.tip.backend.services;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.usth.tip.backend.dto.transaction.CreateTransactionRequest;
@@ -13,6 +12,8 @@ import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.*;
 import vn.edu.usth.tip.backend.models.enums.TransactionType;
 import vn.edu.usth.tip.backend.repositories.*;
+import vn.edu.usth.tip.backend.utils.SecurityUtils;
+import vn.edu.usth.tip.backend.utils.SyncConstants;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -36,14 +37,16 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
     private final GoalRepository goalRepository;
+    private final SecurityUtils securityUtils;
 
     @Transactional
     public TransactionResponse createTransaction(CreateTransactionRequest req) {
+        Account account = accountRepository.findById(req.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "id", req.getAccountId()));
+
         Transaction tx = new Transaction();
         tx.setUser(userRepository.findById(req.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", req.getUserId())));
-        Account account = accountRepository.findById(req.getAccountId())
-                .orElseThrow(() -> new ResourceNotFoundException("Account", "id", req.getAccountId()));
         tx.setAccount(account);
         tx.setCategory(categoryRepository.findById(req.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategoryId())));
@@ -59,7 +62,6 @@ public class TransactionService {
         tx.setIsRecurring(req.getIsRecurring() != null ? req.getIsRecurring() : false);
         tx.setRecurInterval(req.getRecurInterval());
 
-        // ─── Cập nhật số dư account ───────────────────────────────────────
         BigDecimal amount = req.getAmount();
         BigDecimal currentBalance = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
         if (TransactionType.income == req.getType()) {
@@ -80,9 +82,7 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public List<TransactionResponse> getAllTransactions() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        User user = securityUtils.getCurrentUser();
         return getTransactionsByUser(user.getId());
     }
 
@@ -97,7 +97,8 @@ public class TransactionService {
         Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", "id", id));
 
-        // ── Hoàn nguyên số dư ví CŨ trước khi update ──────────────────────
+        // Reverse the old account's balance before applying new values
+        // so account switching within an edit is handled correctly.
         Account oldAccount = tx.getAccount();
         if (oldAccount != null && tx.getAmount() != null) {
             BigDecimal current = oldAccount.getBalance() != null ? oldAccount.getBalance() : BigDecimal.ZERO;
@@ -109,7 +110,6 @@ public class TransactionService {
             accountRepository.save(oldAccount);
         }
 
-        // ── Áp dụng giá trị mới ────────────────────────────────────────────
         tx.setAmount(req.getAmount());
         tx.setType(req.getType());
         tx.setNote(req.getNote());
@@ -122,14 +122,12 @@ public class TransactionService {
                     .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategoryId())));
         }
 
-        // ── Cập nhật ví MỚI (hỗ trợ đổi ví khi chỉnh sửa giao dịch) ────────
         Account newAccount = (req.getAccountId() != null)
                 ? accountRepository.findById(req.getAccountId())
                         .orElseThrow(() -> new ResourceNotFoundException("Account", "id", req.getAccountId()))
                 : oldAccount;
         tx.setAccount(newAccount);
 
-        // ── Áp dụng số dư cho ví mới ──────────────────────────────────────
         if (newAccount != null) {
             BigDecimal current = newAccount.getBalance() != null ? newAccount.getBalance() : BigDecimal.ZERO;
             if (TransactionType.income == req.getType()) {
@@ -147,7 +145,6 @@ public class TransactionService {
     public void deleteTransaction(UUID id) {
         Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", "id", id));
-        // ─── Hoàn nguyên số dư account ─────────────────────────────────────
         Account account = tx.getAccount();
         if (account != null && tx.getAmount() != null && tx.getDeletedAt() == null) {
             BigDecimal currentBalance = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
@@ -165,10 +162,7 @@ public class TransactionService {
         transactionRepository.save(tx);
     }
 
-    // =========================================================================
-    //  API ĐỒNG BỘ BATCH — POST /api/transactions/sync
-    //  Last-Write-Wins (LWW): PATH DELETE → PATH A (edit) → PATH B (new).
-    // =========================================================================
+    // Batch sync API — Last-Write-Wins: PATH DELETE → PATH A (edit) → PATH B (new).
 
     @Transactional(rollbackFor = Exception.class)
     public SyncResponse syncTransactions(SyncRequest req) {
@@ -180,119 +174,139 @@ public class TransactionService {
         int skippedCount = 0;
 
         for (SyncTransactionRequest item : req.getTransactions()) {
-
-            // ── PATH DELETE: soft-delete signal từ client ─────────────────────
             if (item.isDeleted() && item.getTransactionId() != null) {
-                transactionRepository.findByIdAndUser_Id(item.getTransactionId(), user.getId())
-                        .ifPresent(existing -> {
-                            if (existing.getDeletedAt() == null) {
-                                reverseBalanceEffect(existing.getAccount(), existing.getType(), existing.getAmount());
-                                OffsetDateTime nowDel = OffsetDateTime.now();
-                                existing.setDeletedAt(nowDel);
-                                existing.setUpdatedAt(nowDel);
-                                existing.setClientSync(true);
-                                transactionRepository.save(existing);
-                            }
-                        });
-                // BẮT BUỘC ACK — nếu không có, Android không nhận ack → zombie spam
-                TransactionResponse ack = new TransactionResponse();
-                ack.setId(item.getTransactionId());
-                ack.setDeleted(true);
-                responseList.add(ack);
+                handleDeletedSync(item, user, responseList);
                 continue;
             }
 
-            // ── PATH A: edit giao dịch đã tồn tại trên server ────────────────
             if (item.getTransactionId() != null) {
-                java.util.Optional<Transaction> existingOpt =
-                        transactionRepository.findByIdAndUser_Id(item.getTransactionId(), user.getId());
-                if (existingOpt.isPresent()) {
-                    Transaction existing = existingOpt.get();
-                    // Null-safe LWW: clientUpdatedAt=null → Server Wins (app cũ)
-                    // existing.updatedAt=null (legacy record) → Client Wins
-                    boolean clientWins = item.getClientUpdatedAt() != null
-                            && (existing.getUpdatedAt() == null
-                                || item.getClientUpdatedAt().isAfter(existing.getUpdatedAt()));
-                    if (!clientWins) {
-                        // Server Wins: trả về version server để Android thoát Sync Blackhole
-                        responseList.add(toResponse(existing));
-                        continue;
-                    }
-                    // Client Wins: áp dụng edits với balance rollback
-                    reverseBalanceEffect(existing.getAccount(), existing.getType(), existing.getAmount());
-                    Account newAccount = item.getAccountId() != null
-                            ? accountRepository.findById(item.getAccountId()).orElse(existing.getAccount())
-                            : existing.getAccount();
-                    existing.setAccount(newAccount);
-                    if (item.getCategoryId() != null) {
-                        existing.setCategory(categoryRepository.findById(item.getCategoryId())
-                                .orElse(existing.getCategory()));
-                    }
-                    BigDecimal positiveAmount = item.getAmount().abs();
-                    existing.setAmount(positiveAmount);
-                    existing.setType(item.getType());
-                    existing.setNote(item.getNote());
-                    existing.setTransactionDate(item.getTransactionDate());
-                    existing.setIsRecurring(item.getIsRecurring() != null ? item.getIsRecurring() : false);
-                    existing.setRecurInterval(item.getRecurInterval());
-                    applyBalanceEffect(newAccount, item.getType(), positiveAmount);
-                    // Dùng timestamp của client làm ground truth — tắt @PreUpdate auto-stamp
-                    existing.setUpdatedAt(item.getClientUpdatedAt());
-                    existing.setClientSync(true);
-                    transactionRepository.save(existing);
-                    responseList.add(toResponse(existing));
-                    savedCount++;
+                Integer pathAResult = handleExistingSync(item, user, responseList);
+                if (pathAResult != null) {
+                    savedCount += pathAResult;
                     continue;
                 }
-                // Không tìm thấy trên server → fall through PATH B với UUID này
+                // Not found on server → fall through to PATH B with this UUID
             }
 
-            // ── PATH B: giao dịch mới ─────────────────────────────────────────
-            if (item.getAccountId() == null || item.getCategoryId() == null || item.getAmount() == null) {
-                skippedCount++;
-                continue;
-            }
-            Account account = accountRepository.findById(item.getAccountId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Account", "id", item.getAccountId()));
-            Category category = categoryRepository.findById(item.getCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Category", "id", item.getCategoryId()));
-
-            if (item.getTransactionId() != null) {
-                // Client UUID đã có nhưng không tìm thấy ở PATH A → INSERT với UUID đó
-                // Không check duplicate (trust client UUID, tỷ lệ collision = 0%)
-                Transaction newTx = buildNewTransaction(user, account, category, item);
-                newTx.setId(item.getTransactionId());
-                applyBalanceEffect(account, item.getType(), item.getAmount().abs());
-                accountRepository.save(account);
-                transactionRepository.save(newTx);
-                responseList.add(toResponse(newTx));
+            int pathBResult = handleNewSync(item, user, responseList);
+            if (pathBResult > 0) {
                 savedCount++;
-                continue;
-            }
-
-            // Legacy (transactionId=null) — check duplicate để tránh double-send
-            String categoryName = category.getName();
-            java.util.Optional<Transaction> duplicate = transactionRepository.findDuplicate(
-                    user.getId(), item.getAmount(), item.getTransactionDate(),
-                    item.getType() != null ? item.getType().name() : null,
-                    categoryName, item.getNote());
-            if (duplicate.isPresent()) {
-                // Trả về record đã tồn tại → Android đồng bộ UUID chuẩn, thoát loop
-                responseList.add(toResponse(duplicate.get()));
+            } else {
                 skippedCount++;
-                continue;
             }
+        }
 
+        return new SyncResponse(savedCount, skippedCount, responseList);
+    }
+
+    private void handleDeletedSync(SyncTransactionRequest item, User user,
+                                   List<TransactionResponse> responseList) {
+        transactionRepository.findByIdAndUser_Id(item.getTransactionId(), user.getId())
+                .ifPresent(existing -> {
+                    if (existing.getDeletedAt() == null) {
+                        reverseBalanceEffect(existing.getAccount(), existing.getType(), existing.getAmount());
+                        OffsetDateTime nowDel = OffsetDateTime.now();
+                        existing.setDeletedAt(nowDel);
+                        existing.setUpdatedAt(nowDel);
+                        existing.setClientSync(true);
+                        transactionRepository.save(existing);
+                    }
+                });
+        // Must ACK even when already deleted — otherwise Android retries forever (zombie sync loop)
+        TransactionResponse ack = new TransactionResponse();
+        ack.setId(item.getTransactionId());
+        ack.setDeleted(true);
+        responseList.add(ack);
+    }
+
+    /**
+     * Returns null if the transaction is not found on the server (fall through to PATH B).
+     * Returns 0 if server wins the LWW conflict (no save). Returns 1 if client wins (saved).
+     */
+    private Integer handleExistingSync(SyncTransactionRequest item, User user,
+                                       List<TransactionResponse> responseList) {
+        java.util.Optional<Transaction> existingOpt =
+                transactionRepository.findByIdAndUser_Id(item.getTransactionId(), user.getId());
+        if (existingOpt.isEmpty()) return null;
+
+        Transaction existing = existingOpt.get();
+        // Null-safe LWW: clientUpdatedAt=null → Server Wins (legacy client without timestamps)
+        // existing.updatedAt=null → Client Wins (legacy record inserted before updatedAt was tracked)
+        boolean clientWins = item.getClientUpdatedAt() != null
+                && (existing.getUpdatedAt() == null
+                    || item.getClientUpdatedAt().isAfter(existing.getUpdatedAt()));
+        if (!clientWins) {
+            // Return server version so Android exits the Sync Blackhole
+            responseList.add(toResponse(existing));
+            return 0;
+        }
+
+        reverseBalanceEffect(existing.getAccount(), existing.getType(), existing.getAmount());
+        Account newAccount = item.getAccountId() != null
+                ? accountRepository.findById(item.getAccountId()).orElse(existing.getAccount())
+                : existing.getAccount();
+        existing.setAccount(newAccount);
+        if (item.getCategoryId() != null) {
+            existing.setCategory(categoryRepository.findById(item.getCategoryId())
+                    .orElse(existing.getCategory()));
+        }
+        BigDecimal positiveAmount = item.getAmount().abs();
+        existing.setAmount(positiveAmount);
+        existing.setType(item.getType());
+        existing.setNote(item.getNote());
+        existing.setTransactionDate(item.getTransactionDate());
+        existing.setIsRecurring(item.getIsRecurring() != null ? item.getIsRecurring() : false);
+        existing.setRecurInterval(item.getRecurInterval());
+        applyBalanceEffect(newAccount, item.getType(), positiveAmount);
+        // Use client timestamp as ground truth — disables @PreUpdate auto-stamp
+        existing.setUpdatedAt(item.getClientUpdatedAt());
+        existing.setClientSync(true);
+        transactionRepository.save(existing);
+        responseList.add(toResponse(existing));
+        return 1;
+    }
+
+    /** Returns 1 if a new transaction was inserted, 0 if skipped (missing fields or duplicate). */
+    private int handleNewSync(SyncTransactionRequest item, User user,
+                              List<TransactionResponse> responseList) {
+        if (item.getAccountId() == null || item.getCategoryId() == null || item.getAmount() == null) {
+            return 0;
+        }
+
+        Account account = accountRepository.findById(item.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "id", item.getAccountId()));
+        Category category = categoryRepository.findById(item.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", item.getCategoryId()));
+
+        if (item.getTransactionId() != null) {
+            // Client UUID not found in PATH A → INSERT with that UUID (trust client UUID, collision ≈ 0%)
             Transaction newTx = buildNewTransaction(user, account, category, item);
-            newTx.setId(UUID.randomUUID()); // server tự cấp UUID cho legacy records
+            newTx.setId(item.getTransactionId());
             applyBalanceEffect(account, item.getType(), item.getAmount().abs());
             accountRepository.save(account);
             transactionRepository.save(newTx);
             responseList.add(toResponse(newTx));
-            savedCount++;
+            return 1;
         }
 
-        return new SyncResponse(savedCount, skippedCount, responseList);
+        // Legacy path (transactionId=null) — check duplicate to prevent double-send
+        java.util.Optional<Transaction> duplicate = transactionRepository.findDuplicate(
+                user.getId(), item.getAmount(), item.getTransactionDate(),
+                item.getType() != null ? item.getType().name() : null,
+                category.getName(), item.getNote());
+        if (duplicate.isPresent()) {
+            // Return existing record so Android syncs the canonical UUID and exits the loop
+            responseList.add(toResponse(duplicate.get()));
+            return 0;
+        }
+
+        Transaction newTx = buildNewTransaction(user, account, category, item);
+        newTx.setId(UUID.randomUUID()); // server assigns UUID for legacy records
+        applyBalanceEffect(account, item.getType(), item.getAmount().abs());
+        accountRepository.save(account);
+        transactionRepository.save(newTx);
+        responseList.add(toResponse(newTx));
+        return 1;
     }
 
     private Transaction buildNewTransaction(User user, Account account, Category category,
@@ -341,15 +355,10 @@ public class TransactionService {
         accountRepository.save(account);
     }
 
-    // =========================================================================
-    //  API TRUY XUẤT 30 NGÀY — GET /api/transactions/recent
-    //  Trả về giao dịch trong 30 ngày qua, sắp xếp mới nhất lên đầu.
-    // =========================================================================
-
     @Transactional(readOnly = true)
     public List<TransactionResponse> getRecentTransactions(UUID userId, int days) {
-        // Dùng transactionDate (LocalDate) thay vì createdAt (OffsetDateTime)
-        // để tránh Hibernate/Neon PostgreSQL timezone binding issue gây ra lỗi 500
+        // Use transactionDate (LocalDate) instead of createdAt (OffsetDateTime) to avoid
+        // a Hibernate/Neon PostgreSQL timezone binding issue that caused HTTP 500 errors
         LocalDate since = LocalDate.now().minusDays(days);
         return transactionRepository
                 .findByUser_IdAndTransactionDateGreaterThanEqualOrderByTransactionDateDescCreatedAtDesc(
@@ -359,15 +368,9 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public List<TransactionResponse> getMyRecentTransactions(int days) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        User user = securityUtils.getCurrentUser();
         return getRecentTransactions(user.getId(), days);
     }
-
-    // =========================================================================
-    //  HELPER
-    // =========================================================================
 
     private TransactionResponse toResponse(Transaction tx) {
         TransactionResponse res = new TransactionResponse();
@@ -391,19 +394,13 @@ public class TransactionService {
         return res;
     }
 
-    // =========================================================================
-    //  DELTA SYNC — GET /api/transactions/delta
-    // =========================================================================
-
     @Transactional(readOnly = true)
     public DeltaResponse<TransactionResponse> getDelta(String updatedSince, String untilTimestamp,
                                                         String lastUpdatedAt, UUID lastId, int limit) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        User user = securityUtils.getCurrentUser();
         OffsetDateTime since = updatedSince != null
                 ? OffsetDateTime.parse(updatedSince)
-                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+                : OffsetDateTime.parse(SyncConstants.EPOCH_CURSOR);
         OffsetDateTime until = untilTimestamp != null
                 ? OffsetDateTime.parse(untilTimestamp)
                 : OffsetDateTime.now();

@@ -7,12 +7,9 @@ import vn.edu.usth.tip.backend.models.enums.DebtType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Data
 public class CreateDebtRequest {
-    @NotNull private UUID userId;
-
     @NotBlank
     private String contactName;
     private String contactPhone;

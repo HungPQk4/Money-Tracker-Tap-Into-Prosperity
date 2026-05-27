@@ -3,9 +3,10 @@ package vn.edu.usth.tip.backend.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import vn.edu.usth.tip.backend.dto.common.DeltaResponse;
 import vn.edu.usth.tip.backend.dto.debt.CreateDebtRequest;
 import vn.edu.usth.tip.backend.dto.debt.DebtResponse;
@@ -14,7 +15,8 @@ import vn.edu.usth.tip.backend.models.Debt;
 import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.models.enums.DebtStatus;
 import vn.edu.usth.tip.backend.repositories.DebtRepository;
-import vn.edu.usth.tip.backend.repositories.UserRepository;
+import vn.edu.usth.tip.backend.utils.SecurityUtils;
+import vn.edu.usth.tip.backend.utils.SyncConstants;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -27,18 +29,18 @@ import java.util.stream.Collectors;
 public class DebtService {
 
     private final DebtRepository debtRepository;
-    private final UserRepository userRepository;
+    private final SecurityUtils securityUtils;
 
+    @Transactional
     public DebtResponse createDebt(CreateDebtRequest req) {
-        User user = userRepository.findById(req.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", req.getUserId()));
+        User user = securityUtils.getCurrentUser();
         Debt debt = new Debt();
         debt.setUser(user);
         debt.setContactName(req.getContactName());
         debt.setContactPhone(req.getContactPhone());
         debt.setType(req.getType());
         debt.setAmount(req.getAmount());
-        debt.setRemainingAmount(req.getAmount()); // initially the full amount
+        debt.setRemainingAmount(req.getAmount());
         debt.setDueDate(req.getDueDate());
         debt.setNote(req.getNote());
         debt.setStatus(DebtStatus.active);
@@ -53,56 +55,59 @@ public class DebtService {
 
     @Transactional(readOnly = true)
     public List<DebtResponse> getAllDebts() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
-        return getDebtsByUser(user.getId());
+        return getDebtsByUser(securityUtils.getCurrentUser().getId());
     }
 
+    @Transactional
     public DebtResponse settleDebt(UUID id) {
         Debt debt = debtRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Debt", "id", id));
+        if (!debt.getUser().getId().equals(securityUtils.getCurrentUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         debt.setRemainingAmount(BigDecimal.ZERO);
         debt.setStatus(DebtStatus.settled);
         return toResponse(debtRepository.save(debt));
     }
 
+    @Transactional
     public void deleteDebt(UUID id) {
         Debt debt = debtRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Debt", "id", id));
+        if (!debt.getUser().getId().equals(securityUtils.getCurrentUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         OffsetDateTime now = OffsetDateTime.now();
         debt.setDeletedAt(now);
         debt.setUpdatedAt(now);
         debtRepository.save(debt);
     }
 
-    private DebtResponse toResponse(Debt d) {
+    private DebtResponse toResponse(Debt debt) {
         DebtResponse res = new DebtResponse();
-        res.setId(d.getId());
-        res.setUserId(d.getUser().getId());
-        res.setContactName(d.getContactName());
-        res.setContactPhone(d.getContactPhone());
-        res.setType(d.getType());
-        res.setAmount(d.getAmount());
-        res.setRemainingAmount(d.getRemainingAmount());
-        res.setDueDate(d.getDueDate());
-        res.setStatus(d.getStatus());
-        res.setNote(d.getNote());
-        res.setCreatedAt(d.getCreatedAt());
-        res.setUpdatedAt(d.getUpdatedAt());
-        res.setDeleted(d.getDeletedAt() != null);
+        res.setId(debt.getId());
+        res.setUserId(debt.getUser().getId());
+        res.setContactName(debt.getContactName());
+        res.setContactPhone(debt.getContactPhone());
+        res.setType(debt.getType());
+        res.setAmount(debt.getAmount());
+        res.setRemainingAmount(debt.getRemainingAmount());
+        res.setDueDate(debt.getDueDate());
+        res.setStatus(debt.getStatus());
+        res.setNote(debt.getNote());
+        res.setCreatedAt(debt.getCreatedAt());
+        res.setUpdatedAt(debt.getUpdatedAt());
+        res.setDeleted(debt.getDeletedAt() != null);
         return res;
     }
 
     @Transactional(readOnly = true)
     public DeltaResponse<DebtResponse> getDelta(String updatedSince, String untilTimestamp,
                                                  String lastUpdatedAt, UUID lastId, int limit) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        User user = securityUtils.getCurrentUser();
         OffsetDateTime since = updatedSince != null
                 ? OffsetDateTime.parse(updatedSince)
-                : OffsetDateTime.parse("1970-01-01T00:00:00Z");
+                : OffsetDateTime.parse(SyncConstants.EPOCH_CURSOR);
         OffsetDateTime until = untilTimestamp != null
                 ? OffsetDateTime.parse(untilTimestamp)
                 : OffsetDateTime.now();

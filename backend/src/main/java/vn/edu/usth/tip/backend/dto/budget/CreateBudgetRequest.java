@@ -7,11 +7,10 @@ import vn.edu.usth.tip.backend.models.enums.BudgetPeriod;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
+import java.util.UUID; // categoryId
 
 @Data
 public class CreateBudgetRequest {
-    @NotNull private UUID userId;
     @NotNull private UUID categoryId;
 
     @NotNull @Positive
