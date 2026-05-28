@@ -19,39 +19,9 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Nút bộ lọc danh mục -->
+    <!-- Hộp hiển thị ngày giờ thời gian thực -->
     <LinearLayout
-        android:id="@+id/btn_filter_category"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/bg_filter_pill_light"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="8dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_analytics_title">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Thu nhập vs Chi tiêu"
-            android:textColor="#5B4DC7"
-            android:textSize="13sp"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginStart="4dp"
-            android:src="@android:drawable/arrow_down_float"
-            app:tint="#5B4DC7" />
-    </LinearLayout>
-
-    <!-- Bộ lọc thời gian -->
-    <LinearLayout
-        android:id="@+id/btn_filter_time"
+        android:id="@+id/box_current_datetime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_filter_pill_light"
@@ -64,19 +34,13 @@
         app:layout_constraintTop_toTopOf="@id/tv_analytics_title">
 
         <TextView
+            android:id="@+id/tv_current_datetime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tháng 5, 2026"
+            android:text="27/05/2026 00:00"
             android:textColor="#5B4DC7"
             android:textSize="13sp"
             android:textStyle="bold" />
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginStart="4dp"
-            android:src="@android:drawable/arrow_down_float"
-            app:tint="#5B4DC7" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

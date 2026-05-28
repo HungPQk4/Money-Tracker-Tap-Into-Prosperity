@@ -40,6 +40,10 @@ public interface DebtLoanDao {
     @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_LENT)
     LiveData<Long> getTotalOwedToMe();
 
+    // Lấy tất cả debt/loan trên background thread (dùng cho InsightEngine)
+    @Query("SELECT * FROM debt_loans ORDER BY dueDate ASC")
+    List<DebtLoan> getAllDebtLoansSync();
+
     // Sync versions dùng cho widget (chạy trên background thread, không có LiveData)
     @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_I_OWE)
     long getTotalIOweSync();

@@ -61,7 +61,7 @@ public class TransactionRepository {
         this.transactionDao = db.transactionDao();
         this.walletDao      = db.walletDao();
         this.categoryDao    = db.categoryDao();
-        this.tokenManager   = new TokenManager(appContext);
+        this.tokenManager   = TokenManager.getOrCreate(appContext);
         this.transactionApi = RetrofitClient.createService(TransactionApi.class, tokenManager);
         this.financialApi   = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }

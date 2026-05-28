@@ -295,14 +295,13 @@
                         app:cardCornerRadius="20dp"
                         app:cardBackgroundColor="#4E3DC8"
                         app:cardElevation="4dp">
-                        <TextView
+                        <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:text="AI"
-                            android:gravity="center"
-                            android:textColor="#FFFFFF"
-                            android:textStyle="bold"
-                            android:textSize="14sp"/>
+                            android:src="@drawable/ic_lightbulb"
+                            android:scaleType="fitCenter"
+                            android:padding="8dp"
+                            android:contentDescription="Gợi ý" />
                     </androidx.cardview.widget.CardView>
                     
                     <LinearLayout

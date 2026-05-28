@@ -2,6 +2,7 @@ package vn.edu.usth.tip.ui.fragments;
 
 import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.adapters.TransactionAdapter;
+import vn.edu.usth.tip.utils.MoneyFormat;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 
 import android.graphics.Color;
@@ -200,7 +201,7 @@ public class AllTransactionsFragment extends Fragment {
         return field != null && field.toLowerCase().contains(query);
     }
 
-    private String formatVnd(long amount) {
-        return String.format("₫%,.0f", (double) amount).replace(",", ".");
+    private CharSequence formatVnd(long amount) {
+        return MoneyFormat.formatShortStyled(amount);
     }
 }

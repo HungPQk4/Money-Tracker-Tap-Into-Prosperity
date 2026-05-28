@@ -41,7 +41,7 @@ public class WalletDetailSheet extends BottomSheetDialogFragment {
 
     @Override
     public int getTheme() {
-        return com.google.android.material.R.style.Theme_MaterialComponents_BottomSheetDialog;
+        return com.google.android.material.R.style.Theme_MaterialComponents_Light_BottomSheetDialog;
     }
 
     @Nullable
@@ -71,8 +71,7 @@ public class WalletDetailSheet extends BottomSheetDialogFragment {
         // Pre-fill
         tvIcon.setText(wallet.getIcon());
         cardIconBg.setCardBackgroundColor(wallet.getColor());
-        tvBalance.setText(String.format("₫%,.0f", (double) wallet.getBalanceVnd())
-                .replace(",", "."));
+        tvBalance.setText(vn.edu.usth.tip.utils.MoneyFormat.formatFullStyled(wallet.getBalanceVnd()));
         tvName.setText(wallet.getName());
         tvType.setText(getWalletTypeName(wallet.getType()));
         tvIncluded.setText(wallet.isIncludedInTotal() ? "Có" : "Không");

@@ -53,7 +53,8 @@
       "Bash(./gradlew projects *)",
       "Bash(./gradlew compileJava)",
       "Bash(psql \"postgresql://neondb_owner:npg_m2bhA6IcDMnw@ep-bold-unit-amd1epkd-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" -f \"f:\\\\Money-Tracker-Tap-Into-Prosperity\\\\backend\\\\src\\\\main\\\\resources\\\\migrate_add_soft_delete.sql\")",
-      "Bash(xargs grep -l \"TODO\\\\|FIXME\\\\|BUG\\\\|HACK\")"
+      "Bash(xargs grep -l \"TODO\\\\|FIXME\\\\|BUG\\\\|HACK\")",
+      "Bash(./gradlew compileDebugJavaSources)"
     ]
   }
 }

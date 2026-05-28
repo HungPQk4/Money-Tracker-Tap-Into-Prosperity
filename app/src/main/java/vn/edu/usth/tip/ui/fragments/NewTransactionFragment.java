@@ -221,7 +221,7 @@ public class NewTransactionFragment extends Fragment {
         for (int i = 0; i < accounts.size(); i++) {
             AccountResponse acc = accounts.get(i);
             String icon = (acc.getIcon() != null && !acc.getIcon().isEmpty()) ? acc.getIcon() + "  " : "💳  ";
-            String balance = String.format("%,d₫", acc.getBalance()).replace(",", ".");
+            String balance = vn.edu.usth.tip.utils.MoneyFormat.formatShort(acc.getBalance());
             names[i] = icon + acc.getName() + "  (" + balance + ")";
         }
         String title = isToAccount ? "Chọn tài khoản đích" : "Chọn tài khoản nguồn";
@@ -254,7 +254,7 @@ public class NewTransactionFragment extends Fragment {
             for (int i = 0; i < accounts.size(); i++) {
                 AccountResponse acc = accounts.get(i);
                 String icon = (acc.getIcon() != null && !acc.getIcon().isEmpty()) ? acc.getIcon() + "  " : "💳  ";
-                String balance = String.format("%,d₫", acc.getBalance()).replace(",", ".");
+                String balance = vn.edu.usth.tip.utils.MoneyFormat.formatShort(acc.getBalance());
                 accountNames[i] = icon + acc.getName() + "  (" + balance + ")";
             }
 
@@ -273,8 +273,11 @@ public class NewTransactionFragment extends Fragment {
         try {
             long val = Long.parseLong(state.amountStr);
             tvAmount.setText(String.format("%,d", val).replace(",", "."));
+            float sp = val < 1_000_000_000L ? 52f : (val < 1_000_000_000_000L ? 36f : 26f);
+            tvAmount.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, sp);
         } catch (Exception e) {
             tvAmount.setText("0");
+            tvAmount.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 52f);
         }
 
         // Reset all tabs to inactive state — use container color, not transparent
@@ -512,6 +515,8 @@ public class NewTransactionFragment extends Fragment {
         LinearLayout layoutInterval    = view.findViewById(R.id.layout_recur_interval);
         Spinner spinnerInterval        = view.findViewById(R.id.spinner_recur_interval);
 
+        if (switchRecurring == null || layoutInterval == null || spinnerInterval == null) return;
+
         String[] intervalLabels = {"Hàng ngày", "Hàng tuần", "Hàng tháng", "Hàng năm"};
         String[] intervalValues = {"DAILY",     "WEEKLY",    "MONTHLY",    "YEARLY"};
 
@@ -556,7 +561,8 @@ public class NewTransactionFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (appViewModel != null && !requireActivity().isChangingConfigurations()) {
+        android.app.Activity activity = getActivity();
+        if (appViewModel != null && activity != null && !activity.isChangingConfigurations()) {
             appViewModel.clearEditingTransaction();
         }
     }

@@ -1,9 +1,5 @@
 package vn.edu.usth.tip.adapters;
 
-import vn.edu.usth.tip.R;
-
-import vn.edu.usth.tip.models.Transaction;
-
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,9 +8,16 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
+import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.models.Transaction;
+import vn.edu.usth.tip.utils.MoneyFormat;
 
 public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.TxViewHolder> {
 
@@ -22,23 +25,34 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
         void onClick(Transaction tx);
     }
 
-    private final List<Transaction>          transactions;
+    private static final int ICON_BG_EXPENSE  = Color.parseColor("#2A1C1C");
+    private static final int ICON_BG_INCOME   = Color.parseColor("#1C2A20");
+    private static final int ICON_BG_TRANSFER = Color.parseColor("#1C1C2A");
+
+    private static final int AMOUNT_EXPENSE  = Color.parseColor("#EF4444");
+    private static final int AMOUNT_INCOME   = Color.parseColor("#22C55E");
+    private static final int AMOUNT_TRANSFER = Color.parseColor("#A78BFA");
+
+    private List<Transaction>               transactions;
     private final OnTransactionClickListener listener;
-
-    // Icon background colors per category
-    private static final int COLOR_EXPENSE  = Color.parseColor("#2A1C1C"); // dark red tint
-    private static final int COLOR_INCOME   = Color.parseColor("#1C2A20"); // dark green tint
-    private static final int COLOR_TRANSFER = Color.parseColor("#1C1C2A"); // dark blue tint
-
-    // Amount text colors
-    private static final int TEXT_EXPENSE  = Color.parseColor("#EF4444");
-    private static final int TEXT_INCOME   = Color.parseColor("#22C55E");
-    private static final int TEXT_TRANSFER = Color.parseColor("#A78BFA");
 
     public TransactionAdapter(List<Transaction> transactions,
                               OnTransactionClickListener listener) {
-        this.transactions = transactions;
+        this.transactions = transactions != null ? transactions : new ArrayList<>();
         this.listener     = listener;
+        setHasStableIds(true);
+    }
+
+    public void setData(List<Transaction> newList) {
+        List<Transaction> next = newList != null ? newList : new ArrayList<>();
+        DiffUtil.DiffResult result = DiffUtil.calculateDiff(new TxDiffCallback(transactions, next));
+        this.transactions = next;
+        result.dispatchUpdatesTo(this);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return transactions.get(position).getId().hashCode();
     }
 
     @NonNull
@@ -57,20 +71,11 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
         h.tvTitle.setText(tx.getTitle());
         h.tvCategory.setText(tx.getCategory());
         h.tvTime.setText(tx.getFormattedDateTime());
-        h.tvAmount.setText(tx.getFormattedAmount());
+        h.tvAmount.setText(MoneyFormat.styled(tx.getFormattedAmount()));
         h.tvWallet.setText(tx.getWalletName());
 
-        // Color icon background by type
-        int bgColor = tx.getType() == Transaction.Type.INCOME  ? COLOR_INCOME
-                    : tx.getType() == Transaction.Type.EXPENSE ? COLOR_EXPENSE
-                    : COLOR_TRANSFER;
-        h.cardIcon.setCardBackgroundColor(bgColor);
-
-        // Color amount by type
-        int amtColor = tx.getType() == Transaction.Type.INCOME  ? TEXT_INCOME
-                     : tx.getType() == Transaction.Type.EXPENSE ? TEXT_EXPENSE
-                     : TEXT_TRANSFER;
-        h.tvAmount.setTextColor(amtColor);
+        h.cardIcon.setCardBackgroundColor(iconBgColor(tx.getType()));
+        h.tvAmount.setTextColor(amountColor(tx.getType()));
 
         h.cardRecurring.setVisibility(tx.isRecurring() ? View.VISIBLE : View.GONE);
 
@@ -80,21 +85,65 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
     }
 
     @Override
-    public int getItemCount() { return transactions.size(); }
-
-    // ── Update helpers ────────────────────────────────────────────────
-
-    public void setData(List<Transaction> newList) {
-        transactions.clear();
-        transactions.addAll(newList);
-        notifyDataSetChanged();
+    public int getItemCount() {
+        return transactions.size();
     }
 
-    // ── ViewHolder ────────────────────────────────────────────────────
+    // ── Helpers ────────────────────────────────────────────────────────
+
+    private static int iconBgColor(Transaction.Type type) {
+        switch (type) {
+            case INCOME:   return ICON_BG_INCOME;
+            case EXPENSE:  return ICON_BG_EXPENSE;
+            default:       return ICON_BG_TRANSFER;
+        }
+    }
+
+    private static int amountColor(Transaction.Type type) {
+        switch (type) {
+            case INCOME:   return AMOUNT_INCOME;
+            case EXPENSE:  return AMOUNT_EXPENSE;
+            default:       return AMOUNT_TRANSFER;
+        }
+    }
+
+    // ── DiffCallback ───────────────────────────────────────────────────
+
+    private static final class TxDiffCallback extends DiffUtil.Callback {
+        private final List<Transaction> oldList, newList;
+
+        TxDiffCallback(List<Transaction> oldList, List<Transaction> newList) {
+            this.oldList = oldList;
+            this.newList = newList;
+        }
+
+        @Override public int getOldListSize() { return oldList.size(); }
+        @Override public int getNewListSize() { return newList.size(); }
+
+        @Override
+        public boolean areItemsTheSame(int op, int np) {
+            return oldList.get(op).getId().equals(newList.get(np).getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(int op, int np) {
+            Transaction o = oldList.get(op), n = newList.get(np);
+            return o.getAmountVnd()    == n.getAmountVnd()
+                && o.getType()         == n.getType()
+                && o.isRecurring()     == n.isRecurring()
+                && o.getTimestampMs()  == n.getTimestampMs()
+                && Objects.equals(o.getTitle(),      n.getTitle())
+                && Objects.equals(o.getCategory(),   n.getCategory())
+                && Objects.equals(o.getWalletName(), n.getWalletName())
+                && Objects.equals(o.getIcon(),       n.getIcon());
+        }
+    }
+
+    // ── ViewHolder ──────────────────────────────────────────────────────
 
     static class TxViewHolder extends RecyclerView.ViewHolder {
-        CardView cardTransaction, cardIcon, cardRecurring;
-        TextView tvIcon, tvTitle, tvCategory, tvTime, tvAmount, tvWallet;
+        final CardView cardTransaction, cardIcon, cardRecurring;
+        final TextView tvIcon, tvTitle, tvCategory, tvTime, tvAmount, tvWallet;
 
         TxViewHolder(@NonNull View v) {
             super(v);

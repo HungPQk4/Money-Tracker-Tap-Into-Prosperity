@@ -141,15 +141,29 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
-                android:layout_marginBottom="32dp"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="24dp"
                 android:gravity="center"
-                android:orientation="horizontal">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="₫" android:textColor="#6B6584" android:textSize="24sp" android:layout_marginBottom="20dp" />
-                <TextView android:id="@+id/tv_amount" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp" android:text="0" android:textColor="#1A1730"
-                    android:textSize="56sp" android:textStyle="bold" />
+                android:orientation="vertical">
+
+                <TextView android:id="@+id/tv_amount"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#1A1730"
+                    android:textStyle="bold"
+                    android:textSize="52sp"
+                    android:maxLines="1"
+                    android:gravity="center" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="VND"
+                    android:textColor="#9E9ABB"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.08" />
             </LinearLayout>
 
             <!-- Section: Danh mục (EXPENSE / INCOME) -->

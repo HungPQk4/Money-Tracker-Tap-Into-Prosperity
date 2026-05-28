@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import vn.edu.usth.tip.utils.MoneyFormat;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -132,9 +134,9 @@ public class BudgetsFragment extends Fragment {
         float pctFloat = totalBudgeted > 0 ? (totalSpent * 100.0f) / totalBudgeted : 0f;
         int   pctInt   = (int) Math.min(100, pctFloat);
 
-        tvTotalBudgeted.setText("₫" + fmtVnd(totalBudgeted));
-        tvTotalSpent.setText("₫"    + fmtVnd(totalSpent));
-        tvTotalRemaining.setText("₫" + fmtVnd(Math.max(0, remaining)));
+        tvTotalBudgeted.setText(MoneyFormat.formatShortStyled(totalBudgeted));
+        tvTotalSpent.setText(MoneyFormat.formatShortStyled(totalSpent));
+        tvTotalRemaining.setText(MoneyFormat.formatShortStyled(Math.max(0, remaining)));
 
         progressOverall.setProgress(pctInt);
 
@@ -162,15 +164,12 @@ public class BudgetsFragment extends Fragment {
     }
 
     private void resetSummary() {
-        tvTotalBudgeted.setText("₫0");
-        tvTotalSpent.setText("₫0");
-        tvTotalRemaining.setText("₫0");
+        tvTotalBudgeted.setText(MoneyFormat.formatShortStyled(0));
+        tvTotalSpent.setText(MoneyFormat.formatShortStyled(0));
+        tvTotalRemaining.setText(MoneyFormat.formatShortStyled(0));
         progressOverall.setProgress(0);
         tvOverallPercent.setText("0% đã chi");
         tvActiveCount.setText("0 ngân sách");
     }
 
-    private static String fmtVnd(long v) {
-        return String.format("%,d", v).replace(",", ".");
-    }
 }

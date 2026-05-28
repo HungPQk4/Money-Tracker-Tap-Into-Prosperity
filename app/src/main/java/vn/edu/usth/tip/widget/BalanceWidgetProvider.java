@@ -50,9 +50,8 @@ public class BalanceWidgetProvider extends AppWidgetProvider {
                 // 4. Format số tiền Locale vi-VN
                 NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
                 nf.setMaximumFractionDigits(0);
-                // Tổng tài sản: không có ₫ prefix — ký hiệu ₫ hiển thị riêng trong layout XML
-                String assetsText   = nf.format(totalAssets);
-                String netWorthText = "₫" + nf.format(netWorth);
+                String assetsText   = nf.format(totalAssets) + " VND";
+                String netWorthText = nf.format(netWorth) + " VND";
 
                 // 5. PendingIntent (requestCode=0): click toàn bộ widget → mở MainActivity
                 Intent launchMain = new Intent(appContext, MainActivity.class);
@@ -60,15 +59,7 @@ public class BalanceWidgetProvider extends AppWidgetProvider {
                 PendingIntent piMain = PendingIntent.getActivity(appContext, 0, launchMain,
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-                // 6. PendingIntent (requestCode=1): nút "+" → mở màn hình thêm giao dịch
-                Intent addTxIntent = new Intent(appContext, MainActivity.class);
-                addTxIntent.putExtra("open_new_transaction", true);
-                addTxIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                        | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                PendingIntent piAddTx = PendingIntent.getActivity(appContext, 1, addTxIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-                // 7. Cập nhật từng widget instance
+                // 6. Cập nhật từng widget instance
                 for (int id : appWidgetIds) {
                     RemoteViews views = new RemoteViews(
                             appContext.getPackageName(), R.layout.widget_balance);
@@ -76,7 +67,6 @@ public class BalanceWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(R.id.widget_total_assets, assetsText);
                     views.setTextViewText(R.id.widget_net_worth, netWorthText);
                     views.setOnClickPendingIntent(R.id.widget_root, piMain);
-                    views.setOnClickPendingIntent(R.id.btn_add_tx, piAddTx);
 
                     // Reset tất cả row về GONE trước khi điền data mới
                     views.setViewVisibility(R.id.widget_tx_row_1, View.GONE);
@@ -112,7 +102,7 @@ public class BalanceWidgetProvider extends AppWidgetProvider {
                             // Số tiền có dấu + / - / →
                             String prefix = isIncome ? "+" : (isTransfer ? "→" : "-");
                             views.setTextViewText(amountIds[i],
-                                    prefix + "₫" + nf.format(tx.getAmountVnd()));
+                                    prefix + nf.format(tx.getAmountVnd()) + " VND");
 
                             // Màu: xanh lá (thu) · đỏ (chi) · xám (chuyển)
                             int color = isIncome   ? 0xFF22C55E

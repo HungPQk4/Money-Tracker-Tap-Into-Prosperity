@@ -22,10 +22,12 @@ public class GoalAdvisor {
 
         if (remaining <= 0) {
             Insight done = new Insight();
-            done.type = InsightType.GOAL_FORECAST;
+            done.type = InsightType.GOAL_COMPLETED;
             done.priority = InsightPriority.LOW;
+            done.categoryName = goal.getName();
             done.title = "🎉 Mục tiêu " + goal.getName() + " đã hoàn thành!";
-            done.body = "Bạn đã đạt mục tiêu tiết kiệm " + goal.getName() + ". Tiếp tục phát huy!";
+            done.body = "Chúc mừng! Bạn đã đạt mục tiêu tiết kiệm " + goal.getName()
+                    + " (" + Insight.formatVnd(goal.getTargetAmount()) + "). Tiếp tục phát huy!";
             return done;
         }
 

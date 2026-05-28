@@ -18,6 +18,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import vn.edu.usth.tip.R;
 import vn.edu.usth.tip.utils.AnimUtils;
 import vn.edu.usth.tip.adapters.DebtLoanAdapter;
+import vn.edu.usth.tip.utils.MoneyFormat;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 
 public class DebtsLoansFragment extends Fragment {
@@ -87,14 +88,14 @@ public class DebtsLoansFragment extends Fragment {
         TextView tvTotalIOwe = view.findViewById(R.id.tv_total_i_owe);
         if (tvTotalIOwe != null) {
             viewModel.getTotalIOwe().observe(getViewLifecycleOwner(), total -> {
-                tvTotalIOwe.setText(viewModel.formatCurrency(total != null ? total : 0));
+                tvTotalIOwe.setText(MoneyFormat.styled(viewModel.formatCurrency(total != null ? total : 0)));
             });
         }
 
         TextView tvTotalOwedToMe = view.findViewById(R.id.tv_total_owed_to_me);
         if (tvTotalOwedToMe != null) {
             viewModel.getTotalOwedToMe().observe(getViewLifecycleOwner(), total -> {
-                tvTotalOwedToMe.setText(viewModel.formatCurrency(total != null ? total : 0));
+                tvTotalOwedToMe.setText(MoneyFormat.styled(viewModel.formatCurrency(total != null ? total : 0)));
             });
         }
 
@@ -104,12 +105,12 @@ public class DebtsLoansFragment extends Fragment {
             viewModel.getTotalOwedToMe().observe(getViewLifecycleOwner(), owedToMe -> {
                 Long iOwe = viewModel.getTotalIOwe().getValue();
                 long net = (owedToMe != null ? owedToMe : 0) - (iOwe != null ? iOwe : 0);
-                tvNetBalance.setText(viewModel.formatCurrency(net));
+                tvNetBalance.setText(MoneyFormat.styled(viewModel.formatCurrency(net)));
             });
             viewModel.getTotalIOwe().observe(getViewLifecycleOwner(), iOwe -> {
                 Long owedToMe = viewModel.getTotalOwedToMe().getValue();
                 long net = (owedToMe != null ? owedToMe : 0) - (iOwe != null ? iOwe : 0);
-                tvNetBalance.setText(viewModel.formatCurrency(net));
+                tvNetBalance.setText(MoneyFormat.styled(viewModel.formatCurrency(net)));
             });
         }
     }

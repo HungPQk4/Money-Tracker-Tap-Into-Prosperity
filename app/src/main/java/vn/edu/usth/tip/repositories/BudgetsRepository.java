@@ -38,7 +38,7 @@ public class BudgetsRepository {
         this.db = AppDatabase.getDatabase(appContext);
         this.budgetDao = db.budgetDao();
         this.categoryDao = db.categoryDao();
-        this.tokenManager = new TokenManager(appContext);
+        this.tokenManager = TokenManager.getOrCreate(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 

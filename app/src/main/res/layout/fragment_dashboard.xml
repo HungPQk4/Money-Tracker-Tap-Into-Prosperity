@@ -55,15 +55,6 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:text="₫"
-                        android:textColor="#FFFFFF"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <TextView
                         android:id="@+id/tv_total_assets"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -92,16 +83,6 @@
                     android:layout_marginTop="4dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_marginBottom="4dp"
-                        android:text="₫"
-                        android:textColor="#FFFFFF"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_net_worth"
@@ -173,7 +154,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="₫0"
+                                android:text="0 VND"
                                 android:textColor="#FFFFFF"
                                 android:textSize="13sp"
                                 android:textStyle="bold" />
@@ -223,7 +204,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="₫0"
+                                android:text="0 VND"
                                 android:textColor="#FFFFFF"
                                 android:textSize="13sp"
                                 android:textStyle="bold" />
@@ -273,7 +254,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="₫0"
+                                android:text="0 VND"
                                 android:textColor="#FFFFFF"
                                 android:textSize="13sp"
                                 android:textStyle="bold" />
@@ -473,14 +454,13 @@
                         app:cardCornerRadius="16dp"
                         app:cardElevation="4dp">
 
-                        <TextView
+                        <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:text="AI"
-                            android:textColor="#FFFFFF"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
+                            android:src="@drawable/ic_lightbulb"
+                            android:scaleType="fitCenter"
+                            android:padding="6dp"
+                            android:contentDescription="Gợi ý" />
                     </androidx.cardview.widget.CardView>
 
                     <TextView

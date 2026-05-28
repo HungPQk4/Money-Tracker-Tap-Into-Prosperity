@@ -31,8 +31,7 @@ public class Wallet {
     }
 
     public String getFormattedBalance() {
-        return String.format("₫%,.0f", (double) balanceVnd)
-                .replace(",", ".");
+        return String.format(java.util.Locale.US, "%,d", balanceVnd).replace(",", ".") + " VND";
     }
 
     public String getTypeName() {

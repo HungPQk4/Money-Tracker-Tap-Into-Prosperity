@@ -35,7 +35,7 @@ public class GoalsRepository {
         this.appContext = context.getApplicationContext();
         this.db = AppDatabase.getDatabase(appContext);
         this.goalDao = db.goalDao();
-        this.tokenManager = new TokenManager(appContext);
+        this.tokenManager = TokenManager.getOrCreate(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 

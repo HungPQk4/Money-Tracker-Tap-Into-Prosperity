@@ -33,45 +33,26 @@
                 android:drawableStart="@drawable/ic_widget_wallet"
                 android:drawablePadding="5dp" />
 
-            <ImageButton
-                android:id="@+id/btn_add_tx"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
+            <ImageView
+                android:id="@+id/widget_logo"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:layout_marginStart="8dp"
-                android:padding="5dp"
-                android:background="@drawable/widget_btn_add_bg"
-                android:src="@drawable/ic_widget_add"
-                android:contentDescription="Thêm giao dịch" />
+                android:src="@mipmap/ic_launcher"
+                android:contentDescription="TiP" />
 
         </LinearLayout>
 
-        <!-- Tổng tài sản: [₫ 14sp] + [số tiền 24sp bold] -->
-        <LinearLayout
+        <!-- Tổng tài sản -->
+        <TextView
+            android:id="@+id/widget_total_assets"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="bottom"
-            android:layout_marginTop="3dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="₫"
-                android:textColor="#757575"
-                android:textSize="14sp"
-                android:layout_marginBottom="3dp" />
-
-            <TextView
-                android:id="@+id/widget_total_assets"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0"
-                android:textColor="#1A237E"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:layout_marginStart="1dp" />
-
-        </LinearLayout>
+            android:text="0 VND"
+            android:textColor="#1A237E"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginTop="3dp" />
 
         <!-- Divider 1 -->
         <TextView
@@ -102,7 +83,7 @@
                 android:id="@+id/widget_net_worth"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="₫0"
+                android:text="0 VND"
                 android:textColor="#374151"
                 android:textSize="13sp"
                 android:textStyle="bold" />

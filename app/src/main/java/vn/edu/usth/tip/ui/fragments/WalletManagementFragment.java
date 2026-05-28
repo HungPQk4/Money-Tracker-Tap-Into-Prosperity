@@ -2,6 +2,7 @@ package vn.edu.usth.tip.ui.fragments;
 
 import vn.edu.usth.tip.models.Wallet;
 import vn.edu.usth.tip.adapters.WalletAdapter;
+import vn.edu.usth.tip.utils.MoneyFormat;
 import vn.edu.usth.tip.viewmodels.AccountViewModel;
 import vn.edu.usth.tip.network.responses.AccountResponse;
 
@@ -119,7 +120,7 @@ public class WalletManagementFragment extends Fragment
                 tvSummaryIncluded.setText(includedCount + "/" + currentWallets.size());
             }
 
-            String formattedTotal = String.format("₫%,.0f", (double) totalNetWorth).replace(",", ".");
+            CharSequence formattedTotal = MoneyFormat.formatShortStyled(totalNetWorth);
             tvSummaryTotal.setText(formattedTotal);
 
             View toolbar = getView();

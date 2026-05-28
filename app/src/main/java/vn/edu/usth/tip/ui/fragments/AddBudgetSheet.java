@@ -253,8 +253,8 @@ public class AddBudgetSheet extends BottomSheetDialogFragment {
                 Toast.makeText(requireContext(), "Màu: " + hex, Toast.LENGTH_SHORT).show();
             });
 
-            // Select first by default
-            if (i == 0) {
+            // Highlight chip matching selectedColor (kể cả khi đang edit budget hiện tại)
+            if (hex.equalsIgnoreCase(selectedColor)) {
                 GradientDrawable sel = (GradientDrawable) chip.getBackground();
                 sel.setStroke(dpToPx(3), Color.WHITE);
             }

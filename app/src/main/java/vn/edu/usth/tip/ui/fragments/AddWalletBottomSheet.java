@@ -86,7 +86,7 @@ public class AddWalletBottomSheet extends BottomSheetDialogFragment {
 
     @Override
     public int getTheme() {
-        return com.google.android.material.R.style.Theme_MaterialComponents_BottomSheetDialog;
+        return com.google.android.material.R.style.Theme_MaterialComponents_Light_BottomSheetDialog;
     }
 
     @Nullable
@@ -159,6 +159,9 @@ public class AddWalletBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
+    private static final int COLOR_CHIP_INACTIVE_BG   = Color.parseColor("#F3F4F6");
+    private static final int COLOR_CHIP_INACTIVE_TEXT = Color.parseColor("#374151");
+
     private void highlightTypeChip(View root, int selectedChipId) {
         int[] allChipIds = {
                 R.id.chip_type_cash, R.id.chip_type_bank,
@@ -167,10 +170,22 @@ public class AddWalletBottomSheet extends BottomSheetDialogFragment {
         for (int id : allChipIds) {
             CardView chip = root.findViewById(id);
             if (chip == null) continue;
-            if (id == selectedChipId) {
-                chip.setCardBackgroundColor(selectedColor);
-            } else {
-                chip.setCardBackgroundColor(Color.parseColor("#252545"));
+            boolean active = (id == selectedChipId);
+            chip.setCardBackgroundColor(active ? selectedColor : COLOR_CHIP_INACTIVE_BG);
+            setChipLabelColor(chip, active ? Color.WHITE : COLOR_CHIP_INACTIVE_TEXT);
+        }
+    }
+
+    /** Tô màu text label (TextView thứ hai) bên trong chip CardView → LinearLayout. */
+    private static void setChipLabelColor(CardView chip, int color) {
+        if (chip.getChildCount() == 0) return;
+        android.view.View inner = chip.getChildAt(0);
+        if (!(inner instanceof android.view.ViewGroup)) return;
+        android.view.ViewGroup ll = (android.view.ViewGroup) inner;
+        for (int i = 0; i < ll.getChildCount(); i++) {
+            android.view.View child = ll.getChildAt(i);
+            if (child instanceof android.widget.TextView) {
+                ((android.widget.TextView) child).setTextColor(color);
             }
         }
     }
@@ -183,7 +198,7 @@ public class AddWalletBottomSheet extends BottomSheetDialogFragment {
             circle.setShape(GradientDrawable.OVAL);
             circle.setColor(COLORS[i]);
             if (COLORS[i] == activeColor) {
-                circle.setStroke(3, Color.WHITE);
+                circle.setStroke(3, Color.parseColor("#735BF2"));
             }
             chip.setBackground(circle);
         }

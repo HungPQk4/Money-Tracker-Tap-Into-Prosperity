@@ -2,6 +2,7 @@ package vn.edu.usth.tip.ui.fragments;
 
 import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.adapters.TransactionAdapter;
+import vn.edu.usth.tip.utils.MoneyFormat;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 import vn.edu.usth.tip.viewmodels.DashboardViewModel;
 import vn.edu.usth.tip.repositories.TransactionRepository;
@@ -366,10 +367,10 @@ public class DashboardFragment extends BaseFragment {
         long netWorth = totalAssets - (iOwe != null ? iOwe : 0) + (owedToMe != null ? owedToMe : 0);
 
         if (tvTotalAssets != null) {
-            tvTotalAssets.setText(String.format("%,d", totalAssets).replace(",", "."));
+            tvTotalAssets.setText(MoneyFormat.formatShortStyled(totalAssets));
         }
         if (tvNetWorthInside != null) {
-            tvNetWorthInside.setText(String.format("%,d", netWorth).replace(",", "."));
+            tvNetWorthInside.setText(MoneyFormat.formatShortStyled(netWorth));
         }
     }
 
@@ -400,18 +401,15 @@ public class DashboardFragment extends BaseFragment {
                 }
             }
 
-            if (tvMonthlyIncome   != null) tvMonthlyIncome.setText("₫"   + String.format("%,d", optIncome).replace(",", "."));
-            if (tvMonthlyExpense  != null) tvMonthlyExpense.setText("₫"  + String.format("%,d", optExpense).replace(",", "."));
-            if (tvMonthlyTransfer != null) tvMonthlyTransfer.setText("₫" + String.format("%,d", optTransfer).replace(",", "."));
+            if (tvMonthlyIncome   != null) tvMonthlyIncome.setText(MoneyFormat.formatShortStyled(optIncome));
+            if (tvMonthlyExpense  != null) tvMonthlyExpense.setText(MoneyFormat.formatShortStyled(optExpense));
+            if (tvMonthlyTransfer != null) tvMonthlyTransfer.setText(MoneyFormat.formatShortStyled(optTransfer));
         } else {
-            // Fallback to Room data (AppViewModel EngineState) when API not yet loaded.
-            // Note: engineState.mIncome already reflects ALL transactions in Room (synced + unsynced),
-            // so no need to add unsynced ones again here.
             AppViewModel.EngineState engineState = viewModel.getEngineState().getValue();
             if (engineState != null) {
-                if (tvMonthlyIncome   != null) tvMonthlyIncome.setText("₫"   + String.format("%,d", engineState.mIncome).replace(",", "."));
-                if (tvMonthlyExpense  != null) tvMonthlyExpense.setText("₫"  + String.format("%,d", engineState.mExpense).replace(",", "."));
-                if (tvMonthlyTransfer != null) tvMonthlyTransfer.setText("₫" + String.format("%,d", engineState.mTransfer).replace(",", "."));
+                if (tvMonthlyIncome   != null) tvMonthlyIncome.setText(MoneyFormat.formatShortStyled(engineState.mIncome));
+                if (tvMonthlyExpense  != null) tvMonthlyExpense.setText(MoneyFormat.formatShortStyled(engineState.mExpense));
+                if (tvMonthlyTransfer != null) tvMonthlyTransfer.setText(MoneyFormat.formatShortStyled(engineState.mTransfer));
             }
         }
     }

@@ -306,7 +306,7 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public String formatCurrency(long amount) {
-        return "đ" + String.format("%,d", amount).replace(",", ".");
+        return vn.edu.usth.tip.utils.MoneyFormat.formatShort(amount);
     }
 
     public void setEditingTransaction(Transaction tx) {

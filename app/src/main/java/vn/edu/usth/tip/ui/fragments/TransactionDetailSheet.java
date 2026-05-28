@@ -1,6 +1,7 @@
 package vn.edu.usth.tip.ui.fragments;
 
 import vn.edu.usth.tip.models.Transaction;
+import vn.edu.usth.tip.utils.MoneyFormat;
 import vn.edu.usth.tip.viewmodels.AppViewModel;
 
 import android.app.Dialog;
@@ -133,7 +134,7 @@ public class TransactionDetailSheet extends BottomSheetDialogFragment {
         ((TextView) view.findViewById(R.id.tv_detail_icon)).setText(tx.getIcon());
 
         TextView tvAmount = view.findViewById(R.id.tv_detail_amount);
-        tvAmount.setText(tx.getFormattedAmount());
+        tvAmount.setText(MoneyFormat.styled(tx.getFormattedAmount()));
         tvAmount.setTextColor(amountColor);
 
         ((TextView) view.findViewById(R.id.tv_detail_title)).setText(tx.getTitle());

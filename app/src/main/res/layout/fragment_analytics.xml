@@ -124,7 +124,7 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Chart Legend -->
+                <!-- Chart Legend (interactive toggle buttons) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -132,13 +132,37 @@
                     android:orientation="horizontal"
                     android:gravity="center">
 
-                    <androidx.cardview.widget.CardView android:layout_width="10dp" android:layout_height="10dp" app:cardCornerRadius="5dp" app:cardBackgroundColor="#2DD3A1" app:cardElevation="0dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:text="Thu nhập" android:textColor="#6B7280" android:textSize="12sp" />
+                    <LinearLayout
+                        android:id="@+id/btn_legend_income"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="8dp"
+                        android:background="@drawable/bg_filter_pill_light"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <androidx.cardview.widget.CardView android:layout_width="10dp" android:layout_height="10dp" app:cardCornerRadius="5dp" app:cardBackgroundColor="#2DD3A1" app:cardElevation="0dp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:text="Thu nhập" android:textColor="#2DD3A1" android:textSize="12sp" android:textStyle="bold"/>
+                    </LinearLayout>
 
-                    <Space android:layout_width="24dp" android:layout_height="wrap_content"/>
+                    <Space android:layout_width="16dp" android:layout_height="wrap_content"/>
 
-                    <androidx.cardview.widget.CardView android:layout_width="10dp" android:layout_height="10dp" app:cardCornerRadius="5dp" app:cardBackgroundColor="#E76E60" app:cardElevation="0dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:text="Chi tiêu" android:textColor="#6B7280" android:textSize="12sp" />
+                    <LinearLayout
+                        android:id="@+id/btn_legend_expense"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="8dp"
+                        android:background="@drawable/bg_filter_pill_light"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <androidx.cardview.widget.CardView android:layout_width="10dp" android:layout_height="10dp" app:cardCornerRadius="5dp" app:cardBackgroundColor="#E76E60" app:cardElevation="0dp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:text="Chi tiêu" android:textColor="#E76E60" android:textSize="12sp" android:textStyle="bold"/>
+                    </LinearLayout>
                 </LinearLayout>
 
             </LinearLayout>
@@ -193,7 +217,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="₫0"
+                        android:text="0 VND"
                         android:textColor="#1F2937"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -229,7 +253,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="₫0"
+                        android:text="0 VND"
                         android:textColor="#1F2937"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -265,7 +289,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="₫0"
+                        android:text="0 VND"
                         android:textColor="#1F2937"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -298,14 +322,13 @@
                     app:cardCornerRadius="20dp"
                     app:cardBackgroundColor="#6A5AE0"
                     app:cardElevation="4dp">
-                    <TextView
+                    <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:text="AI"
-                        android:gravity="center"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:textSize="14sp"/>
+                        android:src="@drawable/ic_lightbulb"
+                        android:scaleType="fitCenter"
+                        android:padding="8dp"
+                        android:contentDescription="Gợi ý" />
                 </androidx.cardview.widget.CardView>
 
                 <LinearLayout

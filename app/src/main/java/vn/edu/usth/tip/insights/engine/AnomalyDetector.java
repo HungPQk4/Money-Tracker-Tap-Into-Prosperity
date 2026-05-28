@@ -1,10 +1,10 @@
 package vn.edu.usth.tip.insights.engine;
 
+import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import vn.edu.usth.tip.insights.models.Insight;
 import vn.edu.usth.tip.insights.models.InsightPriority;
@@ -13,84 +13,87 @@ import vn.edu.usth.tip.models.dto.CategoryMonthlyDTO;
 
 public class AnomalyDetector {
 
+    private static final double Z_SCORE_ANOMALY_THRESHOLD = 2.0;
+    private static final double MIN_STD_DEV               = 1.0; // clamp near-zero to avoid IEEE 754 instability
+    private static final int    HISTORY_MONTHS            = 3;
+    private static final int    MIN_NONZERO_HISTORY       = 2;
+
     public List<Insight> detect(List<CategoryMonthlyDTO> rows) {
         List<Insight> results = new ArrayList<>();
 
-        // Chuẩn bị nhãn 4 tháng (3 tháng lịch sử + tháng hiện tại)
-        // Zero-Padding: SQL GROUP BY bỏ qua tháng không có giao dịch
-        Calendar cal = Calendar.getInstance();
-        String currentYM = toYearMonth(cal);
+        YearMonth now        = YearMonth.now();
+        String    currentKey = toKey(now);
 
-        String[] last4 = new String[4];
-        for (int i = 3; i >= 0; i--) {
-            last4[3 - i] = toYearMonth(cal);
-            cal.add(Calendar.MONTH, -1);
+        // Historical baseline: oldest → newest (e.g. indices 0..2 = 3, 2, 1 months ago)
+        String[] historicalKeys = new String[HISTORY_MONTHS];
+        for (int i = 0; i < HISTORY_MONTHS; i++) {
+            historicalKeys[i] = toKey(now.minusMonths(HISTORY_MONTHS - i));
         }
 
-        // Gom dữ liệu DB theo category → yearMonth → amount
-        Map<String, Map<String, Long>> byCategory = new HashMap<>();
-        for (CategoryMonthlyDTO row : rows) {
-            byCategory
-                .computeIfAbsent(row.category, k -> new HashMap<>())
-                .put(row.yearMonth, row.totalVnd);
-        }
+        // Group DB rows: category → (yearMonth key → totalVnd)
+        // SQL GROUP BY guarantees no duplicate (category, yearMonth) pairs, so no merge needed.
+        Map<String, Map<String, Long>> byCategory = rows.stream().collect(
+                Collectors.groupingBy(
+                        r -> r.category,
+                        Collectors.toMap(r -> r.yearMonth, r -> r.totalVnd)
+                )
+        );
 
         for (Map.Entry<String, Map<String, Long>> entry : byCategory.entrySet()) {
-            String category = entry.getKey();
+            String           category = entry.getKey();
             Map<String, Long> monthMap = entry.getValue();
 
-            // Data Leakage Prevention: tháng hiện tại chỉ dùng để so sánh, không đưa vào baseline
-            long current = monthMap.getOrDefault(currentYM, 0L);
+            // Current month is comparison target only — excluded from baseline to prevent data leakage
+            long current = monthMap.getOrDefault(currentKey, 0L);
 
-            // 3 tháng lịch sử — dùng last4[1..3] (KHÔNG dùng last4[0] = tháng hiện tại)
-            long[] historical = new long[3];
-            for (int i = 0; i < 3; i++) {
-                historical[i] = monthMap.getOrDefault(last4[i + 1], 0L);
+            long[] historical = new long[HISTORY_MONTHS];
+            for (int i = 0; i < HISTORY_MONTHS; i++) {
+                historical[i] = monthMap.getOrDefault(historicalKeys[i], 0L);
             }
 
-            // Guard: cần ít nhất 2 tháng lịch sử có số tiền > 0 để stdDev có nghĩa thống kê
+            // Require at least MIN_NONZERO_HISTORY months of real spend so stdDev is statistically meaningful
             int nonZeroCount = 0;
             for (long v : historical) if (v > 0) nonZeroCount++;
-            if (nonZeroCount < 2) continue;
+            if (nonZeroCount < MIN_NONZERO_HISTORY) continue;
 
-            double mean = RegressionHelper.mean(historical);
+            double mean   = RegressionHelper.mean(historical);
             double stdDev = RegressionHelper.sampleStdDev(historical);
-
-            // IEEE 754 Trap: KHÔNG dùng stdDev == 0 → có thể là 0.0000000000004
-            // Nếu stdDev < 1.0 (ổn định hoàn toàn), set = 1.0 để vẫn phát hiện đột biến
-            if (stdDev < 1.0) stdDev = 1.0;
+            if (stdDev < MIN_STD_DEV) stdDev = MIN_STD_DEV;
 
             double z = (current - mean) / stdDev;
+            if (Math.abs(z) <= Z_SCORE_ANOMALY_THRESHOLD) continue;
 
-            if (Math.abs(z) > 2.0) {
-                Insight insight = new Insight();
-                insight.type = InsightType.ANOMALY;
-                insight.priority = z > 0 ? InsightPriority.HIGH : InsightPriority.MEDIUM;
-                insight.categoryName = category;
-                insight.zScore = z;
-                insight.projectedAmountVnd = current;
-                insight.historicalAvgVnd = (long) mean;
+            Insight insight = new Insight();
+            insight.type               = InsightType.ANOMALY;
+            insight.priority           = z > 0 ? InsightPriority.HIGH : InsightPriority.MEDIUM;
+            insight.categoryName       = category;
+            insight.zScore             = z;
+            insight.projectedAmountVnd = current;
+            insight.historicalAvgVnd   = (long) mean;
 
-                if (z > 0) {
-                    insight.title = category + " tăng đột biến";
-                    insight.body = String.format(
-                            "Chi tiêu %s tháng này (%s) cao hơn %.1f lần so với mức trung bình (%s). Bạn có thể cần xem lại.",
-                            category, Insight.formatVnd(current), current / Math.max(1, mean),
-                            Insight.formatVnd((long) mean));
-                } else {
-                    insight.title = category + " giảm mạnh";
-                    insight.body = String.format(
-                            "Chi tiêu %s tháng này (%s) thấp hơn nhiều so với thói quen (%s). Tiết kiệm tốt!",
-                            category, Insight.formatVnd(current), Insight.formatVnd((long) mean));
-                }
-                results.add(insight);
+            String currentFmt = Insight.formatVnd(current);
+            String avgFmt     = Insight.formatVnd((long) mean);
+
+            if (z > 0) {
+                String ratio = String.format("%.1f", current / Math.max(1.0, mean));
+                insight.title = category + " tăng đột biến";
+                insight.body  = "Chi tiêu " + category + " tháng này (" + currentFmt
+                        + ") cao hơn " + ratio + " lần so với mức trung bình ("
+                        + avgFmt + "). Bạn có thể cần xem lại.";
+            } else {
+                insight.title = category + " giảm mạnh";
+                insight.body  = "Chi tiêu " + category + " tháng này (" + currentFmt
+                        + ") thấp hơn nhiều so với thói quen (" + avgFmt + "). Tiết kiệm tốt!";
             }
+
+            results.add(insight);
         }
 
         return results;
     }
 
-    private static String toYearMonth(Calendar cal) {
-        return String.format("%04d%02d", cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1);
+    private static String toKey(YearMonth ym) {
+        int m = ym.getMonthValue();
+        return String.valueOf(ym.getYear()) + (m < 10 ? "0" : "") + m;
     }
 }

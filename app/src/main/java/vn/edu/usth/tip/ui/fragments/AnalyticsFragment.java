@@ -1,11 +1,15 @@
 package vn.edu.usth.tip.ui.fragments;
 
+import android.animation.ValueAnimator;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,8 +18,13 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+
+import vn.edu.usth.tip.utils.MoneyFormat;
 
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
@@ -33,6 +42,8 @@ public class AnalyticsFragment extends Fragment {
     private static final int BAR_MAX_HEIGHT_DP = 120;
     private static final int BAR_SLIVER_DP     = 4;
 
+    private enum BarFilter { BOTH, INCOME_ONLY, EXPENSE_ONLY }
+
     private DashboardViewModel dashboardViewModel;
     private AppViewModel appViewModel;
     private InsightViewModel insightViewModel;
@@ -44,6 +55,14 @@ public class AnalyticsFragment extends Fragment {
     private androidx.cardview.widget.CardView[] cvIncomes = new androidx.cardview.widget.CardView[6];
     private androidx.cardview.widget.CardView[] cvExpenses = new androidx.cardview.widget.CardView[6];
     private TextView[] tvMonths = new TextView[6];
+
+    private BarFilter mBarFilter = BarFilter.BOTH;
+    private View mBtnLegendIncome;
+    private View mBtnLegendExpense;
+
+    private Handler mClockHandler;
+    private Runnable mClockRunnable;
+    private boolean mChartInitialized = false;
 
     public AnalyticsFragment() {
         // Required empty public constructor
@@ -99,37 +118,46 @@ public class AnalyticsFragment extends Fragment {
         dashboardViewModel.getSummaryData().observe(getViewLifecycleOwner(), summary -> updateAnalyticsSummary());
         appViewModel.getTransactions().observe(getViewLifecycleOwner(), txs -> {
             updateAnalyticsSummary();
-            updateBarChart();
+            updateBarChart(true);
         });
         appViewModel.getEngineState().observe(getViewLifecycleOwner(), state -> updateAnalyticsSummary());
 
         // Trigger load
         dashboardViewModel.loadDashboardSummary();
 
-        View btnFilterCategory = view.findViewById(R.id.btn_filter_category);
-        View btnFilterTime = view.findViewById(R.id.btn_filter_time);
+        // Real-time clock
+        TextView tvCurrentDatetime = view.findViewById(R.id.tv_current_datetime);
+        mClockHandler = new Handler(Looper.getMainLooper());
+        mClockRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (tvCurrentDatetime != null) {
+                    SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", new Locale("vi", "VN"));
+                    tvCurrentDatetime.setText(sdf.format(new Date()));
+                }
+                mClockHandler.postDelayed(this, 60000);
+            }
+        };
+        mClockRunnable.run();
 
-        if (btnFilterCategory != null) {
-            btnFilterCategory.setOnClickListener(v -> {
-                String[] categories = {"Tất cả", "Ăn uống", "Di chuyển", "Mua sắm", "Giải trí"};
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Chọn danh mục")
-                        .setItems(categories, (dialog, which) -> {
-                            Toast.makeText(requireContext(), "Lọc: " + categories[which], Toast.LENGTH_SHORT).show();
-                        })
-                        .show();
+        // Interactive legend buttons
+        mBtnLegendIncome = view.findViewById(R.id.btn_legend_income);
+        mBtnLegendExpense = view.findViewById(R.id.btn_legend_expense);
+
+        if (mBtnLegendIncome != null) {
+            mBtnLegendIncome.setOnClickListener(v -> {
+                animateLegendClick(v);
+                mBarFilter = (mBarFilter == BarFilter.INCOME_ONLY) ? BarFilter.BOTH : BarFilter.INCOME_ONLY;
+                updateBarChart(false);
+                updateLegendState();
             });
         }
-
-        if (btnFilterTime != null) {
-            btnFilterTime.setOnClickListener(v -> {
-                String[] times = {"Tuần này", "Tháng này", "Tháng trước", "Năm nay"};
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Chọn thời gian")
-                        .setItems(times, (dialog, which) -> {
-                            Toast.makeText(requireContext(), "Lọc: " + times[which], Toast.LENGTH_SHORT).show();
-                        })
-                        .show();
+        if (mBtnLegendExpense != null) {
+            mBtnLegendExpense.setOnClickListener(v -> {
+                animateLegendClick(v);
+                mBarFilter = (mBarFilter == BarFilter.EXPENSE_ONLY) ? BarFilter.BOTH : BarFilter.EXPENSE_ONLY;
+                updateBarChart(false);
+                updateLegendState();
             });
         }
 
@@ -161,6 +189,7 @@ public class AnalyticsFragment extends Fragment {
         if (swipeRefreshLayout != null) {
             swipeRefreshLayout.setColorSchemeColors(ContextCompat.getColor(requireContext(), R.color.brand_primary));
             swipeRefreshLayout.setOnRefreshListener(() -> {
+                mChartInitialized = false;
                 if (dashboardViewModel != null) dashboardViewModel.loadDashboardSummary();
                 if (insightViewModel != null) insightViewModel.generateInsights();
                 swipeRefreshLayout.setRefreshing(false);
@@ -196,17 +225,17 @@ public class AnalyticsFragment extends Fragment {
                 }
             }
 
-            if (tvIncome != null) tvIncome.setText("₫" + String.format("%,d", optIncome).replace(",", "."));
-            if (tvExpense != null) tvExpense.setText("₫" + String.format("%,d", optExpense).replace(",", "."));
-            if (tvTransfer != null) tvTransfer.setText("₫" + String.format("%,d", optTransfer).replace(",", "."));
+            if (tvIncome != null) tvIncome.setText(MoneyFormat.formatShortStyled(optIncome));
+            if (tvExpense != null) tvExpense.setText(MoneyFormat.formatShortStyled(optExpense));
+            if (tvTransfer != null) tvTransfer.setText(MoneyFormat.formatShortStyled(optTransfer));
         } else if (engineState != null) {
-            if (tvIncome != null) tvIncome.setText("₫" + String.format("%,d", engineState.mIncome).replace(",", "."));
-            if (tvExpense != null) tvExpense.setText("₫" + String.format("%,d", engineState.mExpense).replace(",", "."));
-            if (tvTransfer != null) tvTransfer.setText("₫" + String.format("%,d", engineState.mTransfer).replace(",", "."));
+            if (tvIncome != null) tvIncome.setText(MoneyFormat.formatShortStyled(engineState.mIncome));
+            if (tvExpense != null) tvExpense.setText(MoneyFormat.formatShortStyled(engineState.mExpense));
+            if (tvTransfer != null) tvTransfer.setText(MoneyFormat.formatShortStyled(engineState.mTransfer));
         }
     }
 
-    private void updateBarChart() {
+    private void updateBarChart(boolean staggered) {
         List<Transaction> txs = appViewModel.getTransactions().getValue();
         if (txs == null) return;
 
@@ -222,19 +251,16 @@ public class AnalyticsFragment extends Fragment {
         String[] monthLabels = new String[6];
 
         for (int i = 5; i >= 0; i--) {
-            int month = cal.get(Calendar.MONTH) + 1; // 1-based month
+            int month = cal.get(Calendar.MONTH) + 1;
             monthLabels[i] = "T" + month;
 
             long startOfMonth = cal.getTimeInMillis();
-
-            // Find end of month
             Calendar endCal = (Calendar) cal.clone();
             endCal.add(Calendar.MONTH, 1);
             long endOfMonth = endCal.getTimeInMillis();
 
             long mIncome = 0;
             long mExpense = 0;
-
             for (Transaction t : txs) {
                 if (t.getTimestampMs() >= startOfMonth && t.getTimestampMs() < endOfMonth) {
                     if (t.getType() == Transaction.Type.INCOME) mIncome += t.getAmountVnd();
@@ -244,8 +270,6 @@ public class AnalyticsFragment extends Fragment {
 
             incomes[i] = mIncome;
             expenses[i] = mExpense;
-
-            // Move to previous month
             cal.add(Calendar.MONTH, -1);
         }
 
@@ -259,26 +283,72 @@ public class AnalyticsFragment extends Fragment {
         float density = getResources().getDisplayMetrics().density;
         int maxPx = (int) (BAR_MAX_HEIGHT_DP * density);
 
+        // On first data load use stagger; on filter toggle animate all at once
+        boolean useStagger = staggered && !mChartInitialized;
+        if (staggered) mChartInitialized = true;
+
         for (int i = 0; i < 6; i++) {
             if (tvMonths[i] != null) tvMonths[i].setText(monthLabels[i]);
 
             int incPx = maxVal == 0 ? 0 : (int) ((incomes[i] * maxPx) / maxVal);
             int expPx = maxVal == 0 ? 0 : (int) ((expenses[i] * maxPx) / maxVal);
 
-            // Give a sliver if there's > 0 amount so it's not totally invisible
             if (incomes[i]  > 0 && incPx < BAR_SLIVER_DP) incPx = BAR_SLIVER_DP;
             if (expenses[i] > 0 && expPx < BAR_SLIVER_DP) expPx = BAR_SLIVER_DP;
 
-            if (cvIncomes[i] != null) {
-                ViewGroup.LayoutParams lp = cvIncomes[i].getLayoutParams();
-                lp.height = incPx;
-                cvIncomes[i].setLayoutParams(lp);
-            }
-            if (cvExpenses[i] != null) {
-                ViewGroup.LayoutParams lp = cvExpenses[i].getLayoutParams();
-                lp.height = expPx;
-                cvExpenses[i].setLayoutParams(lp);
-            }
+            if (mBarFilter == BarFilter.EXPENSE_ONLY) incPx = 0;
+            if (mBarFilter == BarFilter.INCOME_ONLY) expPx = 0;
+
+            long delay = useStagger ? i * 70L : 0L;
+            animateBar(cvIncomes[i], incPx, delay);
+            animateBar(cvExpenses[i], expPx, delay + (useStagger ? 25L : 0L));
+        }
+    }
+
+    private void animateBar(View bar, int targetHeight, long startDelay) {
+        if (bar == null) return;
+        int fromHeight = bar.getLayoutParams().height;
+        if (fromHeight == targetHeight) return;
+        ValueAnimator anim = ValueAnimator.ofInt(fromHeight, targetHeight);
+        anim.setDuration(380);
+        anim.setStartDelay(startDelay);
+        anim.setInterpolator(new DecelerateInterpolator(1.8f));
+        anim.addUpdateListener(a -> {
+            ViewGroup.LayoutParams lp = bar.getLayoutParams();
+            lp.height = (int) a.getAnimatedValue();
+            bar.setLayoutParams(lp);
+        });
+        anim.start();
+    }
+
+    private void animateLegendClick(View v) {
+        v.animate()
+            .scaleX(0.90f).scaleY(0.90f)
+            .setDuration(90)
+            .withEndAction(() -> v.animate()
+                .scaleX(1f).scaleY(1f)
+                .setDuration(220)
+                .setInterpolator(new OvershootInterpolator(2.5f))
+                .start())
+            .start();
+    }
+
+    private void updateLegendState() {
+        if (mBtnLegendIncome != null) {
+            float a = mBarFilter == BarFilter.EXPENSE_ONLY ? 0.4f : 1.0f;
+            mBtnLegendIncome.animate().alpha(a).setDuration(200).start();
+        }
+        if (mBtnLegendExpense != null) {
+            float a = mBarFilter == BarFilter.INCOME_ONLY ? 0.4f : 1.0f;
+            mBtnLegendExpense.animate().alpha(a).setDuration(200).start();
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (mClockHandler != null) {
+            mClockHandler.removeCallbacks(mClockRunnable);
         }
     }
 

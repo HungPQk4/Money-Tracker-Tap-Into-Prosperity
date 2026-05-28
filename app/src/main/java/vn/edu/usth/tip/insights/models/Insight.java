@@ -35,6 +35,10 @@ public class Insight {
     public String topDayLabel;      // Tên ngày (VD: "Thứ 7")
     public long avgTopDayVnd;       // Chi tiêu trung bình ngày đó (VNĐ)
 
+    // DEBT/LOAN — context nhắc nhở vay nợ
+    public String personName;       // Tên người liên quan
+    public long debtDueDateMs;      // Ngày đến hạn (0 = không có hạn)
+
     public Insight() {}
 
     // Copy constructor — BẮT BUỘC để mergeWithApi tạo deep copy
@@ -60,6 +64,8 @@ public class Insight {
         this.goalProjectedDateMs = other.goalProjectedDateMs;
         this.topDayLabel = other.topDayLabel;
         this.avgTopDayVnd = other.avgTopDayVnd;
+        this.personName = other.personName;
+        this.debtDueDateMs = other.debtDueDateMs;
     }
 
     // Ghim cứng Locale Việt Nam — tránh máy cài English-US hiển thị "$1,200,000.00"

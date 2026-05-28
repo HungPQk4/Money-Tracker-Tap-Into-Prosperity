@@ -56,11 +56,11 @@ public class Transaction {
         this.recurInterval = null;
     }
 
-    /** Trả về chuỗi số tiền có dấu, vd: "-₫75.000" hoặc "+₫18.000.000" */
+    /** Trả về chuỗi số tiền có dấu, vd: "+75.000 ₫" hoặc "-18.000.000 ₫" */
     public String getFormattedAmount() {
         String sign = (type == Type.INCOME) ? "+" : "-";
-        String abs  = String.format("₫%,.0f", (double) amountVnd).replace(",", ".");
-        return sign + abs;
+        String abs  = String.format(java.util.Locale.US, "%,d", amountVnd).replace(",", ".");
+        return sign + abs + " VND";
     }
 
     /** Trả về giờ:phút từ timestamp */
