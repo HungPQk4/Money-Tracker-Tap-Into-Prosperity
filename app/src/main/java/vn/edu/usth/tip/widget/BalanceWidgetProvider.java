@@ -18,6 +18,7 @@ import vn.edu.usth.tip.R;
 import vn.edu.usth.tip.models.Transaction;
 import vn.edu.usth.tip.models.Wallet;
 import vn.edu.usth.tip.ui.activities.MainActivity;
+import vn.edu.usth.tip.utils.TokenManager;
 
 public class BalanceWidgetProvider extends AppWidgetProvider {
 
@@ -29,9 +30,10 @@ public class BalanceWidgetProvider extends AppWidgetProvider {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
                 AppDatabase db = AppDatabase.getDatabase(appContext);
+                String userId = TokenManager.getOrCreate(appContext).getUserId();
 
                 // 1. Tổng tài sản
-                List<Wallet> wallets = db.walletDao().getAllWalletsSync();
+                List<Wallet> wallets = db.walletDao().getAllWalletsSync(userId);
                 long totalAssets = 0;
                 if (wallets != null) {
                     for (Wallet w : wallets) {
@@ -40,12 +42,12 @@ public class BalanceWidgetProvider extends AppWidgetProvider {
                 }
 
                 // 2. Tài sản ròng = totalAssets - nợ + cho vay
-                long iOwe     = db.debtLoanDao().getTotalIOweSync();
-                long owedToMe = db.debtLoanDao().getTotalOwedToMeSync();
+                long iOwe     = db.debtLoanDao().getTotalIOweSync(userId);
+                long owedToMe = db.debtLoanDao().getTotalOwedToMeSync(userId);
                 long netWorth = totalAssets - iOwe + owedToMe;
 
                 // 3. Giao dịch gần nhất (tối đa 3)
-                List<Transaction> recentTxs = db.transactionDao().getRecentTransactionsSync(3);
+                List<Transaction> recentTxs = db.transactionDao().getRecentTransactionsSync(3, userId);
 
                 // 4. Format số tiền Locale vi-VN
                 NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));

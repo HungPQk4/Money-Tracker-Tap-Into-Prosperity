@@ -22,12 +22,15 @@ public interface BudgetDao {
     @Delete
     void delete(Budget budget);
 
-    @Query("SELECT * FROM budgets ORDER BY createdMs DESC")
-    LiveData<List<Budget>> getAllBudgets();
+    @Query("SELECT * FROM budgets WHERE user_id = :userId ORDER BY createdMs DESC")
+    LiveData<List<Budget>> getAllBudgets(String userId);
 
-    @Query("SELECT * FROM budgets")
-    List<Budget> getAllBudgetsSync();
+    @Query("SELECT * FROM budgets WHERE user_id = :userId")
+    List<Budget> getAllBudgetsSync(String userId);
 
     @Query("DELETE FROM budgets WHERE id = :id")
     void deleteById(String id);
+
+    @Query("DELETE FROM budgets WHERE user_id = :userId OR user_id IS NULL")
+    void deleteAllForUser(String userId);
 }

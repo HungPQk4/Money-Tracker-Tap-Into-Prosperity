@@ -25,6 +25,10 @@ public class SyncPrefs {
         getPrefs(ctx).edit().putString(key, serverTimestamp).apply();
     }
 
+    public static void clearAll(Context ctx) {
+        getPrefs(ctx).edit().clear().apply();
+    }
+
     private static SharedPreferences getPrefs(Context ctx) {
         return ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }

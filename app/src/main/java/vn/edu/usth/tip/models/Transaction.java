@@ -1,6 +1,7 @@
 package vn.edu.usth.tip.models;
 
 import androidx.annotation.NonNull;
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
@@ -30,6 +31,8 @@ public class Transaction {
     private boolean isDeleted = false; // soft delete — push lên server trước khi hard delete
     private boolean isRecurring = false; // giao dịch định kỳ — server sinh clone hàng ngày/tuần/tháng/năm
     private String recurInterval; // "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" | null
+    @ColumnInfo(name = "user_id")
+    private String userId;
 
     @Ignore // Không lưu vào Room, chỉ dùng khi gửi lên API
     private String accountId;
@@ -137,6 +140,8 @@ public class Transaction {
     public void setDeleted(boolean deleted) { isDeleted = deleted; }
     public void setRecurring(boolean recurring) { isRecurring = recurring; }
     public void setRecurInterval(String recurInterval) { this.recurInterval = recurInterval; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public void setAccountId(String accountId) { this.accountId = accountId; }
     public String getAccountId() { return accountId; }
     public void setCategoryId(String categoryId) { this.categoryId = categoryId; }

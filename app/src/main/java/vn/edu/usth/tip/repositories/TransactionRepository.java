@@ -94,7 +94,7 @@ public class TransactionRepository {
                 UUID userId = UUID.fromString(userIdStr);
 
                 // ── 1. Lấy tất cả giao dịch chưa sync ───────────────────────
-                List<Transaction> unsynced = transactionDao.getUnsyncedTransactionsSync();
+                List<Transaction> unsynced = transactionDao.getUnsyncedTransactionsSync(userIdStr);
                 if (unsynced == null || unsynced.isEmpty()) {
                     runOnMain(() -> callback.onComplete(0, 0, null));
                     return;
@@ -258,7 +258,7 @@ public class TransactionRepository {
         if (userIdStr == null) return false; // chưa đăng nhập — không retry
 
         UUID userId = UUID.fromString(userIdStr);
-        List<Transaction> unsynced = transactionDao.getUnsyncedTransactionsSync();
+        List<Transaction> unsynced = transactionDao.getUnsyncedTransactionsSync(userIdStr);
         if (unsynced == null || unsynced.isEmpty()) return false;
 
         final int BATCH_SIZE = 100;
@@ -593,7 +593,8 @@ public class TransactionRepository {
                 }
 
                 // Snapshot local DB once (outside transaction — read-only)
-                final List<Transaction> localAll = transactionDao.getAllTransactionsSync();
+                String userId = tokenManager.getUserId();
+                final List<Transaction> localAll = transactionDao.getAllTransactionsSync(userId);
 
                 // All deletes + inserts run as a single atomic transaction:
                 // if any uncaught error occurs mid-way, Room rolls back everything.
@@ -661,7 +662,8 @@ public class TransactionRepository {
     private UUID resolveAccountId(Transaction tx) {
         String walletName = tx.getWalletName();
         if (walletName == null || walletName.isEmpty()) walletName = "Ví chính";
-        
+        String userId = tokenManager.getUserId();
+
         android.util.Log.d("TX_SYNC", "Resolving accountId for: '" + walletName + "'");
 
         java.util.Map<String, UUID> serverAccountMap = new java.util.HashMap<>();
@@ -673,11 +675,11 @@ public class TransactionRepository {
                 for (AccountDto dto : resp.body()) {
                     serverAccountMap.put(dto.getName().trim().toLowerCase(), dto.getId());
 
-                    Wallet local = walletDao.findByNameNoCase(dto.getName());
+                    Wallet local = walletDao.findByNameNoCase(dto.getName(), userId);
                     if (local != null && !local.getId().equals(dto.getId().toString())) {
                         walletDao.deleteById(local.getId());
                     }
-                    
+
                     Wallet.Type wType = Wallet.Type.CASH;
                     if (dto.getType() != null) {
                         String t = dto.getType().toLowerCase();
@@ -686,7 +688,7 @@ public class TransactionRepository {
                         else if (t.equals("investment")) wType = Wallet.Type.INVESTMENT;
                     }
 
-                    walletDao.insert(new Wallet(
+                    Wallet serverWallet = new Wallet(
                             dto.getId().toString(),
                             dto.getName(),
                             dto.getBalance() != null ? dto.getBalance().longValue() : 0,
@@ -694,7 +696,9 @@ public class TransactionRepository {
                             android.graphics.Color.parseColor("#4A90E2"),
                             wType,
                             true
-                    ));
+                    );
+                    serverWallet.setUserId(userId);
+                    walletDao.insert(serverWallet);
                 }
             }
         } catch (Exception e) {
@@ -710,7 +714,7 @@ public class TransactionRepository {
             return null;
         }
 
-        Wallet localWallet = walletDao.findByNameNoCase(walletName);
+        Wallet localWallet = walletDao.findByNameNoCase(walletName, userId);
         if (localWallet != null) {
             UUID created = syncWalletToNeon(localWallet);
             if (created != null) return created;
@@ -719,11 +723,12 @@ public class TransactionRepository {
                     java.util.UUID.randomUUID().toString(),
                     walletName, 0, "💳", android.graphics.Color.parseColor("#4A90E2"), Wallet.Type.CASH, true
             );
+            newWallet.setUserId(userId);
             UUID created = syncWalletToNeon(newWallet);
             if (created != null) return created;
         }
 
-        List<Wallet> all = walletDao.getAllWalletsSync();
+        List<Wallet> all = walletDao.getAllWalletsSync(userId);
         if (all != null) {
             for (Wallet w : all) {
                 try {
@@ -908,6 +913,7 @@ public class TransactionRepository {
         tx.setSynced(true);
         tx.setRecurring(dto.isRecurring());
         tx.setRecurInterval(dto.getRecurInterval());
+        tx.setUserId(tokenManager.getUserId());
         // Parse server updatedAt → updatedAtMs for LWW pull guard
         if (dto.getUpdatedAt() != null) {
             tx.setUpdatedAtMs(parseServerUpdatedAt(dto.getUpdatedAt()));
@@ -929,7 +935,7 @@ public class TransactionRepository {
         end.add(java.util.Calendar.MONTH, 1);
         long endMs = end.getTimeInMillis();
 
-        return transactionDao.getTransactionsBetween(startMs, endMs);
+        return transactionDao.getTransactionsBetween(startMs, endMs, tokenManager.getUserId());
     }
 
     /**
@@ -1067,6 +1073,7 @@ public class TransactionRepository {
 
             List<AccountDto> items = page.getItems();
             if (items != null && !items.isEmpty()) {
+                final String syncUserId = tokenManager.getUserId();
                 db.runInTransaction(() -> {
                     for (AccountDto dto : items) {
                         if (dto.isDeleted()) {
@@ -1074,7 +1081,7 @@ public class TransactionRepository {
                             continue;
                         }
                         Wallet.Type wType = vn.edu.usth.tip.utils.WalletTypeConverter.fromApiString(dto.getType(), Wallet.Type.CASH);
-                        walletDao.insert(new Wallet(
+                        Wallet w = new Wallet(
                                 dto.getId().toString(),
                                 dto.getName(),
                                 dto.getBalance() != null ? dto.getBalance().longValue() : 0,
@@ -1082,7 +1089,9 @@ public class TransactionRepository {
                                 android.graphics.Color.parseColor("#4A90E2"),
                                 wType,
                                 true
-                        ));
+                        );
+                        w.setUserId(syncUserId);
+                        walletDao.insert(w);
                     }
                 });
             }
@@ -1137,7 +1146,8 @@ public class TransactionRepository {
                 }
 
                 // Snapshot local for LWW (read-only, outside transaction)
-                List<Transaction> localAll = transactionDao.getAllTransactionsSync();
+                String userId = tokenManager.getUserId();
+                List<Transaction> localAll = transactionDao.getAllTransactionsSync(userId);
                 Map<String, Transaction> localById = new HashMap<>();
                 if (localAll != null) {
                     for (Transaction t : localAll) localById.put(t.getId(), t);

@@ -39,8 +39,9 @@ public class RetrofitClient {
 
             okhttp3.Response response = chain.proceed(builder.build());
 
-            // Nếu gặp lỗi 401 (Hết hạn token hoặc không hợp lệ), xóa token
-            if ((response.code() == 401 || response.code() == 403) && tokenManager != null) {
+            // 401 = token hết hạn hoặc không hợp lệ → buộc đăng xuất.
+            // 403 KHÔNG được xử lý ở đây vì nó có thể là lỗi phân quyền hợp lệ, không phải token hết hạn.
+            if (response.code() == 401 && tokenManager != null) {
                 tokenManager.clear();
                 SessionManager.getInstance().triggerSessionExpired();
             }

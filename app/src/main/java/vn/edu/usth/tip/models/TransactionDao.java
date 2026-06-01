@@ -17,25 +17,25 @@ import vn.edu.usth.tip.models.dto.DayPatternDTO;
 @Dao
 public interface TransactionDao {
 
-    /** Tất cả giao dịch chưa xóa, mới nhất trước */
-    @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY timestampMs DESC")
-    LiveData<List<Transaction>> getAllTransactions();
+    /** Tất cả giao dịch chưa xóa của user, mới nhất trước */
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 AND user_id = :userId ORDER BY timestampMs DESC")
+    LiveData<List<Transaction>> getAllTransactions(String userId);
 
-    @Query("SELECT * FROM transactions WHERE isDeleted = 0")
-    List<Transaction> getAllTransactionsSync();
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 AND user_id = :userId")
+    List<Transaction> getAllTransactionsSync(String userId);
 
-    @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY timestampMs DESC LIMIT :limit")
-    List<Transaction> getRecentTransactionsSync(int limit);
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 AND user_id = :userId ORDER BY timestampMs DESC LIMIT :limit")
+    List<Transaction> getRecentTransactionsSync(int limit, String userId);
 
     /**
      * Lọc giao dịch theo khoảng [fromMs, toMs].
      * Dùng cho filter Hôm nay / Tuần này / Tháng này trên Dashboard.
      */
-    @Query("SELECT * FROM transactions WHERE isDeleted = 0 AND timestampMs >= :fromMs AND timestampMs < :toMs ORDER BY timestampMs DESC")
-    LiveData<List<Transaction>> getTransactionsBetween(long fromMs, long toMs);
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 AND user_id = :userId AND timestampMs >= :fromMs AND timestampMs < :toMs ORDER BY timestampMs DESC")
+    LiveData<List<Transaction>> getTransactionsBetween(long fromMs, long toMs, String userId);
 
-    @Query("SELECT * FROM transactions WHERE isSynced = 0")
-    List<Transaction> getUnsyncedTransactionsSync();
+    @Query("SELECT * FROM transactions WHERE isSynced = 0 AND user_id = :userId")
+    List<Transaction> getUnsyncedTransactionsSync(String userId);
 
     @Query("DELETE FROM transactions WHERE id = :id")
     void deleteById(String id);
@@ -66,39 +66,38 @@ public interface TransactionDao {
     // ── InsightEngine sync queries ────────────────────────────────────────────
     // Chỉ dùng từ background thread (ExecutorService). Không trả LiveData.
 
-    // BudgetForecaster: chi tiêu mỗi ngày trong khoảng thời gian (chỉ EXPENSE dương)
-    // CAST sang INTEGER vì strftime trả về String — Room không tự ép kiểu int
-    // 'localtime' bắt buộc: tránh giao dịch 00:00-06:59 VN bị xếp sang ngày trước (UTC)
     @Query("SELECT CAST(strftime('%d', timestampMs/1000, 'unixepoch', 'localtime') AS INTEGER) as dayNum, " +
            "SUM(amountVnd) as totalVnd " +
            "FROM transactions WHERE type = 'EXPENSE' AND amountVnd > 0 " +
+           "AND user_id = :userId " +
            "AND timestampMs BETWEEN :fromMs AND :toMs " +
            "GROUP BY dayNum ORDER BY dayNum ASC")
-    List<DailySpendDTO> getDailyExpensesSync(long fromMs, long toMs);
+    List<DailySpendDTO> getDailyExpensesSync(long fromMs, long toMs, String userId);
 
     @Query("SELECT CAST(strftime('%d', timestampMs/1000, 'unixepoch', 'localtime') AS INTEGER) as dayNum, " +
            "SUM(amountVnd) as totalVnd " +
            "FROM transactions WHERE type = 'EXPENSE' AND amountVnd > 0 " +
+           "AND user_id = :userId " +
            "AND category = :category " +
            "AND timestampMs BETWEEN :fromMs AND :toMs " +
            "GROUP BY dayNum ORDER BY dayNum ASC")
-    List<DailySpendDTO> getDailyExpensesByCategorySync(long fromMs, long toMs, String category);
+    List<DailySpendDTO> getDailyExpensesByCategorySync(long fromMs, long toMs, String category, String userId);
 
-    // PatternAnalyzer: trung bình chi tiêu theo thứ trong tuần (7 dòng tối đa)
     @Query("SELECT strftime('%w', timestampMs/1000, 'unixepoch', 'localtime') as dayOfWeek, " +
            "AVG(amountVnd) as avgSpend " +
            "FROM transactions WHERE type = 'EXPENSE' AND amountVnd > 0 " +
+           "AND user_id = :userId " +
            "AND timestampMs > :sinceMs " +
            "GROUP BY dayOfWeek")
-    List<DayPatternDTO> getAvgSpendByDayOfWeekSync(long sinceMs);
+    List<DayPatternDTO> getAvgSpendByDayOfWeekSync(long sinceMs, String userId);
 
-    // AnomalyDetector: tổng chi tiêu theo tháng, phân nhóm category (4 tháng gần nhất)
     @Query("SELECT category, strftime('%Y%m', timestampMs/1000, 'unixepoch', 'localtime') as yearMonth, " +
            "SUM(amountVnd) as totalVnd " +
            "FROM transactions WHERE type = 'EXPENSE' AND amountVnd > 0 " +
+           "AND user_id = :userId " +
            "AND timestampMs > :sinceMs " +
            "GROUP BY category, yearMonth")
-    List<CategoryMonthlyDTO> getCategoryMonthlyTotalsSync(long sinceMs);
+    List<CategoryMonthlyDTO> getCategoryMonthlyTotalsSync(long sinceMs, String userId);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(Transaction transaction);
@@ -109,4 +108,3 @@ public interface TransactionDao {
     @Delete
     void delete(Transaction transaction);
 }
-

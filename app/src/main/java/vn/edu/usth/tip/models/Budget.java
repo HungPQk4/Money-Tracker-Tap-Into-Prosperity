@@ -1,6 +1,7 @@
 package vn.edu.usth.tip.models;
 
 import androidx.annotation.NonNull;
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
@@ -23,6 +24,8 @@ public class Budget {
     private long   periodStartMs;// Thời điểm bắt đầu (epoch ms)
     private long   periodEndMs;  // Thời điểm kết thúc (epoch ms)
     private long   createdMs;    // Thời điểm tạo
+    @ColumnInfo(name = "user_id")
+    private String userId;
 
     public Budget(@NonNull String id, String name, String emoji, String color,
                   String categoryName, long limitAmount, long spentAmount,
@@ -62,4 +65,6 @@ public class Budget {
     public void setPeriodStartMs(long t)     { this.periodStartMs = t; }
     public void setPeriodEndMs(long t)       { this.periodEndMs = t; }
     public void setCreatedMs(long t)         { this.createdMs = t; }
+    public String getUserId()                { return userId; }
+    public void setUserId(String userId)     { this.userId = userId; }
 }

@@ -31,7 +31,7 @@ public class DebtsRepository {
         this.appContext = context.getApplicationContext();
         this.db = AppDatabase.getDatabase(appContext);
         this.debtLoanDao = db.debtLoanDao();
-        this.tokenManager = new TokenManager(appContext);
+        this.tokenManager = TokenManager.getOrCreate(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 
@@ -139,8 +139,8 @@ public class DebtsRepository {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
                 // 1. Đẩy các khoản vay/nợ chưa đồng bộ lên server trước
-                List<DebtLoan> unsynced = debtLoanDao.getUnsyncedDebtsSync();
                 String userIdStr = tokenManager.getUserId();
+                List<DebtLoan> unsynced = debtLoanDao.getUnsyncedDebtsSync(userIdStr);
                 if (userIdStr != null && unsynced != null && !unsynced.isEmpty()) {
                     UUID userId = UUID.fromString(userIdStr);
                     for (DebtLoan d : unsynced) {
@@ -175,10 +175,13 @@ public class DebtsRepository {
                     if (response.isSuccessful() && response.body() != null) {
                         AppDatabase.databaseWriteExecutor.execute(() -> {
                             final List<DebtDto> serverDebts = response.body();
+                            final String userId = tokenManager.getUserId();
                             db.runInTransaction(() -> {
-                                debtLoanDao.deleteSyncedDebts();
+                                debtLoanDao.deleteSyncedDebts(userId);
                                 for (DebtDto dto : serverDebts) {
-                                    debtLoanDao.insert(convertToModel(dto));
+                                    DebtLoan model = convertToModel(dto);
+                                    model.setUserId(userId);
+                                    debtLoanDao.insert(model);
                                 }
                             });
                             new android.os.Handler(android.os.Looper.getMainLooper()).post(callback::onSuccess);

@@ -17,7 +17,7 @@ public class AccountRepository {
     private final AccountApi accountApi;
 
     public AccountRepository(Context context) {
-        TokenManager tokenManager = new TokenManager(context);
+        TokenManager tokenManager = TokenManager.getOrCreate(context);
         this.accountApi = RetrofitClient.createService(AccountApi.class, tokenManager);
     }
 

@@ -2,11 +2,15 @@ package vn.edu.usth.tip.ui.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
+import vn.edu.usth.tip.AppDatabase;
 import vn.edu.usth.tip.databinding.ActivityLoginBinding;
+import vn.edu.usth.tip.utils.SyncPrefs;
 import vn.edu.usth.tip.viewmodels.LoginViewModel;
 
 public class LoginActivity extends AppCompatActivity {
@@ -30,11 +34,41 @@ public class LoginActivity extends AppCompatActivity {
         viewModel.getLoginSuccess().observe(this, response -> {
             viewModel.setLoading(false);
             binding.btnLogin.setEnabled(true);
-            viewModel.saveAuthData(response);
-            Toast.makeText(this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(this, MainActivity.class);
-            startActivity(intent);
-            finish();
+
+            String oldUserId = viewModel.getCurrentUserId();
+            String newUserId = response.getUserId() != null ? response.getUserId().toString() : null;
+            // userChanged: explicit account switch (oldUserId known and different).
+            // noCredentials: oldUserId was wiped (session expiry/crash) but DB may still have
+            // stale rows — clear as a safety net even though setupSessionExpiry already did so.
+            boolean userChanged   = oldUserId != null && !oldUserId.equals(newUserId);
+            boolean noCredentials = oldUserId == null;
+
+            if (userChanged || noCredentials) {
+                // Wipe stale local data on background thread before entering MainActivity
+                // so the new user never sees data belonging to a previous account.
+                android.app.ProgressDialog pd = new android.app.ProgressDialog(this);
+                pd.setMessage("Đang chuẩn bị dữ liệu...");
+                pd.setCancelable(false);
+                pd.show();
+                android.content.Context appCtx = getApplicationContext();
+                AppDatabase.databaseWriteExecutor.execute(() -> {
+                    AppDatabase.getDatabase(appCtx).clearAllTables();
+                    SyncPrefs.clearAll(appCtx);
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        pd.dismiss();
+                        viewModel.saveAuthData(response);
+                        Toast.makeText(this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(this, MainActivity.class));
+                        finish();
+                    });
+                });
+            } else {
+                // Same account re-login — DB is already scoped to this user, no clear needed.
+                viewModel.saveAuthData(response);
+                Toast.makeText(this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(this, MainActivity.class));
+                finish();
+            }
         });
 
         viewModel.getLoginError().observe(this, error -> {

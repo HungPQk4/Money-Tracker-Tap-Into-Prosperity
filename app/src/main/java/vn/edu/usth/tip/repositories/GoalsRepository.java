@@ -119,11 +119,13 @@ public class GoalsRepository {
             public void onResponse(@NonNull Call<List<GoalDto>> call, @NonNull Response<List<GoalDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
-                        final List<Goal> localGoals = goalDao.getAllGoalsSync();
+                        final String userId = tokenManager.getUserId();
+                        final List<Goal> localGoals = goalDao.getAllGoalsSync(userId);
                         final List<GoalDto> serverGoals = response.body();
                         db.runInTransaction(() -> {
                             for (GoalDto dto : serverGoals) {
                                 Goal serverGoal = convertToModel(dto);
+                                serverGoal.setUserId(userId);
                                 for (Goal local : localGoals) {
                                     if (local.getName().trim().equalsIgnoreCase(serverGoal.getName().trim())
                                             && !local.getId().equals(serverGoal.getId())) {
@@ -184,6 +186,7 @@ public class GoalsRepository {
 
             List<GoalDto> items = page.getItems();
             if (items != null && !items.isEmpty()) {
+                String userId = tokenManager.getUserId();
                 List<Goal>   toInsert = new ArrayList<>();
                 List<String> toDelete = new ArrayList<>();
                 for (GoalDto dto : items) {
@@ -191,7 +194,9 @@ public class GoalsRepository {
                         if (dto.getId() != null) toDelete.add(dto.getId().toString());
                         continue;
                     }
-                    toInsert.add(convertToModel(dto));
+                    Goal g = convertToModel(dto);
+                    g.setUserId(userId);
+                    toInsert.add(g);
                 }
                 db.runInTransaction(() -> {
                     for (String id : toDelete) goalDao.deleteById(id);

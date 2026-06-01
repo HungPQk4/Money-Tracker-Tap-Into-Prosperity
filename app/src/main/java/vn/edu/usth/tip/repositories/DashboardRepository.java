@@ -17,7 +17,7 @@ public class DashboardRepository {
     private final DashboardApi dashboardApi;
 
     public DashboardRepository(Context context) {
-        TokenManager tokenManager = new TokenManager(context);
+        TokenManager tokenManager = TokenManager.getOrCreate(context);
         this.dashboardApi = RetrofitClient.createService(DashboardApi.class, tokenManager);
     }
 

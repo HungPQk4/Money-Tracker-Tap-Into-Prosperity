@@ -6,9 +6,16 @@ import vn.edu.usth.tip.utils.MoneyFormat;
 import vn.edu.usth.tip.viewmodels.AccountViewModel;
 import vn.edu.usth.tip.network.responses.AccountResponse;
 
+import vn.edu.usth.tip.AppDatabase;
 import vn.edu.usth.tip.R;
+import vn.edu.usth.tip.ui.activities.LoginActivity;
 import vn.edu.usth.tip.utils.AnimUtils;
+import vn.edu.usth.tip.utils.SessionManager;
+import vn.edu.usth.tip.utils.SyncPrefs;
+import vn.edu.usth.tip.utils.TokenManager;
 
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -123,12 +130,6 @@ public class WalletManagementFragment extends Fragment
             CharSequence formattedTotal = MoneyFormat.formatShortStyled(totalNetWorth);
             tvSummaryTotal.setText(formattedTotal);
 
-            View toolbar = getView();
-            if (toolbar != null) {
-                TextView tvToolbar = toolbar.findViewById(R.id.tv_total_balance);
-                if (tvToolbar != null) tvToolbar.setText(formattedTotal);
-            }
-
             boolean empty = currentWallets.isEmpty();
             emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
             rv.setVisibility(empty ? View.GONE : View.VISIBLE);
@@ -185,6 +186,35 @@ public class WalletManagementFragment extends Fragment
 
         view.findViewById(R.id.btn_back)
                 .setOnClickListener(v -> Navigation.findNavController(v).navigateUp());
+
+        view.findViewById(R.id.btn_logout)
+                .setOnClickListener(v -> showLogoutConfirmation());
+    }
+
+    private void showLogoutConfirmation() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Đăng xuất")
+                .setMessage("Bạn có chắc muốn đăng xuất khỏi tài khoản?")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Đăng xuất", (dialog, which) -> performLogout())
+                .show();
+    }
+
+    private void performLogout() {
+        Context appCtx = requireContext().getApplicationContext();
+        // Clear DB and sync cursors on background thread, then navigate on main thread.
+        // This guarantees the next login always starts from a clean state.
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            AppDatabase.getDatabase(appCtx).clearAllTables();
+            SyncPrefs.clearAll(appCtx);
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                TokenManager.getOrCreate(appCtx).clear();
+                SessionManager.getInstance().clearSessionExpired();
+                Intent intent = new Intent(appCtx, LoginActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                appCtx.startActivity(intent);
+            });
+        });
     }
 
     // ── WalletActionListener ──────────────────────────────────────────

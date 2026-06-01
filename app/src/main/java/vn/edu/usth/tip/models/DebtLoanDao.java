@@ -22,32 +22,27 @@ public interface DebtLoanDao {
     @Delete
     void delete(DebtLoan debtLoan);
 
-    // Lấy danh sách tất cả, sắp xếp theo ngày hẹn gần nhất
-    @Query("SELECT * FROM debt_loans ORDER BY dueDate ASC")
-    LiveData<List<DebtLoan>> getAllSortedByDueDate();
+    @Query("SELECT * FROM debt_loans WHERE user_id = :userId ORDER BY dueDate ASC")
+    LiveData<List<DebtLoan>> getAllSortedByDueDate(String userId);
 
-    @Query("SELECT * FROM debt_loans WHERE isSynced = 0")
-    List<DebtLoan> getUnsyncedDebtsSync();
+    @Query("SELECT * FROM debt_loans WHERE isSynced = 0 AND user_id = :userId")
+    List<DebtLoan> getUnsyncedDebtsSync(String userId);
 
-    @Query("DELETE FROM debt_loans WHERE isSynced = 1")
-    void deleteSyncedDebts();
+    @Query("DELETE FROM debt_loans WHERE isSynced = 1 AND user_id = :userId")
+    void deleteSyncedDebts(String userId);
 
-    // Tính tổng tiền 'I OWE' (những mục mình nợ)
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_I_OWE)
-    LiveData<Long> getTotalIOwe();
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_I_OWE + " AND user_id = :userId")
+    LiveData<Long> getTotalIOwe(String userId);
 
-    // Tính tổng tiền 'OWED TO ME' (những mục mình cho vay)
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_LENT)
-    LiveData<Long> getTotalOwedToMe();
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_LENT + " AND user_id = :userId")
+    LiveData<Long> getTotalOwedToMe(String userId);
 
-    // Lấy tất cả debt/loan trên background thread (dùng cho InsightEngine)
-    @Query("SELECT * FROM debt_loans ORDER BY dueDate ASC")
-    List<DebtLoan> getAllDebtLoansSync();
+    @Query("SELECT * FROM debt_loans WHERE user_id = :userId ORDER BY dueDate ASC")
+    List<DebtLoan> getAllDebtLoansSync(String userId);
 
-    // Sync versions dùng cho widget (chạy trên background thread, không có LiveData)
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_I_OWE)
-    long getTotalIOweSync();
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_I_OWE + " AND user_id = :userId")
+    long getTotalIOweSync(String userId);
 
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_LENT)
-    long getTotalOwedToMeSync();
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM debt_loans WHERE type = " + DebtLoan.TYPE_LENT + " AND user_id = :userId")
+    long getTotalOwedToMeSync(String userId);
 }

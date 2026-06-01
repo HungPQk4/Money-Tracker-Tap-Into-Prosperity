@@ -11,7 +11,7 @@ public class SplashActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        TokenManager tokenManager = new TokenManager(this);
+        TokenManager tokenManager = TokenManager.getOrCreate(this);
         
         Intent intent;
         if (tokenManager.getToken() != null) {

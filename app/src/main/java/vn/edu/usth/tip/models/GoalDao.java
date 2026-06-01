@@ -22,11 +22,11 @@ public interface GoalDao {
     @Delete
     void delete(Goal goal);
 
-    @Query("SELECT * FROM goals ORDER BY targetDateMs ASC")
-    LiveData<List<Goal>> getAllGoalsSorted();
-    
-    @Query("SELECT * FROM goals")
-    List<Goal> getAllGoalsSync();
+    @Query("SELECT * FROM goals WHERE user_id = :userId ORDER BY targetDateMs ASC")
+    LiveData<List<Goal>> getAllGoalsSorted(String userId);
+
+    @Query("SELECT * FROM goals WHERE user_id = :userId")
+    List<Goal> getAllGoalsSync(String userId);
 
     @Query("DELETE FROM goals WHERE id = :id")
     void deleteById(String id);

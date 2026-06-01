@@ -40,7 +40,7 @@ public class InsightEngine {
     }
 
     // Phải gọi từ background thread (ExecutorService) — KHÔNG gọi trên Main Thread
-    public AnalysisResult analyzeAll() {
+    public AnalysisResult analyzeAll(String userId) {
         List<Insight> allInsights = new ArrayList<>();
 
         long now = System.currentTimeMillis();
@@ -48,18 +48,18 @@ public class InsightEngine {
 
         // 1. Pattern Analysis — xu hướng hành vi theo ngày trong tuần (90 ngày)
         long since90d = now - 90L * 24 * 60 * 60 * 1000;
-        List<DayPatternDTO> patternRows = db.transactionDao().getAvgSpendByDayOfWeekSync(since90d);
+        List<DayPatternDTO> patternRows = db.transactionDao().getAvgSpendByDayOfWeekSync(since90d, userId);
         Insight patternInsight = patternAnalyzer.analyze(patternRows);
         if (patternInsight != null) allInsights.add(patternInsight);
 
         // 2. Anomaly Detection — phát hiện bất thường (4 tháng: 3 lịch sử + hiện tại)
         long since4m = subtractMonths(now, 4);
-        List<CategoryMonthlyDTO> monthlyRows = db.transactionDao().getCategoryMonthlyTotalsSync(since4m);
+        List<CategoryMonthlyDTO> monthlyRows = db.transactionDao().getCategoryMonthlyTotalsSync(since4m, userId);
         List<Insight> anomalies = anomalyDetector.detect(monthlyRows);
         allInsights.addAll(anomalies);
 
         // 3. Goal Advisor — tư vấn mục tiêu tiết kiệm
-        List<Goal> goals = db.goalDao().getAllGoalsSync();
+        List<Goal> goals = db.goalDao().getAllGoalsSync(userId);
         for (Goal goal : goals) {
             Insight goalInsight = goalAdvisor.advise(goal);
             if (goalInsight != null) allInsights.add(goalInsight);
@@ -74,18 +74,16 @@ public class InsightEngine {
         cal.set(Calendar.MILLISECOND, 0);
         long monthStart = cal.getTimeInMillis();
 
-        List<Budget> budgets = db.budgetDao().getAllBudgetsSync();
+        List<Budget> budgets = db.budgetDao().getAllBudgetsSync(userId);
         for (Budget budget : budgets) {
             if (budget.getPeriodStartMs() <= now && budget.getPeriodEndMs() >= now) {
-                // Budget đang hoạt động — chạy OLS forecast
                 List<DailySpendDTO> filtered = db.transactionDao()
-                        .getDailyExpensesByCategorySync(monthStart, now, budget.getCategoryName());
+                        .getDailyExpensesByCategorySync(monthStart, now, budget.getCategoryName(), userId);
                 BudgetForecaster.BudgetForecastResult result =
                         budgetForecaster.forecast(budget, filtered);
                 if (result.insight != null) allInsights.add(result.insight);
             } else if (budget.getPeriodEndMs() < now
                     && budget.getPeriodEndMs() >= now - oneDayMs) {
-                // Budget vừa kết thúc trong 24h — thông báo hoàn thành (tự biến mất sau 24h)
                 Insight completed = new Insight();
                 completed.type           = InsightType.BUDGET_COMPLETED;
                 completed.priority       = InsightPriority.LOW;
@@ -99,13 +97,12 @@ public class InsightEngine {
         }
 
         // 5. Debt/Loan Reminders — nhắc nhở vay nợ với đầy đủ số tiền và ngày tháng
-        List<DebtLoan> debtLoans = db.debtLoanDao().getAllDebtLoansSync();
+        List<DebtLoan> debtLoans = db.debtLoanDao().getAllDebtLoansSync(userId);
         List<Insight> debtInsights = debtLoanAdvisor.advise(debtLoans);
         allInsights.addAll(debtInsights);
 
         // 6. Biểu đồ dự báo tổng chi tiêu — dùng TẤT CẢ giao dịch tháng này (không filter category)
-        // Đảm bảo chart bám sát thực tế, độc lập với budget
-        List<DailySpendDTO> allExpenses = db.transactionDao().getDailyExpensesSync(monthStart, now);
+        List<DailySpendDTO> allExpenses = db.transactionDao().getDailyExpensesSync(monthStart, now, userId);
         List<ForecastPoint> forecastPoints = buildTotalSpendForecast(allExpenses);
 
         // Sắp xếp: HIGH trước, sau đó MEDIUM, rồi LOW

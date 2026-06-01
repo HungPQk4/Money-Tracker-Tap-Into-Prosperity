@@ -31,7 +31,7 @@ import vn.edu.usth.tip.models.GoalDao;
 @Database(
         entities = {Transaction.class, Category.class, Wallet.class,
                 Budget.class, DebtLoan.class, Goal.class},
-        version = 16,
+        version = 17,
         exportSchema = false
 )
 @TypeConverters({Converters.class})
@@ -86,7 +86,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "money_tracker_database")
-                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                             .fallbackToDestructiveMigration()
                             .addCallback(sRoomDatabaseCallback)
                             .build();
@@ -117,6 +117,18 @@ public abstract class AppDatabase extends RoomDatabase {
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("DELETE FROM categories");
             database.execSQL("DELETE FROM wallets");
+        }
+    };
+
+    // 16→17: thêm user_id vào tất cả bảng còn lại để cô lập dữ liệu theo từng tài khoản
+    static final Migration MIGRATION_16_17 = new Migration(16, 17) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE transactions ADD COLUMN user_id TEXT");
+            database.execSQL("ALTER TABLE wallets ADD COLUMN user_id TEXT");
+            database.execSQL("ALTER TABLE budgets ADD COLUMN user_id TEXT");
+            database.execSQL("ALTER TABLE goals ADD COLUMN user_id TEXT");
+            database.execSQL("ALTER TABLE debt_loans ADD COLUMN user_id TEXT");
         }
     };
 

@@ -1,5 +1,6 @@
 package vn.edu.usth.tip.network.responses;
 
+import com.google.gson.annotations.SerializedName;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -47,6 +48,7 @@ public class FinancialDtos {
 
     public static class BudgetDto {
         private UUID id;
+        @SerializedName(value = "userId", alternate = {"user_id"})
         private UUID userId;
         private UUID categoryId;
         private String categoryName;

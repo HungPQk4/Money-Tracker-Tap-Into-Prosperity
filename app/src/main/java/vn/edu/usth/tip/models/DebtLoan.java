@@ -1,6 +1,7 @@
 package vn.edu.usth.tip.models;
 
 import androidx.annotation.NonNull;
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
@@ -19,6 +20,8 @@ public class DebtLoan {
     private long dueDate; // Timestamp
     private int type;
     private boolean isSynced = false;
+    @ColumnInfo(name = "user_id")
+    private String userId;
 
     public DebtLoan(@NonNull String id, String personName, String reason, long amount, long dueDate, int type) {
         this.id = id;
@@ -39,4 +42,6 @@ public class DebtLoan {
     public int getType() { return type; }
     public boolean isSynced() { return isSynced; }
     public void setSynced(boolean synced) { isSynced = synced; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 }

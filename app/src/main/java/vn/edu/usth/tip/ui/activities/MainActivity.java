@@ -1,10 +1,16 @@
 package vn.edu.usth.tip.ui.activities;
 
+import vn.edu.usth.tip.AppDatabase;
 import vn.edu.usth.tip.R;
 import vn.edu.usth.tip.utils.AnimationConstants;
 import vn.edu.usth.tip.utils.AnimUtils;
 import vn.edu.usth.tip.utils.SessionManager;
+import vn.edu.usth.tip.utils.SyncPrefs;
+import vn.edu.usth.tip.utils.TokenManager;
 
+import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -252,15 +258,24 @@ public class MainActivity extends AppCompatActivity {
         SessionManager.getInstance().getSessionExpiredEvent().observe(this, expired -> {
             if (expired == null || !expired) return;
             SessionManager.getInstance().clearSessionExpired();
-            android.widget.Toast.makeText(
-                    this,
-                    "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
-                    android.widget.Toast.LENGTH_LONG
-            ).show();
-            navController.navigate(R.id.action_global_loginFragment, null,
-                    new NavOptions.Builder()
-                            .setPopUpTo(navController.getGraph().getStartDestinationId(), true)
-                            .build());
+            // Clear DB + cursors on background thread so the next login always starts
+            // from a completely clean state, regardless of which account logs in next.
+            android.content.Context appCtx = getApplicationContext();
+            AppDatabase.databaseWriteExecutor.execute(() -> {
+                AppDatabase.getDatabase(appCtx).clearAllTables();
+                SyncPrefs.clearAll(appCtx);
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    TokenManager.getOrCreate(appCtx).clear();
+                    android.widget.Toast.makeText(
+                            appCtx,
+                            "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+                            android.widget.Toast.LENGTH_LONG
+                    ).show();
+                    Intent intent = new Intent(appCtx, LoginActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    appCtx.startActivity(intent);
+                });
+            });
         });
     }
 }

@@ -13,17 +13,17 @@ import java.util.List;
 @Dao
 public interface WalletDao {
 
-    @Query("SELECT * FROM wallets")
-    LiveData<List<Wallet>> getAllWallets();
+    @Query("SELECT * FROM wallets WHERE user_id = :userId")
+    LiveData<List<Wallet>> getAllWallets(String userId);
 
-    @Query("SELECT * FROM wallets")
-    List<Wallet> getAllWalletsSync();
+    @Query("SELECT * FROM wallets WHERE user_id = :userId")
+    List<Wallet> getAllWalletsSync(String userId);
 
-    @Query("SELECT * FROM wallets WHERE name = :name LIMIT 1")
-    Wallet findByNameSync(String name);
+    @Query("SELECT * FROM wallets WHERE name = :name AND user_id = :userId LIMIT 1")
+    Wallet findByNameSync(String name, String userId);
 
-    @Query("SELECT * FROM wallets WHERE name COLLATE NOCASE = :name LIMIT 1")
-    Wallet findByNameNoCase(String name);
+    @Query("SELECT * FROM wallets WHERE name COLLATE NOCASE = :name AND user_id = :userId LIMIT 1")
+    Wallet findByNameNoCase(String name, String userId);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(Wallet wallet);

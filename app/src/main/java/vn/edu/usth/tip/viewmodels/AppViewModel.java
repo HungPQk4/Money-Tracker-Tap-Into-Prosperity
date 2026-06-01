@@ -129,18 +129,18 @@ public class AppViewModel extends AndroidViewModel {
         goalsRepository = new GoalsRepository(application);
         debtsRepository = new DebtsRepository(application);
 
-        transactionsLiveData = transactionDao.getAllTransactions();
-        String currentUserId = new TokenManager(application).getUserId();
+        String currentUserId = TokenManager.getOrCreate(application).getUserId();
+        transactionsLiveData = transactionDao.getAllTransactions(currentUserId);
         categoriesLiveData = (currentUserId != null)
                 ? categoryDao.getCategoriesForUser(currentUserId)
                 : categoryDao.getAllCategories();
-        walletsDbLiveData = walletDao.getAllWallets();
-        budgetsLiveData = budgetDao.getAllBudgets();
-        goalsLiveData = goalDao.getAllGoalsSorted();
+        walletsDbLiveData = walletDao.getAllWallets(currentUserId);
+        budgetsLiveData = budgetDao.getAllBudgets(currentUserId);
+        goalsLiveData = goalDao.getAllGoalsSorted(currentUserId);
 
-        debtsLiveData = debtLoanDao.getAllSortedByDueDate();
-        totalIOweLiveData = debtLoanDao.getTotalIOwe();
-        totalOwedToMeLiveData = debtLoanDao.getTotalOwedToMe();
+        debtsLiveData = debtLoanDao.getAllSortedByDueDate(currentUserId);
+        totalIOweLiveData = debtLoanDao.getTotalIOwe(currentUserId);
+        totalOwedToMeLiveData = debtLoanDao.getTotalOwedToMe(currentUserId);
 
         // Financial Engine: lắng nghe transactions + wallets + debts + loans
         engineStateLiveData.addSource(transactionsLiveData, v -> calculateEngine());
@@ -243,24 +243,31 @@ public class AppViewModel extends AndroidViewModel {
 
     // ── Budget Engine ───────────────────────────────────────────────
     private void calculateBudgets() {
-        List<Transaction> txs = transactionsLiveData.getValue();
         List<Budget> budgets = budgetsLiveData.getValue();
-        if (txs == null || budgets == null)
-            return;
+        // budgets == null: query chưa được thực thi, chưa thể tính → đợi
+        if (budgets == null) return;
 
+        // budgets rỗng: user chưa có ngân sách nào → emit empty ngay, không cần txs
+        if (budgets.isEmpty()) {
+            budgetStateLiveData.postValue(new ArrayList<>());
+            return;
+        }
+
+        List<Transaction> txs = transactionsLiveData.getValue();
         List<BudgetWithSpent> result = new ArrayList<>();
         for (Budget budget : budgets) {
-            // Base = server-calculated spent (ground truth cho các giao dịch đã sync).
-            // Chỉ cộng thêm giao dịch CHƯA sync để tránh double-count.
             long spent = budget.getSpentAmount();
-            for (Transaction t : txs) {
-                if (t.isSynced()) continue;
-                if (t.getType() != Transaction.Type.EXPENSE) continue;
-                if (t.getTimestampMs() < budget.getPeriodStartMs()) continue;
-                if (t.getTimestampMs() > budget.getPeriodEndMs()) continue;
-                String cat = t.getCategory();
-                if (cat != null && cat.equalsIgnoreCase(budget.getCategoryName())) {
-                    spent += t.getAmountVnd();
+            // Cộng thêm giao dịch CHƯA sync nếu txs đã được deliver
+            if (txs != null) {
+                for (Transaction t : txs) {
+                    if (t.isSynced()) continue;
+                    if (t.getType() != Transaction.Type.EXPENSE) continue;
+                    if (t.getTimestampMs() < budget.getPeriodStartMs()) continue;
+                    if (t.getTimestampMs() > budget.getPeriodEndMs()) continue;
+                    String cat = t.getCategory();
+                    if (cat != null && cat.equalsIgnoreCase(budget.getCategoryName())) {
+                        spent += t.getAmountVnd();
+                    }
                 }
             }
             result.add(new BudgetWithSpent(budget, spent));
@@ -282,7 +289,8 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public LiveData<List<Transaction>> getTransactionsBetween(long fromMs, long toMs) {
-        return transactionDao.getTransactionsBetween(fromMs, toMs);
+        String userId = TokenManager.getOrCreate(getApplication()).getUserId();
+        return transactionDao.getTransactionsBetween(fromMs, toMs, userId);
     }
 
     public LiveData<List<Category>> getCategories() {
@@ -378,6 +386,7 @@ public class AppViewModel extends AndroidViewModel {
     public void addTransaction(Transaction tx) {
         tx.setUpdatedAtMs(System.currentTimeMillis());
         tx.setSynced(false);
+        tx.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             transactionDao.insert(tx);
             enqueueSync();
@@ -388,6 +397,7 @@ public class AppViewModel extends AndroidViewModel {
     public void updateTransaction(Transaction tx) {
         tx.setUpdatedAtMs(System.currentTimeMillis());
         tx.setSynced(false);
+        if (tx.getUserId() == null) tx.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             transactionDao.insert(tx); // INSERT OR REPLACE
             enqueueSync();
@@ -423,6 +433,7 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void addWallet(Wallet w) {
+        w.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             walletDao.insert(w);
             walletsRepository.addOnline(w);
@@ -447,6 +458,7 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void addBudget(Budget b) {
+        b.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             budgetDao.insert(b);
         });
@@ -490,6 +502,7 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void addDebtLoan(DebtLoan debtLoan) {
+        debtLoan.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             debtLoanDao.insert(debtLoan);
             debtsRepository.addOnline(debtLoan);
@@ -504,6 +517,7 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void addGoal(Goal goal) {
+        goal.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             goalDao.insert(goal);
             goalsRepository.addOnline(goal);
@@ -526,6 +540,10 @@ public class AppViewModel extends AndroidViewModel {
 
     public List<Transaction> getCurrentList() {
         return transactionsLiveData.getValue() != null ? transactionsLiveData.getValue() : new ArrayList<>();
+    }
+
+    public void syncBudgets(BudgetsRepository.SyncCallback callback) {
+        budgetsRepository.sync(callback);
     }
 
     public void syncTransactions(TransactionRepository.SyncCallback callback) {
@@ -567,15 +585,6 @@ public class AppViewModel extends AndroidViewModel {
             }
         });
         categoriesRepository.sync(new CategoriesRepository.SyncCallback() {
-            @Override
-            public void onSuccess() {
-            }
-
-            @Override
-            public void onError(String msg) {
-            }
-        });
-        budgetsRepository.sync(new BudgetsRepository.SyncCallback() {
             @Override
             public void onSuccess() {
             }

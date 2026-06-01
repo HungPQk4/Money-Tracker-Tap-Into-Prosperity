@@ -22,7 +22,7 @@ public class LoginViewModel extends AndroidViewModel {
     public LoginViewModel(@NonNull Application application) {
         super(application);
         repository = new AuthRepository();
-        tokenManager = new TokenManager(application);
+        tokenManager = TokenManager.getOrCreate(application);
     }
 
     public LiveData<AuthResponse> getLoginSuccess() { return loginSuccess; }

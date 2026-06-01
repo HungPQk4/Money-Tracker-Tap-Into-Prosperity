@@ -43,7 +43,7 @@ public class InsightViewModel extends AndroidViewModel {
         super(application);
         AppDatabase db = AppDatabase.getDatabase(application);
         engine = new InsightEngine(db);
-        TokenManager tokenManager = new TokenManager(application);
+        TokenManager tokenManager = TokenManager.getOrCreate(application);
         insightApi = RetrofitClient.createAiInsightService(tokenManager);
     }
 
@@ -60,7 +60,8 @@ public class InsightViewModel extends AndroidViewModel {
         executor.execute(() -> {
             try {
                 // Bước 1: Tính toán nặng on-device (offline-first)
-                InsightEngine.AnalysisResult result = engine.analyzeAll();
+                String userId = TokenManager.getOrCreate(getApplication()).getUserId();
+                InsightEngine.AnalysisResult result = engine.analyzeAll(userId);
 
                 // Bước 2: Push ngay bản template offline lên UI — PHẢI dùng postValue()
                 insightsLiveData.postValue(result.insights);

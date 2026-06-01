@@ -1,6 +1,7 @@
 package vn.edu.usth.tip.models;
 
 import androidx.annotation.NonNull;
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
@@ -18,6 +19,8 @@ public class Wallet {
     private int color;           // ARGB int
     private Type type;
     private boolean includedInTotal;
+    @ColumnInfo(name = "user_id")
+    private String userId;
 
     public Wallet(@NonNull String id, String name, long balanceVnd,
                   String icon, int color, Type type, boolean includedInTotal) {
@@ -62,4 +65,6 @@ public class Wallet {
     public void setIcon(String icon)              { this.icon = icon; }
     public void setColor(int color)               { this.color = color; }
     public void setType(Type type)                { this.type = type; }
+    public String getUserId()                     { return userId; }
+    public void setUserId(String userId)          { this.userId = userId; }
 }

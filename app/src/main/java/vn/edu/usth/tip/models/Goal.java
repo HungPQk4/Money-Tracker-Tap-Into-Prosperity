@@ -1,6 +1,7 @@
 package vn.edu.usth.tip.models;
 
 import androidx.annotation.NonNull;
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
@@ -18,6 +19,8 @@ public class Goal {
     private long targetDateMs;
     private String colorHex;
     private long createdMs; // 0 = data trước migration 11→12 (fallback 90 ngày trong GoalAdvisor)
+    @ColumnInfo(name = "user_id")
+    private String userId;
 
     public Goal(@NonNull String id, String name, String emoji, long targetAmount, long savedAmount, long targetDateMs, String colorHex) {
         this.id = id;
@@ -53,4 +56,6 @@ public class Goal {
 
     public long getCreatedMs() { return createdMs; }
     public void setCreatedMs(long createdMs) { this.createdMs = createdMs; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 }

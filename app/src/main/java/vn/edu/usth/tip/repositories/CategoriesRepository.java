@@ -29,7 +29,7 @@ public class CategoriesRepository {
         this.appContext = context.getApplicationContext();
         this.db = AppDatabase.getDatabase(appContext);
         this.categoryDao = db.categoryDao();
-        this.tokenManager = new TokenManager(appContext);
+        this.tokenManager = TokenManager.getOrCreate(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 

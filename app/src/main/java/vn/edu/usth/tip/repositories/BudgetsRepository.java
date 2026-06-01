@@ -76,9 +76,10 @@ public class BudgetsRepository {
                 Response<BudgetDto> response = financialApi.createBudget(req).execute();
                 if (response.isSuccessful() && response.body() != null) {
                     android.util.Log.d("BUDGET_SYNC", "Add success! Server id=" + response.body().getId());
-                    // Replace local record with server-assigned UUID
                     budgetDao.delete(b);
-                    budgetDao.insert(convertToModel(response.body()));
+                    Budget serverModel = convertToModel(response.body());
+                    serverModel.setUserId(userIdStr);
+                    budgetDao.insert(serverModel);
                 } else {
                     String errBody = "";
                     try { if (response.errorBody() != null) errBody = response.errorBody().string(); } catch (Exception ignored) {}
@@ -155,70 +156,42 @@ public class BudgetsRepository {
     }
 
     public void sync(SyncCallback callback) {
-        AppDatabase.databaseWriteExecutor.execute(() -> {
-            try {
-                String userIdStr = tokenManager.getUserId();
-                if (userIdStr == null) {
-                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("UserId is null"));
-                    return;
-                }
-                UUID userId = UUID.fromString(userIdStr);
-
-                // 1. Kéo dữ liệu từ server về trước để so sánh
-                Response<List<BudgetDto>> response = financialApi.getAllBudgets().execute();
-                if (!response.isSuccessful() || response.body() == null) {
-                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Fetch failed: " + response.code()));
-                    return;
-                }
-                List<BudgetDto> serverBudgets = response.body();
-                List<Budget> localBudgets = budgetDao.getAllBudgetsSync();
-
-                // 2. Đẩy các ngân sách local CHƯA CÓ trên server lên server
-                for (Budget local : localBudgets) {
-                    boolean existsOnServer = false;
-                    for (BudgetDto server : serverBudgets) {
-                        if (server.getId().toString().equals(local.getId())) {
-                            existsOnServer = true;
-                            break;
+        if (!vn.edu.usth.tip.utils.NetworkUtils.isConnected(appContext)) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Không có kết nối internet"));
+            return;
+        }
+        // Dùng enqueue (async) giống Goals/Debts — trust JWT filter của server
+        financialApi.getAllBudgets().enqueue(new Callback<List<BudgetDto>>() {
+            @Override
+            public void onResponse(@NonNull Call<List<BudgetDto>> call,
+                                   @NonNull Response<List<BudgetDto>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    AppDatabase.databaseWriteExecutor.execute(() -> {
+                        final String userId = tokenManager.getUserId();
+                        if (userId == null) {
+                            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("UserId is null"));
+                            return;
                         }
-                    }
-
-                    if (!existsOnServer) {
-                        UUID categoryId = resolveCategoryId(local.getCategoryName());
-                        if (categoryId != null) {
-                            long duration = local.getPeriodEndMs() - local.getPeriodStartMs();
-                            String pType = (duration <= 8L * 24 * 60 * 60 * 1000) ? "weekly" : "monthly";
-
-                            FinancialRequests.CreateBudgetRequest req = new FinancialRequests.CreateBudgetRequest(
-                                userId, categoryId, new java.math.BigDecimal(local.getLimitAmount()), new java.math.BigDecimal(local.getSpentAmount()),
-                                pType, sdf.format(new java.util.Date(local.getPeriodStartMs())),
-                                sdf.format(new java.util.Date(local.getPeriodEndMs()))
-                            );
-
-                            Response<BudgetDto> res = financialApi.createBudget(req).execute();
-                            if (res.isSuccessful() && res.body() != null) {
-                                budgetDao.delete(local);
-                                budgetDao.insert(convertToModel(res.body()));
+                        final List<BudgetDto> serverBudgets = response.body();
+                        // Delete-before-insert: xóa data cũ rồi insert sạch từ server
+                        db.runInTransaction(() -> {
+                            budgetDao.deleteAllForUser(userId);
+                            for (BudgetDto dto : serverBudgets) {
+                                Budget b = convertToModel(dto);
+                                b.setUserId(userId);
+                                budgetDao.insert(b);
                             }
-                        }
-                    }
+                        });
+                        new android.os.Handler(android.os.Looper.getMainLooper()).post(callback::onSuccess);
+                    });
+                } else {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Error: " + response.code()));
                 }
+            }
 
-                // 3. Cập nhật lại local database bằng dữ liệu mới nhất từ server
-                // Fetch server budgets again in case some were just added
-                serverBudgets = financialApi.getAllBudgets().execute().body();
-                if (serverBudgets != null) {
-                    // Xóa sạch budget local (vì ta đã đẩy hết cái chưa có lên rồi)
-                    // Hoặc đơn giản là REPLACE các bản ghi trùng ID
-                    for (BudgetDto dto : serverBudgets) {
-                        budgetDao.insert(convertToModel(dto));
-                    }
-                }
-
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(callback::onSuccess);
-            } catch (Exception e) {
-                android.util.Log.e("BUDGET_SYNC", "Sync exception: " + e.getMessage(), e);
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(e.getMessage()));
+            @Override
+            public void onFailure(@NonNull Call<List<BudgetDto>> call, @NonNull Throwable t) {
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(t.getMessage()));
             }
         });
     }
@@ -406,6 +379,7 @@ public class BudgetsRepository {
 
             List<BudgetDto> items = page.getItems();
             if (items != null && !items.isEmpty()) {
+                String userId = tokenManager.getUserId();
                 List<Budget>  toInsert = new ArrayList<>();
                 List<String>  toDelete = new ArrayList<>();
                 for (BudgetDto dto : items) {
@@ -413,7 +387,16 @@ public class BudgetsRepository {
                         if (dto.getId() != null) toDelete.add(dto.getId().toString());
                         continue;
                     }
-                    toInsert.add(convertToModel(dto));
+                    // STRICT: chỉ insert budget có userId khớp user hiện tại
+                    String dtoUserId = dto.getUserId() != null ? dto.getUserId().toString() : null;
+                    if (!userId.equals(dtoUserId)) {
+                        android.util.Log.w("BUDGET_SYNC", "Delta skip " + dto.getId()
+                                + " dtoUserId=" + dtoUserId + " expected=" + userId);
+                        continue;
+                    }
+                    Budget b = convertToModel(dto);
+                    b.setUserId(userId);
+                    toInsert.add(b);
                 }
                 db.runInTransaction(() -> {
                     for (String id : toDelete) budgetDao.deleteById(id);

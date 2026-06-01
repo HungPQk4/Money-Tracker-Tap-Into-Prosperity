@@ -37,7 +37,7 @@ public class BudgetsFragment extends Fragment {
     private TextView    tvTotalBudgeted, tvTotalSpent, tvTotalRemaining;
     private TextView    tvOverallPercent, tvActiveCount;
     private ProgressBar progressOverall;
-    private View        emptyState, listLabel;
+    private View        emptyState, listLabel, summaryCard;
 
     public BudgetsFragment() {}
 
@@ -62,6 +62,7 @@ public class BudgetsFragment extends Fragment {
         progressOverall  = view.findViewById(R.id.progress_overall);
         emptyState       = view.findViewById(R.id.layout_budget_empty);
         listLabel        = view.findViewById(R.id.tv_budget_list_label);
+        summaryCard      = view.findViewById(R.id.card_budget_summary);
 
         // RecyclerView
         budgetAdapter = new BudgetAdapter(item -> {
@@ -99,46 +100,58 @@ public class BudgetsFragment extends Fragment {
             swipeRefreshLayout.setColorSchemeColors(ContextCompat.getColor(requireContext(), R.color.brand_primary));
             swipeRefreshLayout.setOnRefreshListener(() -> {
                 if (viewModel != null) {
-                    viewModel.syncAllData();
+                    viewModel.syncBudgets(new vn.edu.usth.tip.repositories.BudgetsRepository.SyncCallback() {
+                        @Override public void onSuccess() {
+                            if (getActivity() != null)
+                                getActivity().runOnUiThread(() -> swipeRefreshLayout.setRefreshing(false));
+                        }
+                        @Override public void onError(String msg) {
+                            if (getActivity() != null)
+                                getActivity().runOnUiThread(() -> swipeRefreshLayout.setRefreshing(false));
+                        }
+                    });
+                } else {
+                    swipeRefreshLayout.setRefreshing(false);
                 }
-                swipeRefreshLayout.postDelayed(() -> swipeRefreshLayout.setRefreshing(false), 500);
             });
         }
     }
 
     private void renderBudgets(List<BudgetWithSpent> list) {
         if (list == null || list.isEmpty()) {
-            emptyState.setVisibility(View.VISIBLE);
-            listLabel.setVisibility(View.GONE);
-            resetSummary();
-            budgetAdapter.setData(null);
+            if (emptyState   != null) emptyState.setVisibility(View.VISIBLE);
+            if (summaryCard  != null) summaryCard.setVisibility(View.GONE);
+            if (listLabel    != null) listLabel.setVisibility(View.GONE);
+            if (budgetAdapter != null) budgetAdapter.setData(null);
             return;
         }
 
-        emptyState.setVisibility(View.GONE);
-        listLabel.setVisibility(View.VISIBLE);
-        budgetAdapter.setData(list);
+        if (emptyState  != null) emptyState.setVisibility(View.GONE);
+        if (summaryCard != null) summaryCard.setVisibility(View.VISIBLE);
+        if (listLabel   != null) listLabel.setVisibility(View.VISIBLE);
+        if (budgetAdapter != null) budgetAdapter.setData(list);
 
-        // Calculate totals
         long totalBudgeted = 0, totalSpent = 0;
         long now = System.currentTimeMillis();
         int  activeCount = 0;
         for (BudgetWithSpent b : list) {
+            if (b == null || b.budget == null) continue;
             totalBudgeted += b.budget.getLimitAmount();
             totalSpent    += b.spentAmount;
             if (b.budget.getPeriodEndMs() >= now) activeCount++;
         }
         long remaining = totalBudgeted - totalSpent;
 
-        // Tách guard khỏi biến hiển thị — tránh hiện ₫1 khi limitAmount = 0
         float pctFloat = totalBudgeted > 0 ? (totalSpent * 100.0f) / totalBudgeted : 0f;
         int   pctInt   = (int) Math.min(100, pctFloat);
 
-        tvTotalBudgeted.setText(MoneyFormat.formatShortStyled(totalBudgeted));
-        tvTotalSpent.setText(MoneyFormat.formatShortStyled(totalSpent));
-        tvTotalRemaining.setText(MoneyFormat.formatShortStyled(Math.max(0, remaining)));
-
-        progressOverall.setProgress(pctInt);
+        if (tvTotalBudgeted  != null) tvTotalBudgeted.setText(MoneyFormat.formatShortStyled(totalBudgeted));
+        if (tvTotalSpent     != null) tvTotalSpent.setText(MoneyFormat.formatShortStyled(totalSpent));
+        if (tvTotalRemaining != null) {
+            tvTotalRemaining.setText(MoneyFormat.formatShortStyled(Math.max(0, remaining)));
+            tvTotalRemaining.setTextColor(pctInt >= 90 ? 0xFFE76E60 : 0xFF2DD3A1);
+        }
+        if (progressOverall  != null) progressOverall.setProgress(pctInt);
 
         String percentText;
         if (pctFloat == 0f || pctFloat >= 100f || pctFloat == (int) pctFloat) {
@@ -150,26 +163,17 @@ public class BudgetsFragment extends Fragment {
         } else {
             percentText = String.format(java.util.Locale.US, "%.1f%% đã chi", pctFloat);
         }
-        tvOverallPercent.setText(percentText);
-
-        // Chỉ đếm budget còn hiệu lực — tránh hiện sai "X đang hoạt động"
-        tvActiveCount.setText(activeCount + " đang hoạt động");
-
-        // Color remaining
-        if (pctInt >= 90) {
-            tvTotalRemaining.setTextColor(0xFFE76E60);
-        } else {
-            tvTotalRemaining.setTextColor(0xFF2DD3A1);
-        }
+        if (tvOverallPercent != null) tvOverallPercent.setText(percentText);
+        if (tvActiveCount    != null) tvActiveCount.setText(activeCount + " đang hoạt động");
     }
 
     private void resetSummary() {
-        tvTotalBudgeted.setText(MoneyFormat.formatShortStyled(0));
-        tvTotalSpent.setText(MoneyFormat.formatShortStyled(0));
-        tvTotalRemaining.setText(MoneyFormat.formatShortStyled(0));
-        progressOverall.setProgress(0);
-        tvOverallPercent.setText("0% đã chi");
-        tvActiveCount.setText("0 ngân sách");
+        if (tvTotalBudgeted  != null) tvTotalBudgeted.setText(MoneyFormat.formatShortStyled(0));
+        if (tvTotalSpent     != null) tvTotalSpent.setText(MoneyFormat.formatShortStyled(0));
+        if (tvTotalRemaining != null) tvTotalRemaining.setText(MoneyFormat.formatShortStyled(0));
+        if (progressOverall  != null) progressOverall.setProgress(0);
+        if (tvOverallPercent != null) tvOverallPercent.setText("0% đã chi");
+        if (tvActiveCount    != null) tvActiveCount.setText("0 ngân sách");
     }
 
 }

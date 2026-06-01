@@ -29,7 +29,7 @@ public class WalletsRepository {
         this.appContext = context.getApplicationContext();
         this.db = AppDatabase.getDatabase(appContext);
         this.walletDao = db.walletDao();
-        this.tokenManager = new TokenManager(appContext);
+        this.tokenManager = TokenManager.getOrCreate(appContext);
         this.financialApi = RetrofitClient.createService(FinancialApi.class, tokenManager);
     }
 
@@ -125,10 +125,12 @@ public class WalletsRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
                         final List<AccountDto> serverAccounts = response.body();
+                        final String userId = tokenManager.getUserId();
                         db.runInTransaction(() -> {
                             for (AccountDto dto : serverAccounts) {
                                 Wallet incoming = convertToModel(dto);
-                                Wallet existing = walletDao.findByNameSync(dto.getName());
+                                incoming.setUserId(userId);
+                                Wallet existing = walletDao.findByNameSync(dto.getName(), userId);
                                 if (existing != null && !existing.getId().equals(incoming.getId())) {
                                     walletDao.delete(existing);
                                 }

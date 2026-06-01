@@ -277,7 +277,7 @@ public class ScanReceiptFragment extends Fragment {
     // ── Bước 3: Gọi API phân tích bằng LLM ─────────────────────────────────
     private void analyzeWithLLM(String rawOcrText) {
         // Loading vẫn đang hiển thị từ runOcrOnUri
-        TokenManager tokenManager = new TokenManager(requireContext());
+        TokenManager tokenManager = TokenManager.getOrCreate(requireContext());
         InvoiceApi invoiceApi = RetrofitClient.createService(InvoiceApi.class, tokenManager);
 
         InvoiceAnalysisRequest request = new InvoiceAnalysisRequest(rawOcrText);
