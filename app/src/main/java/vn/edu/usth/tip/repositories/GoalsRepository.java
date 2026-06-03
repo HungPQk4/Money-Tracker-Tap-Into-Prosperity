@@ -114,18 +114,20 @@ public class GoalsRepository {
             callback.onError("Không có kết nối internet");
             return;
         }
+        final String requestUserId = tokenManager.getUserId();
+        if (requestUserId == null) { callback.onError("Not logged in"); return; }
         financialApi.getAllGoals().enqueue(new Callback<List<GoalDto>>() {
             @Override
             public void onResponse(@NonNull Call<List<GoalDto>> call, @NonNull Response<List<GoalDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
-                        final String userId = tokenManager.getUserId();
-                        final List<Goal> localGoals = goalDao.getAllGoalsSync(userId);
+                        if (!requestUserId.equals(tokenManager.getUserId())) return;
+                        final List<Goal> localGoals = goalDao.getAllGoalsSync(requestUserId);
                         final List<GoalDto> serverGoals = response.body();
                         db.runInTransaction(() -> {
                             for (GoalDto dto : serverGoals) {
                                 Goal serverGoal = convertToModel(dto);
-                                serverGoal.setUserId(userId);
+                                serverGoal.setUserId(requestUserId);
                                 for (Goal local : localGoals) {
                                     if (local.getName().trim().equalsIgnoreCase(serverGoal.getName().trim())
                                             && !local.getId().equals(serverGoal.getId())) {

@@ -442,6 +442,7 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void updateWallet(Wallet w) {
+        if (w.getUserId() == null) w.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             walletDao.update(w);
             walletsRepository.updateOnline(w);
@@ -478,6 +479,7 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void updateBudget(Budget b) {
+        if (b.getUserId() == null) b.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             budgetDao.update(b);
         });
@@ -525,6 +527,7 @@ public class AppViewModel extends AndroidViewModel {
     }
 
     public void updateGoal(Goal goal) {
+        if (goal.getUserId() == null) goal.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
             goalDao.update(goal);
             goalsRepository.updateOnline(goal);

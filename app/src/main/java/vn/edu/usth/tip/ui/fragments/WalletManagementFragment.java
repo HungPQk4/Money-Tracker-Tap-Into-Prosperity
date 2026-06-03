@@ -201,13 +201,25 @@ public class WalletManagementFragment extends Fragment
     }
 
     private void performLogout() {
+        // Hiện loading để chặn user tương tác trong khi xóa DB (tránh race condition).
+        android.app.ProgressDialog pd = new android.app.ProgressDialog(requireContext());
+        pd.setMessage("Đang đăng xuất...");
+        pd.setCancelable(false);
+        pd.show();
+
         Context appCtx = requireContext().getApplicationContext();
-        // Clear DB and sync cursors on background thread, then navigate on main thread.
-        // This guarantees the next login always starts from a clean state.
+        // Huỷ tất cả request đang bay ngay lập tức (tránh zombie response).
+        vn.edu.usth.tip.network.RetrofitClient.cancelAllRequests();
+        // Cancel pending sync worker trước khi xóa DB.
+        androidx.work.WorkManager.getInstance(appCtx).cancelUniqueWork("TxSync");
         AppDatabase.databaseWriteExecutor.execute(() -> {
             AppDatabase.getDatabase(appCtx).clearAllTables();
             SyncPrefs.clearAll(appCtx);
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                // Guard: Fragment có thể đã bị detach (xoay màn hình, thu hồi tài nguyên)
+                // trong khoảng thời gian clearAllTables chạy trên background thread.
+                if (pd.isShowing()) pd.dismiss();
+                if (!isAdded() || isDetached() || getActivity() == null) return;
                 TokenManager.getOrCreate(appCtx).clear();
                 SessionManager.getInstance().clearSessionExpired();
                 Intent intent = new Intent(appCtx, LoginActivity.class);

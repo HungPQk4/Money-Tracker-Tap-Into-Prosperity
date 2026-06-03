@@ -15,8 +15,19 @@ public class RetrofitClient {
     private static final String BASE_URL = "https://aviation-skincare-undertone.ngrok-free.dev/api/";
     private static Retrofit retrofit = null;
 
+    // Shared dispatcher for all authenticated API calls.
+    // Calling cancelAllRequests() on logout immediately aborts every in-flight request,
+    // preventing zombie responses from writing stale data to the DB of the next user.
+    private static final okhttp3.Dispatcher sharedDispatcher = new okhttp3.Dispatcher();
+
+    /** Cancel all in-flight authenticated requests — call on logout / session expiry. */
+    public static void cancelAllRequests() {
+        sharedDispatcher.cancelAll();
+    }
+
     public static <T> T createService(Class<T> serviceClass, TokenManager tokenManager) {
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder()
+                .dispatcher(sharedDispatcher)
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS);
@@ -39,9 +50,13 @@ public class RetrofitClient {
 
             okhttp3.Response response = chain.proceed(builder.build());
 
-            // 401 = token hết hạn hoặc không hợp lệ → buộc đăng xuất.
-            // 403 KHÔNG được xử lý ở đây vì nó có thể là lỗi phân quyền hợp lệ, không phải token hết hạn.
-            if (response.code() == 401 && tokenManager != null) {
+            // 401 = token hết hạn/không hợp lệ → buộc đăng xuất.
+            // 403 cũng được xử lý như lỗi auth vì backend (SecurityConfig) chỉ dùng
+            // `.anyRequest().authenticated()`, KHÔNG có phân quyền role/@PreAuthorize —
+            // nên mọi 403 đều là token thiếu/sai/hết hạn, không phải authorization hợp lệ.
+            // (Backend mới đã trả 401, nhưng giữ 403 ở đây để app phục hồi kể cả khi
+            //  server chưa được rebuild.)
+            if ((response.code() == 401 || response.code() == 403) && tokenManager != null) {
                 tokenManager.clear();
                 SessionManager.getInstance().triggerSessionExpired();
             }
@@ -62,6 +77,7 @@ public class RetrofitClient {
     // Re-using the default client (60s read) risks flaky failures when the LLM is slow.
     public static InsightApi createAiInsightService(TokenManager tokenManager) {
         OkHttpClient.Builder aiClientBuilder = new OkHttpClient.Builder()
+                .dispatcher(sharedDispatcher)
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(15, TimeUnit.SECONDS);
@@ -77,7 +93,13 @@ public class RetrofitClient {
                     if (tokenManager != null && tokenManager.getToken() != null) {
                         builder.header("Authorization", "Bearer " + tokenManager.getToken());
                     }
-                    return chain.proceed(builder.build());
+                    okhttp3.Response response = chain.proceed(builder.build());
+                    // Xử lý lỗi auth nhất quán với createService() — 401/403 → buộc đăng xuất.
+                    if ((response.code() == 401 || response.code() == 403) && tokenManager != null) {
+                        tokenManager.clear();
+                        SessionManager.getInstance().triggerSessionExpired();
+                    }
+                    return response;
                 })
                 .build();
 

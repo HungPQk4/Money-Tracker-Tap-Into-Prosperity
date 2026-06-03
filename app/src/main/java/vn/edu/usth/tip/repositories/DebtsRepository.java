@@ -136,28 +136,32 @@ public class DebtsRepository {
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Không có kết nối internet"));
             return;
         }
+        // Capture userId trước toàn bộ sync — dùng cho cả push lẫn pull
+        final String userIdStr = tokenManager.getUserId();
+        if (userIdStr == null) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Not logged in"));
+            return;
+        }
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
                 // 1. Đẩy các khoản vay/nợ chưa đồng bộ lên server trước
-                String userIdStr = tokenManager.getUserId();
                 List<DebtLoan> unsynced = debtLoanDao.getUnsyncedDebtsSync(userIdStr);
-                if (userIdStr != null && unsynced != null && !unsynced.isEmpty()) {
+                if (unsynced != null && !unsynced.isEmpty()) {
                     UUID userId = UUID.fromString(userIdStr);
                     for (DebtLoan d : unsynced) {
                         FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
                             userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
-                            (d.getType() == DebtLoan.TYPE_LENT) ? "lend" : "borrow", 
+                            (d.getType() == DebtLoan.TYPE_LENT) ? "lend" : "borrow",
                             sdf.format(new java.util.Date(d.getDueDate()))
                         );
                         req.setNote(d.getReason());
-                        
                         try {
                             Response<DebtDto> res = financialApi.createDebt(req).execute();
                             if (res.isSuccessful() && res.body() != null) {
-                                // Xóa bản ghi cũ (ID sinh ở máy) để tránh bị nhân đôi dữ liệu
                                 debtLoanDao.delete(d);
-                                // Thay bằng bản ghi mới (ID chuẩn từ PostgreSQL server)
-                                debtLoanDao.insert(convertToModel(res.body()));
+                                DebtLoan synced = convertToModel(res.body());
+                                synced.setUserId(userIdStr);
+                                debtLoanDao.insert(synced);
                             }
                         } catch (Exception e) {
                             android.util.Log.e("DEBT_SYNC", "sync push failed for '" + d.getPersonName() + "': " + e.getMessage());
@@ -174,13 +178,13 @@ public class DebtsRepository {
                 public void onResponse(@NonNull Call<List<DebtDto>> call, @NonNull Response<List<DebtDto>> response) {
                     if (response.isSuccessful() && response.body() != null) {
                         AppDatabase.databaseWriteExecutor.execute(() -> {
+                            if (!userIdStr.equals(tokenManager.getUserId())) return;
                             final List<DebtDto> serverDebts = response.body();
-                            final String userId = tokenManager.getUserId();
                             db.runInTransaction(() -> {
-                                debtLoanDao.deleteSyncedDebts(userId);
+                                debtLoanDao.deleteSyncedDebts(userIdStr);
                                 for (DebtDto dto : serverDebts) {
                                     DebtLoan model = convertToModel(dto);
-                                    model.setUserId(userId);
+                                    model.setUserId(userIdStr);
                                     debtLoanDao.insert(model);
                                 }
                             });

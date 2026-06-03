@@ -14,7 +14,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpStatus;
 
 @Configuration
 @EnableWebSecurity
@@ -33,6 +35,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
+            )
+            // Thiếu/sai/hết hạn token → trả 401 (Unauthorized) thay vì 403 mặc định của Spring.
+            // Client phân biệt: 401 = cần đăng nhập lại; 403 = bị từ chối quyền hợp lệ.
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

@@ -12,6 +12,7 @@
 - [Data Models](#-data-models)
 - [Luồng đồng bộ dữ liệu](#-luồng-đồng-bộ-dữ-liệu)
 - [Authentication & Security](#-authentication--security)
+- [Multi-Account Data Isolation](#-multi-account-data-isolation)
 - [Financial Engine](#-financial-engine)
 - [UI & Navigation](#-ui--navigation)
 - [API Endpoints](#-api-endpoints)
@@ -62,10 +63,10 @@
 
 | Layer | Công nghệ |
 |-------|-----------|
-| **Android** | Java, Room Database, Retrofit 2, OkHttp, Gson, LiveData, ViewModel, Navigation Component, Material Design 3 |
+| **Android** | Java, Room Database, Retrofit 2, OkHttp, Gson, LiveData, ViewModel, Navigation Component, Material Design 3, WorkManager |
 | **Backend** | Spring Boot 4.0.5, Spring Security, Spring Data JPA, Hibernate, Lombok |
 | **Database** | Neon PostgreSQL (cloud), Room SQLite (local) |
-| **Auth** | JWT (jjwt 0.12.6), BCrypt |
+| **Auth** | JWT (jjwt 0.12.6), BCrypt, EncryptedSharedPreferences |
 | **Build** | Gradle (Kotlin DSL), Java 21 |
 
 ---
@@ -76,17 +77,17 @@
 Money-Tracker-Tap-Into-Prosperity/
 ├── app/                          # Android Application
 │   └── src/main/java/vn/edu/usth/tip/
-│       ├── AppDatabase.java      # Room DB config, migrations, seed data
+│       ├── AppDatabase.java      # Room DB config, migrations (v17), seed data
 │       ├── models/               # Room Entities + DAOs
-│       │   ├── Transaction.java  # Giao dịch (EXPENSE/INCOME/TRANSFER)
-│       │   ├── Category.java     # Danh mục (expense/income)
-│       │   ├── Wallet.java       # Ví (CASH/BANK/EWALLET/INVESTMENT)
-│       │   ├── Budget.java       # Ngân sách theo kỳ
-│       │   ├── Goal.java         # Mục tiêu tiết kiệm
-│       │   ├── DebtLoan.java     # Nợ/Cho vay
-│       │   └── *Dao.java         # Data Access Objects
+│       │   ├── Transaction.java  # Giao dịch (EXPENSE/INCOME/TRANSFER) + userId
+│       │   ├── Category.java     # Danh mục (expense/income) + userId
+│       │   ├── Wallet.java       # Ví (CASH/BANK/EWALLET/INVESTMENT) + userId
+│       │   ├── Budget.java       # Ngân sách theo kỳ + userId
+│       │   ├── Goal.java         # Mục tiêu tiết kiệm + userId
+│       │   ├── DebtLoan.java     # Nợ/Cho vay + userId
+│       │   └── *Dao.java         # DAOs — tất cả queries filter by user_id
 │       ├── network/              # Retrofit API layer
-│       │   ├── RetrofitClient.java    # Base URL, interceptors, JWT
+│       │   ├── RetrofitClient.java    # Shared Dispatcher, cancelAllRequests(), JWT interceptor
 │       │   ├── AuthApi.java           # Login/Register (public)
 │       │   ├── TransactionApi.java    # CRUD + sync + recent
 │       │   ├── FinancialApi.java      # Accounts, Categories, Budgets, Goals, Debts
@@ -94,37 +95,33 @@ Money-Tracker-Tap-Into-Prosperity/
 │       │   └── responses/            # Response DTOs
 │       ├── repositories/         # Data sync logic (offline-first)
 │       │   ├── TransactionRepository.java  # Push/Pull/CRUD sync (phức tạp nhất)
-│       │   ├── WalletsRepository.java
-│       │   ├── CategoriesRepository.java
-│       │   ├── BudgetsRepository.java
-│       │   ├── GoalsRepository.java
-│       │   └── DebtsRepository.java
+│       │   ├── WalletsRepository.java      # requestUserId guard trong sync()
+│       │   ├── CategoriesRepository.java   # requestUserId guard trong sync()
+│       │   ├── BudgetsRepository.java      # deleteAllForUser + requestUserId guard
+│       │   ├── GoalsRepository.java        # requestUserId guard trong sync()
+│       │   └── DebtsRepository.java        # requestUserId guard trong sync()
 │       ├── viewmodels/           # MVVM ViewModels
-│       │   ├── AppViewModel.java          # Financial Engine chính
+│       │   ├── AppViewModel.java          # Financial Engine — queries filtered by userId
 │       │   ├── NewTransactionViewModel.java
-│       │   ├── LoginViewModel.java
+│       │   ├── LoginViewModel.java        # Singleton TokenManager
 │       │   ├── AccountViewModel.java
 │       │   └── DashboardViewModel.java
+│       ├── workers/
+│       │   └── TransactionSyncWorker.java # Background sync (WorkManager)
 │       ├── adapters/             # RecyclerView Adapters
+│       ├── insights/             # AI Insight Engine
+│       │   └── engine/           # BudgetForecaster, AnomalyDetector, PatternAnalyzer
 │       ├── ui/
-│       │   ├── activities/       # Splash, Login, Signup, Main
-│       │   └── fragments/        # Dashboard, Wallets, Transactions, Goals...
+│       │   ├── activities/       # Splash (init TokenManager), Login, Signup, Main
+│       │   └── fragments/        # Dashboard, Wallets (logout btn), Transactions, Goals...
 │       └── utils/
-│           ├── TokenManager.java # SharedPreferences JWT storage
+│           ├── TokenManager.java # EncryptedSharedPreferences JWT, singleton getOrCreate()
+│           ├── SessionManager.java # Global session expiry (401 redirect)
 │           └── SyncPrefs.java    # Server-cursor storage cho delta sync
 │
 ├── backend/                      # Spring Boot REST API
 │   └── src/main/java/vn/edu/usth/tip/backend/
-│       ├── BackendApplication.java
 │       ├── models/               # JPA Entities
-│       │   ├── User.java
-│       │   ├── Account.java      # = Wallet trên Android
-│       │   ├── Category.java
-│       │   ├── Transaction.java
-│       │   ├── Budget.java
-│       │   ├── Goal.java
-│       │   ├── Debt.java
-│       │   └── enums/            # AccountType, TransactionType, etc.
 │       ├── controllers/          # REST Controllers
 │       ├── services/             # Business logic
 │       ├── repositories/         # Spring Data JPA
@@ -162,28 +159,26 @@ Android sử dụng UPPERCASE enum, Backend sử dụng lowercase. Cần convert
 | `Transaction.Type.INCOME` | `income` |
 | `Transaction.Type.TRANSFER` | `transfer` |
 
-> ⚠️ **EWALLET → e_wallet**: Đây là gotcha lớn nhất. Room lưu `"EWALLET"`, Neon cần `"e_wallet"`. Chuyển đổi được thực hiện trong `WalletsRepository.mapTypeToNeon()` và `TransactionRepository.syncWalletToNeon()`.
+> ⚠️ **EWALLET → e_wallet**: Room lưu `"EWALLET"`, Neon cần `"e_wallet"`. Chuyển đổi tại `WalletsRepository.mapTypeToNeon()` và `WalletTypeConverter`.
 
-### UUID cố định (Seed Data)
+### Room Database Version: **18**
 
-Categories và Wallets mặc định sử dụng UUID cố định, được khai báo trong `AppDatabase.java`:
+Migration path: `7→8→9→10→11→12→13→14→15→16→17→18`
 
-```
-EXPENSE Categories:  a1000000-0000-0000-0000-00000000000X
-INCOME Categories:   b1000000-0000-0000-0000-00000000000X
-Default Wallets:     w1000000-0000-0000-0000-00000000000X
-```
+| Migration | Thay đổi |
+|-----------|---------|
+| 7→8 | Thêm `spentAmount` vào `budgets` |
+| 8→9 | Xóa data categories/wallets cũ |
+| 9→10 | ALTER TABLE thêm `color_hex`, `type`, `is_system` (categories); `balanceVnd`, `color`, `type`, `includedInTotal` (wallets) + re-seed |
+| 11→12 | Thêm `createdMs` vào `goals` |
+| 12→13 | Thêm `updatedAtMs` + `isDeleted` vào `transactions` (LWW + soft delete) |
+| 13→14 | Thêm `isRecurring` + `recurInterval` vào `transactions` |
+| 14→15 | Fix icon cho danh mục "Hóa đơn" và "Gia đình" |
+| 15→16 | Thêm `user_id` vào `categories` |
+| 16→17 | Thêm `user_id` vào `transactions`, `wallets`, `budgets`, `goals`, `debt_loans` |
+| **17→18** | **Dọn các dòng mồ côi `user_id IS NULL` ở 5 bảng trên (data cũ trước migration) — sync kéo lại từ server. Không đụng `categories` (system categories hợp lệ có NULL)** |
 
-Các UUID này **phải khớp** giữa Room và Neon để tránh duplicate khi sync.
-
-### Room Database Version: 10
-
-Migration path: `7→8→9→10`
-- **7→8**: Thêm `spentAmount` vào `budgets`
-- **8→9**: Xóa data categories/wallets cũ
-- **9→10**: ALTER TABLE thêm cột mới (`color_hex`, `type`, `is_system` cho categories; `balanceVnd`, `color`, `type`, `includedInTotal` cho wallets) + re-seed
-
-Có `fallbackToDestructiveMigration()` — nếu mất migration sẽ xóa toàn bộ DB.
+Có `fallbackToDestructiveMigration()` — nếu mất migration path sẽ xóa toàn bộ DB và tạo lại.
 
 ---
 
@@ -197,61 +192,62 @@ TransactionSyncWorker.doWork()
   ├─ Phase 1 — txRepo.fullSyncPhase1()
   │   ├─ pushUnsyncedBatchSync()    ← PUSH giao dịch offline lên server
   │   ├─ refreshCategoriesSync()    ← PULL delta categories (cursor-based)
-  │   └─ refreshAccountsSync()      ← PULL delta accounts/wallets
+  │   └─ refreshAccountsSync()      ← PULL delta accounts/wallets + stamp userId
   │
-  ├─ budgetRepo.syncDeltaBlocking() ← PULL delta budgets (sau categories)
-  ├─ goalRepo.syncDeltaBlocking()   ← PULL delta goals (sau accounts)
+  ├─ budgetRepo.syncDeltaBlocking() ← PULL delta budgets + strict userId validation
+  ├─ goalRepo.syncDeltaBlocking()   ← PULL delta goals + stamp userId
   └─ txRepo.pullDeltaTransactionsSync() ← PULL delta transactions (cuối)
 ```
 
 **Thiết kế delta sync:**
 - **Server là nguồn thời gian duy nhất.** Server trả về `syncTimestamp`; client lưu vào `SyncPrefs` và dùng làm `updatedSince` cho phiên sau.
-- **Cursor-based pagination**: `lastUpdatedAt + lastId` làm cursor thay vì OFFSET. `untilTimestamp` đóng băng tập dữ liệu từ trang đầu để tránh pagination drift.
-- **Soft delete toàn bộ entity**: Mọi entity có `deletedAt`. Khi xóa: set cả `deletedAt = now` VÀ `updatedAt = now` để query `WHERE updatedAt > :since` bắt được.
-- **LWW conflict resolution**: Client so sánh `serverUpdatedAtMs` với `local.updatedAtMs`. Server mới hơn → ghi đè local; local mới hơn → giữ local, đẩy lên ở PUSH phase sau.
-- **`db.runInTransaction()`** bọc toàn bộ write của mỗi trang — atomic, không ở trạng thái nửa vời.
+- **Cursor-based pagination**: `lastUpdatedAt + lastId` làm cursor. `untilTimestamp` đóng băng tập dữ liệu từ trang đầu để tránh pagination drift.
+- **Soft delete toàn bộ entity**: Mọi entity có `deletedAt`. Khi xóa: set cả `deletedAt = now` VÀ `updatedAt = now`.
+- **LWW conflict resolution**: So sánh `serverUpdatedAtMs` với `local.updatedAtMs`. Server mới hơn → ghi đè; local mới hơn → giữ, đẩy lên ở PUSH phase sau.
+- **`db.runInTransaction()`** bọc toàn bộ write của mỗi trang — atomic.
 - **Thứ tự PULL theo FK dependency**: categories → accounts → budgets → goals → transactions.
 
-### 2. Transaction Sync (real-time, từng giao dịch)
+### 2. Repository Async Sync — Stale Response Guard
+
+Tất cả các `sync()` method dùng `enqueue()` (async Retrofit) đều áp dụng pattern:
+
+```java
+// Capture userId TẠI THỜI ĐIỂM GỬI REQUEST
+final String requestUserId = tokenManager.getUserId();
+
+financialApi.getAllBudgets().enqueue(new Callback<>() {
+    public void onResponse(...) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            // Guard: bỏ qua response cũ nếu user đã đổi tài khoản
+            if (!requestUserId.equals(tokenManager.getUserId())) return;
+            ...
+        });
+    }
+});
+```
+
+Điều này ngăn race condition: response của user A không thể ghi dữ liệu vào DB của user B kể cả khi về muộn sau khi B đã đăng nhập.
+
+### 3. Transaction Sync (real-time, từng giao dịch)
 
 ```
 addTransactionOnline() / updateTransactionOnline()
-  ├─ Ghi vào Room ngay (isSynced=true)
+  ├─ Ghi vào Room ngay (isSynced=true, userId stamped)
   ├─ resolveAccountId() / resolveCategoryId()
   └─ POST /api/transactions hoặc PUT /api/transactions/{id}
-     └─ onSuccess: replace Room record với server version (UUID thật)
+     └─ onSuccess: replace Room record với server version (UUID thật, userId preserved)
      └─ onFailure:  revertToUnsynced() → isSynced=false → Worker sẽ push sau
 ```
 
-**Quy tắc quan trọng:**
-- `amount` luôn gửi **giá trị dương** (abs). `type` xác định chiều (income/expense/transfer).
-- Server có CHECK constraint `amount > 0`.
-- `createdAt` giữ nguyên thời gian gốc từ client khi batch sync.
-
-### 3. Wallet/Category Auto-resolve
-
-- **Auto-resolve**: Khi tạo transaction mà wallet/category chỉ có local ID → tự động sync lên Neon trước, nhận UUID → dùng UUID đó.
-- **Dedup logic**: Khi pull wallets/categories, nếu tìm thấy record cùng tên nhưng khác ID → xóa bản cũ, insert bản mới.
-
 ### 4. Optimistic UI
-
-Dashboard hiển thị **optimistic data**: số liệu từ PostgreSQL + các giao dịch chưa sync (isSynced=false) để UI luôn phản ánh hành động user ngay lập tức.
 
 ```
 Optimistic Balance = Server Balance + Σ(unsyncedIncome) - Σ(unsyncedExpense)
 ```
 
-### 4. Self-Healing Categories
+### 5. Self-Healing Categories
 
-`AppViewModel` observe danh sách categories. Nếu trống → tự động seed lại default categories:
-
-```java
-categoriesLiveData.observeForever(categories -> {
-    if (categories == null || categories.isEmpty()) {
-        initializeDefaultCategories();
-    }
-});
-```
+`AppViewModel` observe danh sách categories. Nếu trống → tự động seed lại nút "Thêm" mặc định.
 
 ---
 
@@ -260,27 +256,104 @@ categoriesLiveData.observeForever(categories -> {
 ### Flow đăng nhập
 
 ```
-LoginActivity → POST /api/auth/login → JWT token
-  │
-  ├─ TokenManager.saveAuthData(token, fullName, userId)
-  └─ Navigate to MainActivity
+SplashActivity → TokenManager.getOrCreate()  ← khởi tạo singleton trên Main Thread
+     │
+     └─ LoginActivity → POST /api/auth/login → JWT token
+           │
+           ├─ TokenManager.getOrCreate().saveAuthData(token, fullName, userId)
+           ├─ clearAllTables() nếu khác user (hoặc noCredentials)
+           └─ Navigate to MainActivity
 ```
 
-### JWT Management
+### TokenManager — Singleton, EncryptedSharedPreferences
 
-- **Storage**: `SharedPreferences` ("AuthPrefs") — lưu `jwt_token`, `user_full_name`, `user_id`
-- **Injection**: `RetrofitClient` interceptor tự thêm `Authorization: Bearer <token>` vào mọi request
-- **Auto-logout**: Khi nhận 401/403 → `TokenManager.clear()` → navigate về Login
-- **Session monitoring**: `AccountViewModel` observe `sessionExpired` LiveData → `MainActivity` xử lý redirect
-- **Lưu ý: Token vẫn còn tồn tại trong SharedPreferences sau khi logout, cần làm rõ khi nào cần xóa, mã hoá chuỗi JWT**
+- **Storage**: `EncryptedSharedPreferences` ("AuthPrefs") — mã hóa `jwt_token`, `user_full_name`, `user_id` bằng AES256-GCM + AES256-SIV
+- **Singleton pattern**: `TokenManager.getOrCreate(context)` — double-checked locking, `volatile`. Phải tạo trên Main Thread (lần đầu, trong `SplashActivity`) vì EncryptedSharedPreferences truy cập Android Keystore.
+- **In-memory cache**: `cachedToken`, `cachedUserId`, `cachedFullName` — đọc từ disk một lần, sau đó serve từ cache. Background threads (OkHttp interceptor, Worker) đọc cache, không truy cập Keystore.
+- **Fallback**: Nếu EncryptedSharedPreferences bị corrupt → xóa file + tạo lại. Nếu Keystore không khả dụng → fallback sang plain `SharedPreferences`.
+
+### JWT Injection & 401 Handling
+
+- `RetrofitClient` interceptor tự thêm `Authorization: Bearer <token>` vào mọi request
+- **Chỉ HTTP 401** kích hoạt session expiry — HTTP 403 là lỗi phân quyền hợp lệ, không phải token hết hạn
+- Khi 401: `TokenManager.clear()` → `SessionManager.triggerSessionExpired()`
+- `MainActivity.setupSessionExpiry()` observe event → `clearAllTables()` + navigate về Login
+
+### Logout Flow
+
+```
+Logout button (WalletManagementFragment)
+  │
+  ├─ Hiện ProgressDialog (chặn UI trong khi xóa DB)
+  ├─ RetrofitClient.cancelAllRequests()  ← hủy TẤT CẢ request đang bay
+  ├─ WorkManager.cancelUniqueWork("TxSync")
+  ├─ [background] clearAllTables() + SyncPrefs.clearAll()
+  └─ [main thread] pd.dismiss() → TokenManager.clear() → navigate LoginActivity (CLEAR_TASK)
+```
 
 ### Backend Security
 
 - `/api/auth/**` — public (login, register)
 - Tất cả endpoint khác — yêu cầu JWT hợp lệ
-- Stateless session (CSRF disabled)
-- BCrypt password encoding
-- **JWT chưa được mã hoá**
+- Stateless session (CSRF disabled), BCrypt password encoding
+
+---
+
+## 🔒 Multi-Account Data Isolation
+
+Đảm bảo dữ liệu của từng tài khoản hoàn toàn tách biệt. Được triển khai theo 4 lớp:
+
+### Lớp 1: Schema — `user_id` trên tất cả entities
+
+Migration 16→17 thêm cột `user_id TEXT` vào 5 bảng. Tất cả DAOs dùng `WHERE user_id = :userId`:
+
+```sql
+-- Ví dụ: TransactionDao
+SELECT * FROM transactions WHERE isDeleted = 0 AND user_id = :userId ORDER BY timestampMs DESC
+```
+
+Nếu `userId = null` (chưa đăng nhập), query trả về rỗng.
+
+### Lớp 2: Write — Stamp userId khi ghi vào Room
+
+Mọi path ghi dữ liệu đều đặt `userId` trước khi insert:
+
+- **User actions** (`AppViewModel.addBudget/addGoal/addDebtLoan/addWallet/addTransaction`): set `entity.setUserId(TokenManager.getOrCreate(...).getUserId())` trước `insert()`
+- **Server sync** (tất cả `convertToModel()` + `sync()` methods): `b.setUserId(requestUserId)` trước `budgetDao.insert(b)`
+
+### Lớp 3: Async Guard — Stale response bị loại bỏ
+
+Xem mục **Repository Async Sync** ở trên.
+
+### Lớp 4: Account Switch — Xóa DB + Cancel requests
+
+Khi user đổi tài khoản (Login phát hiện `userChanged || noCredentials`):
+
+```java
+RetrofitClient.cancelAllRequests();          // abort in-flight HTTP
+WorkManager.cancelUniqueWork("TxSync");      // stop pending worker
+clearAllTables();                            // wipe entire Room DB
+SyncPrefs.clearAll();                        // reset delta cursors
+TokenManager.saveAuthData(newUser);          // update singleton
+// → navigate to new MainActivity (fresh AppViewModel, fresh LiveData)
+```
+
+`AppViewModel` tạo mới với `currentUserId` mới → `budgetsLiveData = getAllBudgets(newUserId)` → chỉ thấy data của user mới.
+
+### Shared OkHttp Dispatcher
+
+`RetrofitClient` dùng một `Dispatcher` chung cho tất cả `createService()` và `createAiInsightService()`:
+
+```java
+private static final okhttp3.Dispatcher sharedDispatcher = new okhttp3.Dispatcher();
+
+public static void cancelAllRequests() {
+    sharedDispatcher.cancelAll();  // hủy tất cả request đang bay tại tầng HTTP
+}
+```
+
+Auth API (`getAuthApi()`) dùng client riêng — không bị cancel.
+
 ---
 
 ## ⚙️ Financial Engine
@@ -289,7 +362,7 @@ LoginActivity → POST /api/auth/login → JWT token
 
 ### Engine State (MediatorLiveData)
 
-Lắng nghe: `transactions` + `wallets` + `totalIOwe` + `totalOwedToMe`
+Lắng nghe: `transactions(userId)` + `wallets(userId)` + `totalIOwe(userId)` + `totalOwedToMe(userId)`
 
 ```
 totalAssets  = Σ wallet.balanceVnd (where includedInTotal=true)
@@ -301,12 +374,21 @@ mTransfer    = Σ transfer transactions (tháng hiện tại)
 
 ### Budget Engine (MediatorLiveData)
 
-Lắng nghe: `transactions` + `budgets`
+Lắng nghe: `transactions(userId)` + `budgets(userId)`
 
 ```
 Với mỗi Budget:
-  spentAmount = budget.spentAmount + Σ(expense tx trong kỳ, cùng categoryName)
+  spentAmount = budget.spentAmount (server) + Σ(expense tx chưa sync, trong kỳ, cùng categoryName)
 ```
+
+### Insight Engine
+
+`InsightEngine.analyzeAll(userId)` nhận `userId` và pass xuống tất cả DAO queries:
+- `BudgetForecaster`: OLS regression dự báo chi tiêu
+- `AnomalyDetector`: Z-score phát hiện bất thường
+- `PatternAnalyzer`: Xu hướng chi tiêu theo ngày trong tuần
+- `GoalAdvisor`: Tư vấn tốc độ tích lũy
+- `DebtLoanAdvisor`: Nhắc nhở hạn nợ
 
 ---
 
@@ -325,23 +407,22 @@ SplashActivity → LoginActivity → MainActivity
                 │               │    ├─ GoalsFragment
                 │               │    ├─ BudgetsFragment
                 │               │    └─ DebtsLoansFragment
-                │               └─ Profile
+                │               └─ WalletManagement (có nút Đăng xuất)
                 │
-                ├─ WalletManagement
                 ├─ AllTransactions
                 └─ ScanReceipt
 ```
 
 ### Bottom Navigation
 
-5 tabs: Dashboard | Analytics | **[FAB]** | Goals (dropdown) | Profile
+4 tabs: Dashboard | Analytics | Goals (dropdown) | WalletManagement
 
-Goals tab hiển thị popup menu với 3 lựa chọn: Goals, Budgets, Debts & Loans.
+- **WalletManagement** có nút **Đăng xuất** ở toolbar (thay thế hiển thị số dư cũ)
 
 ### Bottom Sheets
 
 - `AddWalletBottomSheet` / `EditWalletBottomSheet` — CRUD ví
-- `AddBudgetSheet` — Tạo ngân sách
+- `AddBudgetSheet` — Tạo/sửa ngân sách
 - `AddDebtSheet` — Tạo nợ/cho vay
 - `AddGoalSheet` — Tạo mục tiêu
 - `AddCategorySheet` — Tạo danh mục
@@ -394,34 +475,41 @@ Goals tab hiển thị popup menu với 3 lựa chọn: Goals, Budgets, Debts & 
 
 ### Kết nối
 
-- **Base URL**: `http://10.0.2.2:8080/api/` (Android Emulator → localhost)
-- **Logging**: `HttpLoggingInterceptor.Level.BODY`
+- **Base URL**: `https://aviation-skincare-undertone.ngrok-free.dev/api/` (ngrok tunnel)
+- **Logging**: `HttpLoggingInterceptor.Level.HEADERS` (chỉ bật trên `BuildConfig.DEBUG`)
 
 ---
 
 ## ⚠️ Gotchas & Known Issues
 
-### 1. EWALLET ↔ e_wallet Enum Mismatch
-Room lưu `"EWALLET"`, Neon cần `"e_wallet"`. Convert tại `WalletsRepository.mapTypeToNeon()`. ✅ ok
+### 1. EWALLET ↔ e_wallet Enum Mismatch ✅
+Room lưu `"EWALLET"`, Neon cần `"e_wallet"`. Convert tại `WalletTypeConverter`.
 
-### 2. Amount luôn dương
-Server có `CHECK(amount > 0)`. Android phải gửi `Math.abs(amountVnd)`. Type field xác định chiều. ✅ ok
+### 2. Amount luôn dương ✅
+Server có `CHECK(amount > 0)`. Android phải gửi `Math.abs(amountVnd)`. `type` xác định chiều.
 
-### 3. Wallet = Account
-Android gọi là "Wallet", Backend gọi là "Account". Mapping 1:1, nhưng field names khác nhau. ✅ ok
+### 3. Wallet = Account ✅
+Android gọi là "Wallet", Backend gọi là "Account". Mapping 1:1.
 
-### 4. Category field naming
-- Room: `color_hex`, `is_system` (snake_case trong DB, camelCase trong Java)
-- Dùng `@ColumnInfo(name = "color_hex")` để map. ✅ ok
+### 4. TokenManager chỉ khởi tạo trên Main Thread ✅
+Lần đầu gọi `TokenManager.getOrCreate()` phải trên Main Thread (trong `SplashActivity`) vì EncryptedSharedPreferences truy cập Android Keystore — Keystore có thể throw `SecurityException` nếu gọi từ background thread. Sau lần đầu, các lần gọi tiếp theo trên bất kỳ thread nào chỉ return cached instance, an toàn.
 
-### 5. Transaction sync reset
-~~`syncTransactions()` luôn gọi `resetSyncStatus()` trước~~ — ✅ Đã sửa. `syncTransactions()` hiện chỉ push records có `isSynced=false` (incremental), không reset toàn bộ.
+### 5. 401 vs 403 ✅
+Chỉ **HTTP 401** kích hoạt session expiry + `TokenManager.clear()`. HTTP 403 là lỗi phân quyền hợp lệ (resource không thuộc user), không phải token hết hạn.
 
-### 6. UUID validation
-Khi resolve accountId/categoryId, nếu ID local không phải UUID → tự sync entity lên Neon để nhận UUID thật. ✅ ok
+### 6. Stale Response Race Condition ✅
+Khi user đổi tài khoản trong khi có API call đang in-flight:
+- `RetrofitClient.cancelAllRequests()` hủy tại tầng HTTP ngay lập tức
+- Stale response guard (`requestUserId.equals(tokenManager.getUserId())`) là safety net thứ 2
 
-### 7. DebtLoan types
-Dùng int constants (`TYPE_I_OWE = 0`, `TYPE_LENT = 1`), không dùng enum. ✅ ok
+### 7. Fragment Lifecycle trong performLogout() ✅
+`performLogout()` gọi `clearAllTables()` trên background thread (~50–200ms). Nếu Fragment bị detach trước khi hoàn tất (xoay màn hình), handler check `isAdded() && !isDetached() && getActivity() != null` trước khi dismiss dialog và navigate.
+
+### 8. UUID validation ✅
+Khi resolve accountId/categoryId, nếu ID local không phải UUID → tự sync entity lên Neon để nhận UUID thật.
+
+### 9. DebtLoan types ✅
+Dùng int constants (`TYPE_I_OWE = 0`, `TYPE_LENT = 1`), không dùng enum.
 
 ---
 
@@ -429,30 +517,32 @@ Dùng int constants (`TYPE_I_OWE = 0`, `TYPE_LENT = 1`), không dùng enum. ✅ 
 
 ### Ngắn hạn (Priority)
 
-- [x] **Incremental Sync**: Thay vì reset toàn bộ sync status, chỉ push records thực sự mới/thay đổi ✅ ok — `resetSyncStatus()` đã bị loại bỏ, `syncTransactions()` chỉ push `isSynced=false`
-- [x] **Conflict Resolution**: Xử lý trường hợp cùng 1 record bị sửa cả offline lẫn online ✅ ok — đã implement LWW (Last Writer Wins) với `updatedAtMs` + `shouldSkipServerVersion()` trên Android và `clientUpdatedAt` LWW logic trên Backend (`TransactionService`), migration 12→13 thêm `updatedAtMs` + `isDeleted`
-- [x] **Error Handling cải thiện**: ✅ ok — Toàn bộ `onFailure`/`onResponse` đã có log + revert (không còn callback bỏ trống). 8 cải tiến kiến trúc đã deploy: `Event<T>` wrapper (chống set-then-clear LiveData anti-pattern), `SessionManager` singleton (global 401/403 redirect thay vì per-repo), `TokenManager` thread-safe (inline Editor), HTTP logging chỉ bật trên `BuildConfig.DEBUG`, `db.runInTransaction()` cho toàn bộ batch pull (atomicity — all-or-nothing), xóa 404→addOnline resurrection (`GoalsRepository`, `DebtsRepository`), `isSaving` guard chống rapid double-tap, `NetworkUtils` fail-fast khi mất mạng trước khi gọi sync
-- [x] **Pull-to-Refresh**: Cho phép user manual sync từ Dashboard ✅ ok — `SwipeRefreshLayout` đã implement ở Dashboard và AllTransactions
-- [x] **Recurring Transactions**: Backend đã có `isRecurring` + `recurInterval` và Android đã implement ✅ ok — `NewTransactionFragment.setupRecurring()` có SwitchMaterial + Spinner (DAILY/WEEKLY/MONTHLY/YEARLY), `NewTransactionViewModel` lưu state, `Transaction` entity có field, migration 13→14 thêm cột, `TransactionAdapter` hiển thị badge, sync đầy đủ qua `SyncBatchRequest`
-- [x] **Receipt Scanning**: `ScanReceiptFragment` + `ExtractInvoiceFragment` đã có shell, cần tích hợp OCR ✅ ok — đã tích hợp CameraX + ML Kit OCR + `InvoiceApi` + `InvoiceParser`
+- [x] **Incremental Sync**: Chỉ push `isSynced=false` records ✅
+- [x] **Conflict Resolution**: LWW với `updatedAtMs` ✅
+- [x] **Error Handling**: `SessionManager` singleton, `Event<T>` wrapper, `NetworkUtils` fail-fast ✅
+- [x] **Pull-to-Refresh**: `SwipeRefreshLayout` trên Dashboard và AllTransactions ✅
+- [x] **Recurring Transactions**: `isRecurring` + `recurInterval`, badge trên adapter ✅
+- [x] **Receipt Scanning**: CameraX + ML Kit OCR + `InvoiceApi` ✅
+- [x] **Multi-Account Data Isolation**: `user_id` trên tất cả entities, DAO filter, stale response guard, cancel in-flight requests ✅
 
 ### Trung hạn
 
-- [x] **Multi-currency Support**: Backend có `currencyCode` (default VND), cần mở rộng UI ✅ ok — `Transaction` entity có `currencyCode`, `Wallet` entity có `currencyCode` mặc định VND
-- [x] **Analytics Charts**: `AnalyticsFragment` hiện còn basic, cần biểu đồ (MPAndroidChart) ✅ ok — MPAndroidChart đã implement: BarChart (Analytics), PieChart (SpendingByCategory)
-- [x] **Budget Auto-Calculate**: Tự tính `spentAmount` từ transactions thay vì nhập tay ✅ ok — `AppViewModel.calculateBudgets()` (Budget Engine) tự tính `spentAmount` = server `spentAmount` + Σ(expense tx chưa sync trong kỳ, cùng categoryName), kết quả qua `BudgetWithSpent` LiveData → `BudgetAdapter` hiển thị
-- [ ] **Export Data**: Xuất CSV/PDF báo cáo tài chính ⚠️ chưa xử lý — không có file nào liên quan, chưa bắt đầu
-- [ ] **Dark Mode**: Hỗ trợ theme tối ⚠️ chưa tùy chỉnh — app dùng `Theme.Material3.DayNight.NoActionBar` nên tự follow dark mode hệ thống, nhưng `values-night/themes.xml` chỉ có 7 dòng placeholder, chưa override màu nào
-- [ ] **Notification System**: Push notification ⚠️ chưa xử lý — `NotificationBottomSheet.java` (24 dòng) chỉ inflate layout; layout hardcode 2 item mẫu; không có FCM, không có `google-services.json`, không có Firebase dependency
-- [ ] **Profile Management**: `ProfileFragment` hiện còn skeleton ⚠️ chưa xử lý — `ProfileFragment.java` (25 dòng) chỉ inflate layout; `fragment_profile.xml` chỉ có 1 TextView "Profile Fragment", không có UI hay logic nào
-- [ ] **Cloud Deployment (Koyeb)**: Deploy backend lên Koyeb thay vì localhost ⚠️ đã có kế hoạch, chưa thực hiện — cần: externalize secrets ra env vars, tạo Dockerfile multi-stage (eclipse-temurin:21), cấu hình `server.port=${PORT:8080}`, cập nhật BASE_URL trên Android từ `10.0.2.2:8080` sang domain Koyeb
-- [x] **Multi-device Sync**: Đồng bộ dữ liệu giữa nhiều thiết bị cùng tài khoản ✅ ok — đã implement đầy đủ: soft delete (`deletedAt`) trên tất cả 6 entity; `updatedAt` cho Category; `DeltaResponse<T>` DTO dùng chung; endpoint `/delta` (cursor-based, `Slice<T>`, không `COUNT(*)`) trên tất cả 6 controller; `SyncPrefs.java` lưu server cursor; `getDelta()` trong Retrofit API; `TransactionSyncWorker` pull theo đúng thứ tự FK (categories → accounts → budgets → goals → transactions); LWW conflict resolution (`serverTs > localTs` → server thắng; local mới hơn → giữ local); `db.runInTransaction()` atomic mỗi page
+- [x] **Multi-currency Support**: `currencyCode` field (default VND) ✅
+- [x] **Analytics Charts**: MPAndroidChart (BarChart, PieChart) ✅
+- [x] **Budget Auto-Calculate**: `BudgetWithSpent` LiveData từ Engine ✅
+- [x] **Multi-device Sync**: Delta sync, soft delete, LWW, `TransactionSyncWorker` ✅
+- [x] **Widget**: `BalanceWidgetProvider` — tổng tài sản, tài sản ròng, 3 giao dịch gần nhất ✅
+- [x] **AI Insights**: `InsightEngine` (OLS, Z-score, EWMA) + AI API backend ✅
+- [ ] **Export Data**: Xuất CSV/PDF ⚠️ chưa bắt đầu
+- [ ] **Dark Mode**: `values-night/themes.xml` chỉ là placeholder, chưa override màu ⚠️
+- [ ] **Notification System**: `NotificationBottomSheet` chỉ là shell, chưa có FCM ⚠️
+- [ ] **Profile Management**: `ProfileFragment` chỉ inflate layout, chưa có UI ⚠️
+- [ ] **Cloud Deployment**: Backend vẫn dùng ngrok tunnel, chưa deploy Koyeb ⚠️
 
 ### Dài hạn
 
-- [ ] **Real-time Sync**: WebSocket/SSE thay vì polling ⚠️ chưa xử lý
-- [x] **Widget**: Home screen widget hiển thị số dư ✅ ok — BalanceWidgetProvider hiển thị tổng tài sản + tài sản ròng, nút "+" mở thêm giao dịch nhanh, tự cập nhật khi có thay đổi dữ liệu
-- [x] **AI Insights**: Phân tích chi tiêu, gợi ý tiết kiệm ✅ ok — InsightEngine đầy đủ (BudgetForecaster/OLS, AnomalyDetector/Z-score, PatternAnalyzer, GoalAdvisor/EWMA), LineChart dự báo, tích hợp AI API backend
+- [ ] **Real-time Sync**: WebSocket/SSE thay vì polling ⚠️
+- [ ] **Google Login**: `SocialLoginButton` có nhưng chưa implement OAuth ⚠️
 
 ---
 
@@ -467,8 +557,8 @@ Cần cấu hình `application.properties` với Neon PostgreSQL connection stri
 
 ### Android
 1. Mở project bằng Android Studio
-2. Đảm bảo backend đang chạy trên port 8080
-3. Chạy trên emulator (base URL sử dụng `10.0.2.2`)
+2. Cập nhật `BASE_URL` trong `RetrofitClient.java` nếu cần
+3. Chạy trên emulator hoặc thiết bị thật
 
 ---
 

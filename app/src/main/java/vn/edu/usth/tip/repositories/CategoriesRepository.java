@@ -128,11 +128,14 @@ public class CategoriesRepository {
             callback.onError("Không có kết nối internet");
             return;
         }
+        final String requestUserId = tokenManager.getUserId();
+        if (requestUserId == null) { callback.onError("Not logged in"); return; }
         financialApi.getAllCategories().enqueue(new Callback<List<CategoryDto>>() {
             @Override
             public void onResponse(@NonNull Call<List<CategoryDto>> call, @NonNull Response<List<CategoryDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
+                        if (!requestUserId.equals(tokenManager.getUserId())) return;
                         List<Category> localCategories = categoryDao.getAllCategoriesSync();
                         List<CategoryDto> serverCategories = new java.util.ArrayList<>(response.body());
 
@@ -152,11 +155,10 @@ public class CategoriesRepository {
                             }
                             if (!foundOnServer) {
                                 try {
-                                    String userId = tokenManager.getUserId();
-                                    if (userId != null) {
+                                    if (requestUserId != null) {
                                         FinancialRequests.CreateCategoryRequest req =
                                             new FinancialRequests.CreateCategoryRequest(
-                                                UUID.fromString(userId),
+                                                UUID.fromString(requestUserId),
                                                 local.getName(),
                                                 local.getType() != null ? local.getType() : "expense",
                                                 local.getIcon(),

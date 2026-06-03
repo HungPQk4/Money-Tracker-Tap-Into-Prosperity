@@ -261,6 +261,10 @@ public class MainActivity extends AppCompatActivity {
             // Clear DB + cursors on background thread so the next login always starts
             // from a completely clean state, regardless of which account logs in next.
             android.content.Context appCtx = getApplicationContext();
+            // Huỷ tất cả request đang bay ngay lập tức (tránh zombie response).
+            vn.edu.usth.tip.network.RetrofitClient.cancelAllRequests();
+            // Cancel pending sync worker trước khi xóa DB.
+            androidx.work.WorkManager.getInstance(appCtx).cancelUniqueWork("TxSync");
             AppDatabase.databaseWriteExecutor.execute(() -> {
                 AppDatabase.getDatabase(appCtx).clearAllTables();
                 SyncPrefs.clearAll(appCtx);

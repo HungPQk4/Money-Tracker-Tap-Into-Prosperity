@@ -799,14 +799,16 @@ public class TransactionRepository {
                             }
                         }
                     }
-                    categoryDao.insert(new Category(
+                    Category cat = new Category(
                             dto.getId().toString(),
                             dto.getName(),
                             dto.getIcon() != null ? dto.getIcon() : "📂",
                             dto.getColorHex() != null ? dto.getColorHex() : "#6C5CE7",
                             dto.getType() != null ? dto.getType() : "expense",
-                            true, false
-                    ));
+                            Boolean.TRUE.equals(dto.getIsSystem()), false
+                    );
+                    cat.setUserId(dto.getUserId() != null ? dto.getUserId().toString() : null);
+                    categoryDao.insert(cat);
                 }
             }
         } catch (Exception e) {
@@ -1028,14 +1030,16 @@ public class TransactionRepository {
                             if (dto.getId() != null) categoryDao.deleteById(dto.getId().toString());
                             continue;
                         }
-                        categoryDao.insert(new Category(
+                        Category cat = new Category(
                                 dto.getId().toString(),
                                 dto.getName(),
                                 dto.getIcon()     != null ? dto.getIcon()     : "📂",
                                 dto.getColorHex() != null ? dto.getColorHex() : "#6C5CE7",
                                 dto.getType()     != null ? dto.getType()     : "expense",
-                                true, false
-                        ));
+                                Boolean.TRUE.equals(dto.getIsSystem()), false
+                        );
+                        cat.setUserId(dto.getUserId() != null ? dto.getUserId().toString() : null);
+                        categoryDao.insert(cat);
                     }
                 });
             }

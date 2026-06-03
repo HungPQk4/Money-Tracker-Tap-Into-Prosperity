@@ -31,7 +31,7 @@ import vn.edu.usth.tip.models.GoalDao;
 @Database(
         entities = {Transaction.class, Category.class, Wallet.class,
                 Budget.class, DebtLoan.class, Goal.class},
-        version = 17,
+        version = 18,
         exportSchema = false
 )
 @TypeConverters({Converters.class})
@@ -86,7 +86,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "money_tracker_database")
-                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                             .fallbackToDestructiveMigration()
                             .addCallback(sRoomDatabaseCallback)
                             .build();
@@ -129,6 +129,22 @@ public abstract class AppDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE budgets ADD COLUMN user_id TEXT");
             database.execSQL("ALTER TABLE goals ADD COLUMN user_id TEXT");
             database.execSQL("ALTER TABLE debt_loans ADD COLUMN user_id TEXT");
+        }
+    };
+
+    // 17→18: dọn các dòng mồ côi (user_id IS NULL) còn sót sau migration 16→17.
+    // Các dòng này là dữ liệu cũ tạo trước khi có user_id — không thể gán cho user nào
+    // một cách an toàn (có thể thuộc bất kỳ tài khoản nào từng đăng nhập trên máy).
+    // Xóa đi rồi để sync kéo lại từ server với user_id đúng.
+    // KHÔNG xóa NULL trong 'categories' — system categories hợp lệ có user_id IS NULL.
+    static final Migration MIGRATION_17_18 = new Migration(17, 18) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("DELETE FROM transactions WHERE user_id IS NULL");
+            database.execSQL("DELETE FROM wallets WHERE user_id IS NULL");
+            database.execSQL("DELETE FROM budgets WHERE user_id IS NULL");
+            database.execSQL("DELETE FROM goals WHERE user_id IS NULL");
+            database.execSQL("DELETE FROM debt_loans WHERE user_id IS NULL");
         }
     };
 

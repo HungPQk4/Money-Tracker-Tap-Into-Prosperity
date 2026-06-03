@@ -119,18 +119,20 @@ public class WalletsRepository {
             callback.onError("Không có kết nối internet");
             return;
         }
+        final String requestUserId = tokenManager.getUserId();
+        if (requestUserId == null) { callback.onError("Not logged in"); return; }
         financialApi.getAllAccounts().enqueue(new Callback<List<AccountDto>>() {
             @Override
             public void onResponse(@NonNull Call<List<AccountDto>> call, @NonNull Response<List<AccountDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
+                        if (!requestUserId.equals(tokenManager.getUserId())) return;
                         final List<AccountDto> serverAccounts = response.body();
-                        final String userId = tokenManager.getUserId();
                         db.runInTransaction(() -> {
                             for (AccountDto dto : serverAccounts) {
                                 Wallet incoming = convertToModel(dto);
-                                incoming.setUserId(userId);
-                                Wallet existing = walletDao.findByNameSync(dto.getName(), userId);
+                                incoming.setUserId(requestUserId);
+                                Wallet existing = walletDao.findByNameSync(dto.getName(), requestUserId);
                                 if (existing != null && !existing.getId().equals(incoming.getId())) {
                                     walletDao.delete(existing);
                                 }

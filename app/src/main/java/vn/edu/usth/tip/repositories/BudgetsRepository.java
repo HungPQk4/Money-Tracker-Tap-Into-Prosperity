@@ -160,25 +160,27 @@ public class BudgetsRepository {
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Không có kết nối internet"));
             return;
         }
-        // Dùng enqueue (async) giống Goals/Debts — trust JWT filter của server
+        // Capture userId tại thời điểm gửi request — không đọc lại trong callback
+        // để tránh race condition khi user đổi tài khoản trong khi response còn in-flight.
+        final String requestUserId = tokenManager.getUserId();
+        if (requestUserId == null) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("Not logged in"));
+            return;
+        }
         financialApi.getAllBudgets().enqueue(new Callback<List<BudgetDto>>() {
             @Override
             public void onResponse(@NonNull Call<List<BudgetDto>> call,
                                    @NonNull Response<List<BudgetDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     AppDatabase.databaseWriteExecutor.execute(() -> {
-                        final String userId = tokenManager.getUserId();
-                        if (userId == null) {
-                            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError("UserId is null"));
-                            return;
-                        }
+                        // Guard: bỏ qua nếu user đã đổi kể từ khi gửi request
+                        if (!requestUserId.equals(tokenManager.getUserId())) return;
                         final List<BudgetDto> serverBudgets = response.body();
-                        // Delete-before-insert: xóa data cũ rồi insert sạch từ server
                         db.runInTransaction(() -> {
-                            budgetDao.deleteAllForUser(userId);
+                            budgetDao.deleteAllForUser(requestUserId);
                             for (BudgetDto dto : serverBudgets) {
                                 Budget b = convertToModel(dto);
-                                b.setUserId(userId);
+                                b.setUserId(requestUserId);
                                 budgetDao.insert(b);
                             }
                         });
@@ -258,14 +260,16 @@ public class BudgetsRepository {
                             }
                         }
                     }
-                    categoryDao.insert(new Category(
+                    Category cat = new Category(
                             dto.getId().toString(),
                             dto.getName(),
                             dto.getIcon() != null ? dto.getIcon() : "📂",
                             dto.getColorHex() != null ? dto.getColorHex() : "#6C5CE7",
                             dto.getType() != null ? dto.getType() : "expense",
-                            true, false
-                    ));
+                            Boolean.TRUE.equals(dto.getIsSystem()), false
+                    );
+                    cat.setUserId(dto.getUserId() != null ? dto.getUserId().toString() : null);
+                    categoryDao.insert(cat);
                 }
                 android.util.Log.d("BUDGET_SYNC", "Synced " + resp.body().size() + " categories from server.");
             }
