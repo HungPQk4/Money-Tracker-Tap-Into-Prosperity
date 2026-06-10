@@ -12,10 +12,13 @@ import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.Account;
 import vn.edu.usth.tip.backend.models.User;
 import vn.edu.usth.tip.backend.repositories.AccountRepository;
+import vn.edu.usth.tip.backend.repositories.TransactionRepository;
 import vn.edu.usth.tip.backend.utils.SecurityUtils;
 import vn.edu.usth.tip.backend.utils.SyncConstants;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,6 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AccountService {
     private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
     private final SecurityUtils securityUtils;
 
     @Transactional(readOnly = true)
@@ -132,5 +136,46 @@ public class AccountService {
                 slice.getContent().stream().map(this::toResponse).toList(),
                 slice.hasNext(),
                 until.toString());
+    }
+
+    // ─── Reconciliation: tính lại số dư từ giao dịch (chống trôi lệch đa thiết bị) ──
+
+    /**
+     * Tính lại số dư một ví = Σ(thu) − Σ(chi + chuyển) từ các giao dịch chưa xóa.
+     * Số dư là counter cộng dồn nên không an toàn dưới LWW khi nhiều thiết bị cùng sửa;
+     * gọi hàm này để đưa số dư về đúng tổng giao dịch.
+     */
+    @Transactional
+    public AccountResponse reconcileBalance(UUID accountId) {
+        User user = securityUtils.getCurrentUser();
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "id", accountId.toString()));
+        if (!account.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Bạn không có quyền truy cập ví này");
+        }
+        applyReconciledBalance(account);
+        return toResponse(account);
+    }
+
+    /** Tính lại số dư cho TẤT CẢ ví của user hiện tại. */
+    @Transactional
+    public List<AccountResponse> reconcileAllBalances() {
+        User user = securityUtils.getCurrentUser();
+        List<AccountResponse> result = new ArrayList<>();
+        for (Account account : accountRepository.findByUserId(user.getId())) {
+            applyReconciledBalance(account);
+            result.add(toResponse(account));
+        }
+        return result;
+    }
+
+    private void applyReconciledBalance(Account account) {
+        BigDecimal computed = transactionRepository.computeBalanceForAccount(account.getId());
+        if (computed == null) computed = BigDecimal.ZERO;
+        // Chỉ ghi khi lệch → tránh bump updatedAt thừa (đỡ tạo delta vô ích).
+        if (account.getBalance() == null || account.getBalance().compareTo(computed) != 0) {
+            account.setBalance(computed);
+            accountRepository.save(account); // @PreUpdate bump updatedAt → đẩy số dư đúng về client qua delta
+        }
     }
 }

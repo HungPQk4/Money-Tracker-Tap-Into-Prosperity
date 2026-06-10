@@ -8,6 +8,7 @@ import vn.edu.usth.tip.backend.models.enums.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
@@ -27,4 +28,8 @@ public class CreateTransactionRequest {
     private String receiptUrl;
     private Boolean isRecurring = false;
     private RecurrenceInterval recurInterval;
+
+    // Optimistic concurrency (tùy chọn): updatedAt mà client đang dựa vào khi sửa.
+    // Nếu khác giá trị hiện tại trên server (thiết bị khác đã sửa) → 409 Conflict.
+    private OffsetDateTime expectedUpdatedAt;
 }

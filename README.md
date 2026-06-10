@@ -98,7 +98,15 @@ The app remains fully functional with no network connection.
 
 ### Cursor-Based Delta Sync
 
-Each entity exposes a `/delta` endpoint. The client stores a server-issued `syncTimestamp` cursor and sends it as `updatedSince` on the next request — only changed records are transferred. Cursor pagination (`lastUpdatedAt + lastId`) prevents drift across pages.
+Each entity exposes a `/delta` endpoint, so a sync transfers **only the records changed since the last pull** instead of the full dataset. Three parameters keep it lossless across multi-page pulls:
+
+| Parameter | Purpose |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `updatedSince` (cursor)        | Server returns only rows with `updatedAt > cursor`. The first sync uses an epoch cursor → full download. The client persists the new cursor per entity in `SyncPrefs`. |
+| `untilTimestamp` (snapshot)    | The first page pins a server-side snapshot time that every later page reuses (`updatedAt <= until`), so edits made mid-pagination never slip in — they arrive on the next cycle. |
+| `lastUpdatedAt` + `lastId`     | Keyset pagination on the composite key `(updatedAt, id)` instead of `OFFSET`, so pages never drift when rows change; `id` breaks ties on equal timestamps. |
+
+The server query returns a `Slice<T>` (no `COUNT(*)`), and soft-deleted rows (`deletedAt != null`) are included so other devices know to delete them locally.
 
 ### Last-Write-Wins Conflict Resolution
 
@@ -114,6 +122,20 @@ User data is isolated across four layers:
 | **Write**          | `userId` is stamped before every `insert()` — both from user actions and server sync |
 | **Async guard**    | In-flight responses are discarded if `userId` has changed since the request was sent |
 | **Account switch** | Cancel all HTTP requests → cancel WorkManager job → wipe Room → reset sync cursors   |
+
+### Stateless JWT Authentication (HMAC-SHA)
+
+The backend holds no session — every request authenticates itself with a JWT signed via **HMAC-SHA**. The same `JWT_SECRET` both **signs** the token at login and **verifies** it on each request, so a tampered payload or a wrong secret fails signature validation.
+
+```
+Login    POST /api/auth/login ─▶ BCrypt.matches ─▶ JwtUtil.generateToken( signWith SECRET ) ─▶ token
+Request  GET /api/...  +  Authorization: Bearer <token>
+             └─▶ JwtAuthFilter: parseSignedClaims( verify SECRET ) ─▶ SecurityContextHolder
+                    ├─ valid                      → 200 + data
+                    └─ missing / invalid / expired → 401 → client clears token, returns to Login
+```
+
+Public routes (`/api/auth/**`) skip the filter; every other route requires a valid token (`anyRequest().authenticated()`). Because verification recomputes the HMAC with `JWT_SECRET`, rotating the secret invalidates every existing token at once.
 
 ### Secure Token Management
 

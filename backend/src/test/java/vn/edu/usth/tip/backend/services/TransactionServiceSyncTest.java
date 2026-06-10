@@ -75,7 +75,8 @@ class TransactionServiceSyncTest {
         savedTx.setAmount(BigDecimal.valueOf(50000));
         savedTx.setType(TransactionType.expense);
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        // Sau refactor "số dư = Σ giao dịch", sync chỉ ghi account khi số dư đổi → stub này có thể không dùng.
+        lenient().when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
     /** PATH B: new transaction with client-supplied UUID — server must preserve the UUID. */

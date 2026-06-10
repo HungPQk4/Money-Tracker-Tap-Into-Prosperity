@@ -300,13 +300,131 @@ Truy vấn PostgreSQL; delta dùng `Slice<T>` (cursor, không `COUNT(*)`).
 
 ---
 
-## 6. Bảo mật & Cô lập dữ liệu (Data Isolation)
+## 6. Delta Sync chi tiết (Cursor-Based Incremental Pull)
+
+Mỗi entity (`transactions`, `accounts`, `categories`, `budgets`, `goals`, `debts`) có một endpoint `/delta`. Thay vì kéo lại **toàn bộ** dữ liệu mỗi lần đồng bộ, client chỉ kéo **những bản ghi đã thay đổi kể từ lần sync trước**. Mốc thời gian đó gọi là **cursor** — do server cấp, client lưu trong `SyncPrefs` (mỗi entity một khóa: `KEY_TX`, `KEY_ACCOUNT`, `KEY_CATEGORY`…).
+
+### 6.1. Sơ đồ luồng (ví dụ với transactions)
+
+```
+CLIENT  pullDeltaTransactionsSync()                     SERVER  GET /api/transactions/delta
+──────────────────────────────────────                 ─────────────────────────────────────
+cursor  = SyncPrefs.getCursor(KEY_TX)   // mốc lần trước (lần đầu = EPOCH_CURSOR)
+untilTs = null;  lastUpdAt = null;  lastId = null
+
+┌─ while (true) ─────────────────────────────────────────────────────────────────────┐
+│                                                                                     │
+│  GET /delta?updatedSince=cursor &untilTimestamp=untilTs                             │
+│            &lastUpdatedAt=lastUpdAt &lastId=lastId &limit=500  ──▶ findDelta():      │
+│                                                                    updatedAt >  since│
+│                                                                AND updatedAt <= until │
+│                                                                AND keyset(lastTs,lastId)
+│                                                                ORDER BY updatedAt, id │
+│                                                                Slice LIMIT 500        │
+│  ◀── DeltaResponse { items[], hasMore, syncTimestamp } ────────────────────────────│
+│                                                                                     │
+│  if (untilTs == null) untilTs = syncTimestamp   // CHỐT "ảnh chụp" ngay ở trang đầu │
+│  finalCursor = syncTimestamp                                                        │
+│                                                                                     │
+│  Ghi vào Room theo LWW:                                                             │
+│     dto.isDeleted() → deleteById   ;   còn lại → upsert                             │
+│                                                                                     │
+│  if (!hasMore) break                                                                │
+│  lastUpdAt = item_cuối.updatedAt ;  lastId = item_cuối.id    // sang trang kế tiếp  │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+SyncPrefs.setCursor(KEY_TX, finalCursor)   // lưu mốc cho phiên sync sau
+```
+
+### 6.2. Ba tham số đảm bảo "không sót, không trùng"
+
+| Tham số | Vai trò |
+|---|---|
+| `updatedSince` (cursor) | Chỉ lấy bản ghi `updatedAt > cursor`. Lần đầu chưa có cursor → dùng `SyncConstants.EPOCH_CURSOR` (mốc rất xa trong quá khứ) → kéo về tất cả. |
+| `untilTimestamp` (snapshot) | Một phiên sync có thể cần nhiều trang. Trang đầu server trả `syncTimestamp` = thời điểm hiện tại; client giữ làm `until` cho mọi trang sau → tất cả các trang thấy **cùng một ảnh chụp** `updatedAt <= until`. Thay đổi xảy ra *trong lúc* đang kéo dở sẽ được lấy ở phiên sync kế tiếp (vì cursor mới = chính `until` này). |
+| `lastUpdatedAt` + `lastId` (keyset) | Phân trang theo **cặp khóa** `(updatedAt, id)` thay vì `OFFSET` → không lệch khi dữ liệu thay đổi giữa các trang. `id` dùng để phá thế hòa khi nhiều bản trùng `updatedAt`. |
+
+**Query keyset** (backend, `TransactionRepository.findDelta`):
+
+```sql
+WHERE user_id = :uid
+  AND updatedAt > :since AND updatedAt <= :until
+  AND (:lastTs IS NULL OR updatedAt > :lastTs
+       OR (updatedAt = :lastTs AND id > :lastId))
+ORDER BY updatedAt ASC, id ASC
+```
+
+> Server dùng `Slice<T>` (không phải `Page<T>`) nên **không chạy `COUNT(*)`**; `hasMore` = `slice.hasNext()` (chỉ cần lấy dư 1 dòng để biết còn trang nữa hay không).
+
+### 6.3. Ghi vào Room
+
+- **Soft-delete cũng được sync**: server trả về **cả** bản ghi đã xóa mềm (`deletedAt != null`) để máy khác biết mà xóa local. Client thấy `dto.isDeleted()` → `deleteById`. (Đây là lý do query cố tình **KHÔNG** lọc bỏ bản đã xóa.)
+- **LWW (Last-Write-Wins)** chống đè dữ liệu offline: với mỗi bản server gửi về, nếu bản local **chưa sync** (`!isSynced`) và `updatedAtMs` của local **mới hơn-hoặc-bằng** server → giữ local, bỏ qua bản server (vòng push kế tiếp sẽ đẩy local lên); ngược lại server đè local. Khi đè vẫn **giữ lại** các trường chỉ-có-ở-local: `photoUri` và `timestampMs` thật.
+
+> Cơ chế áp dụng cho **mọi** entity. Worker gọi các hàm `pullDelta*` theo đúng thứ tự khóa ngoại: categories → accounts → budgets → goals → transactions.
+
+---
+
+## 7. Bảo mật & Cô lập dữ liệu (Data Isolation)
 
 ### Xác thực
 - Đăng nhập → JWT, lưu trong `EncryptedSharedPreferences` (mã hóa AES).
 - Mỗi request gắn `Authorization: Bearer <token>`.
 - Backend trả **401** khi token thiếu/sai/hết hạn.
 - Client gặp **401 HOẶC 403** → clear token → về màn Login.
+
+### Sơ đồ luồng JWT (HMAC-SHA)
+
+Backend chạy **STATELESS**: không lưu session, mỗi request tự chứng minh danh tính bằng một JWT đã ký HMAC-SHA. Có 2 pha — (A) đăng nhập để **lấy** token, (B) mỗi request bảo vệ **xác minh** token qua `JwtAuthFilter`.
+
+**A. Đăng nhập — cấp token** (`AuthService.login` → `JwtUtil.generateToken`)
+
+```
+CLIENT (Android)                       BACKEND
+────────────────                       ───────────────────────────────────────────────
+POST /api/auth/login  ───────────────▶ SecurityConfig:  "/api/auth/**" = permitAll
+   { email, password }                 JwtAuthFilter:   không có "Bearer" → cho đi tiếp
+                                              │
+                                              ▼  AuthController → AuthService.login()
+                                        authenticationManager.authenticate(email, password)
+                                              ├─▶ CustomUserDetailsService.loadUserByUsername ──▶ DB(users)
+                                              └─▶ BCrypt.matches(password, passwordHash)
+                                                     └─ sai → BadCredentialsException → 401
+                                              │ (mật khẩu đúng)
+                                              ▼  jwtUtil.generateToken(userDetails)
+                                                 Jwts.builder()…signWith(SECRET) → KÝ bằng HMAC-SHA
+                                              │
+   token ◀──────── 200 OK { token, userId, email, fullName } ──────────┘
+   │
+   ▼ TokenManager lưu token vào EncryptedSharedPreferences
+```
+
+**B. Mỗi request bảo vệ — xác minh token** (`JwtAuthFilter` → `JwtUtil.parseSignedClaims`)
+
+```
+CLIENT                                 BACKEND  (STATELESS — server không giữ session)
+──────                                 ───────────────────────────────────────────────
+GET /api/transactions                  JwtAuthFilter.doFilterInternal:
+Authorization: Bearer <token> ───────▶   1. có "Bearer "? không → đi tiếp dạng vô danh
+                                         2. jwt = authHeader.substring(7)
+                                         3. extractEmail(jwt):
+                                            verifyWith(SECRET).parseSignedClaims(jwt)
+                                            └─ chữ ký sai / hết hạn → ném lỗi → catch →
+                                               KHÔNG set authentication
+                                         4. loadUserByUsername(email) ──▶ DB(users)
+                                         5. validateToken (email khớp & chưa hết hạn)
+                                            → SecurityContextHolder.setAuthentication(user)
+                                              │
+                                              ▼  filterChain tiếp tục → SecurityConfig
+                                         anyRequest().authenticated():
+                                            ├─ có authentication → ✓ Controller trả dữ liệu
+                                            └─ không có          → HttpStatusEntryPoint → 401
+   200 + dữ liệu  HOẶC  401  ◀───────────┘
+   │
+   ▼ nếu 401 → TokenManager.clear() → quay về màn Login
+```
+
+> **Mấu chốt HMAC-SHA**: bước **ký** (A) và bước **xác minh** (B) dùng **chung một `SECRET`**. Vì vậy đổi `JWT_SECRET` rồi restart → mọi token cũ verify thất bại → 401 hàng loạt (xem mục 8).
 
 ### Cô lập dữ liệu giữa các tài khoản (4 lớp)
 
@@ -319,7 +437,7 @@ Truy vấn PostgreSQL; delta dùng `Slice<T>` (cursor, không `COUNT(*)`).
 
 ---
 
-## 7. Những điểm cần lưu ý (Gotchas)
+## 8. Những điểm cần lưu ý (Gotchas)
 
 - **EWALLET ↔ e_wallet**: convert tại `WalletTypeConverter`.
 - **amount luôn `Math.abs()`**: server có `CHECK(amount > 0)`.
@@ -331,7 +449,7 @@ Truy vấn PostgreSQL; delta dùng `Slice<T>` (cursor, không `COUNT(*)`).
 
 ---
 
-## 8. Công nghệ sử dụng
+## 9. Công nghệ sử dụng
 
 | Mảng | Công nghệ |
 |---|---|

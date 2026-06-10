@@ -3,6 +3,7 @@ package vn.edu.usth.tip.network.requests;
 public class LoginRequest {
     private String email;
     private String password;
+    private String deviceName; // tên thiết bị — hiển thị trong danh sách phiên đăng nhập
 
     public LoginRequest(String email, String password) {
         this.email = email;
@@ -14,4 +15,6 @@ public class LoginRequest {
     public void setEmail(String email) { this.email = email; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    public String getDeviceName() { return deviceName; }
+    public void setDeviceName(String deviceName) { this.deviceName = deviceName; }
 }

@@ -1,0 +1,95 @@
+### ════════════════════════════════════════════════════════════════
+###  TEST Mục 1 — Quản lý phiên / thiết bị (multi-device)  + Reconciliation
+###  Cách dùng: IntelliJ HTTP Client (hoặc VS Code "REST Client")
+###  → bấm ▶ chạy LẦN LƯỢT từ trên xuống. Kết quả kỳ vọng ghi ở mỗi bước.
+###  (Token tự lưu vào biến qua response-handler — không cần copy tay, trừ 2 chỗ ghi PASTE_…)
+### ════════════════════════════════════════════════════════════════
+
+@base = http://localhost:8080/api
+@email = test@example.com
+@password = 123456
+
+### 1. Đăng nhập "Thiết bị A"  → KỲ VỌNG 200, có token + refreshToken
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{email}}", "password": "{{password}}", "deviceName": "Thiet-bi-A" }
+
+> {%
+    client.global.set("tokenA",   response.body.token);
+    client.global.set("refreshA", response.body.refreshToken);
+    client.test("co access + refresh token", function () {
+        client.assert(response.body.token != null,        "THIEU access token");
+        client.assert(response.body.refreshToken != null, "THIEU refresh token");
+    });
+%}
+
+### 2. Đăng nhập "Thiết bị B" (cùng tài khoản, song song)  → KỲ VỌNG 200
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{email}}", "password": "{{password}}", "deviceName": "Thiet-bi-B" }
+
+> {%
+    client.global.set("tokenB",   response.body.token);
+    client.global.set("refreshB", response.body.refreshToken);
+%}
+
+### 3. A xem danh sách phiên  → KỲ VỌNG thấy 2 thiết bị, A có "current": true
+###    (Copy "id" của Thiet-bi-B ở kết quả → dán vào @sessionIdB bước 6)
+GET {{base}}/auth/sessions
+Authorization: Bearer {{tokenA}}
+
+### 4. Xoay access token A bằng refresh token  → KỲ VỌNG 200, token + refreshToken MỚI
+POST {{base}}/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{refreshA}}" }
+
+> {%
+    client.global.set("oldRefreshA", client.global.get("refreshA")); // giữ token cũ để test bước 5
+    client.global.set("tokenA",      response.body.token);
+    client.global.set("refreshA",    response.body.refreshToken);
+%}
+
+### 5. Dùng LẠI refresh token A CŨ  → KỲ VỌNG 401 (đã xoay, không tái sử dụng được)
+POST {{base}}/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{oldRefreshA}}" }
+
+### 6. THU HỒI TỪ XA: A thu hồi phiên của B  → KỲ VỌNG 204
+@sessionIdB = PASTE_ID_THIET_BI_B
+DELETE {{base}}/auth/sessions/{{sessionIdB}}
+Authorization: Bearer {{tokenA}}
+
+### 7. Token B dùng NGAY sau khi bị thu hồi  → KỲ VỌNG 401 (thu hồi TỨC THÌ)
+GET {{base}}/auth/sessions
+Authorization: Bearer {{tokenB}}
+
+### ── Reconciliation số dư (vẫn dùng tokenA còn hiệu lực) ──
+### 8. Lấy danh sách ví  → copy "id" 1 ví vào @accountId bước 9
+GET {{base}}/accounts
+Authorization: Bearer {{tokenA}}
+
+### 9. Tính lại số dư 1 ví  → KỲ VỌNG 200, balance = Σ(thu) − Σ(chi+chuyển)
+@accountId = PASTE_ACCOUNT_ID
+POST {{base}}/accounts/{{accountId}}/reconcile
+Authorization: Bearer {{tokenA}}
+
+### 10. Tính lại số dư TẤT CẢ ví  → KỲ VỌNG 200, mảng ví với số dư đã chuẩn hoá
+POST {{base}}/accounts/reconcile-all
+Authorization: Bearer {{tokenA}}
+
+### ── Đăng xuất ──
+### 11. Đăng xuất các thiết bị khác (giữ A)  → KỲ VỌNG 204
+POST {{base}}/auth/sessions/logout-others
+Authorization: Bearer {{tokenA}}
+
+### 12. Đăng xuất phiên A  → KỲ VỌNG 204
+POST {{base}}/auth/logout
+Authorization: Bearer {{tokenA}}
+
+### 13. Token A sau khi logout  → KỲ VỌNG 401 (phiên đã thu hồi)
+GET {{base}}/auth/sessions
+Authorization: Bearer {{tokenA}}

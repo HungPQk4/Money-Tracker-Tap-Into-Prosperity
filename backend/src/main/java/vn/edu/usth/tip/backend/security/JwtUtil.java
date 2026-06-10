@@ -11,6 +11,7 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Component
@@ -26,8 +27,12 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    public String generateToken(UserDetails userDetails) {
+    /** Phát access token mang claim "sid" = id phiên (cho thu hồi & quản lý đa thiết bị). */
+    public String generateToken(UserDetails userDetails, UUID sessionId) {
         Map<String, Object> claims = new HashMap<>();
+        if (sessionId != null) {
+            claims.put("sid", sessionId.toString());
+        }
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -48,6 +53,12 @@ public class JwtUtil {
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    /** Lấy id phiên từ claim "sid"; null nếu token cũ không mang sid. */
+    public UUID extractSessionId(String token) {
+        String sid = extractClaim(token, claims -> claims.get("sid", String.class));
+        return sid != null ? UUID.fromString(sid) : null;
     }
 
     public Date extractExpiration(String token) {

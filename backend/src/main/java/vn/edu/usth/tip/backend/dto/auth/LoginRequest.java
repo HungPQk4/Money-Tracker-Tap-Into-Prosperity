@@ -11,4 +11,7 @@ public class LoginRequest {
 
     @NotBlank
     private String password;
+
+    // Tên thiết bị (tùy chọn) — hiển thị trong danh sách phiên đăng nhập.
+    private String deviceName;
 }

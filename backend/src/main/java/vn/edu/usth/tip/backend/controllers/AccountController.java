@@ -51,4 +51,15 @@ public class AccountController {
         accountService.deleteAccount(id);
         return ResponseEntity.noContent().build();
     }
+
+    // ─── Reconciliation số dư (tính lại từ giao dịch) ───────────────────────────
+    @PostMapping("/{id}/reconcile")
+    public ResponseEntity<AccountResponse> reconcile(@PathVariable UUID id) {
+        return ResponseEntity.ok(accountService.reconcileBalance(id));
+    }
+
+    @PostMapping("/reconcile-all")
+    public ResponseEntity<List<AccountResponse>> reconcileAll() {
+        return ResponseEntity.ok(accountService.reconcileAllBalances());
+    }
 }

@@ -18,7 +18,9 @@ public class AuthRepository {
     }
 
     public void login(String email, String password, MutableLiveData<AuthResponse> successData, MutableLiveData<String> errorData) {
-        authApi.login(new LoginRequest(email, password)).enqueue(new Callback<AuthResponse>() {
+        LoginRequest request = new LoginRequest(email, password);
+        request.setDeviceName(deviceName());
+        authApi.login(request).enqueue(new Callback<AuthResponse>() {
             @Override
             public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -36,7 +38,9 @@ public class AuthRepository {
     }
 
     public void register(String email, String password, String fullName, MutableLiveData<AuthResponse> successData, MutableLiveData<String> errorData) {
-        authApi.register(new RegisterRequest(email, password, fullName)).enqueue(new Callback<AuthResponse>() {
+        RegisterRequest request = new RegisterRequest(email, password, fullName);
+        request.setDeviceName(deviceName());
+        authApi.register(request).enqueue(new Callback<AuthResponse>() {
             @Override
             public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -51,5 +55,13 @@ public class AuthRepository {
                 errorData.postValue("Lỗi kết nối: " + t.getMessage());
             }
         });
+    }
+
+    /** Tên thiết bị hiển thị trong danh sách phiên (vd "samsung SM-G991B"). */
+    private static String deviceName() {
+        String manufacturer = android.os.Build.MANUFACTURER != null ? android.os.Build.MANUFACTURER : "";
+        String model = android.os.Build.MODEL != null ? android.os.Build.MODEL : "";
+        String name = (manufacturer + " " + model).trim();
+        return name.isEmpty() ? "Thiết bị Android" : name;
     }
 }

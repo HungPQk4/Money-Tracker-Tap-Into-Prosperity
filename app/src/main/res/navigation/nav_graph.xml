@@ -173,7 +173,21 @@
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+
+        <action
+            android:id="@+id/action_walletManagement_to_sessions"
+            app:destination="@id/sessionManagementFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
     </fragment>
+
+    <fragment
+        android:id="@+id/sessionManagementFragment"
+        android:name="vn.edu.usth.tip.ui.fragments.SessionManagementFragment"
+        android:label="Thiết bị đăng nhập"
+        tools:layout="@layout/fragment_session_management" />
 
     <fragment
         android:id="@+id/newTransactionFragment"

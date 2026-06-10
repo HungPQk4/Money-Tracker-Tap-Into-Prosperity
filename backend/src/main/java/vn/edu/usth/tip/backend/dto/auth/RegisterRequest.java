@@ -18,4 +18,7 @@ public class RegisterRequest {
 
     private String currencyCode = "VND";
     private String timezone = "Asia/Ho_Chi_Minh";
+
+    // Tên thiết bị (tùy chọn) — hiển thị trong danh sách phiên đăng nhập.
+    private String deviceName;
 }

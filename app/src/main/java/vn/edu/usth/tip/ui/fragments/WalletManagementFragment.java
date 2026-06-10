@@ -189,6 +189,10 @@ public class WalletManagementFragment extends Fragment
 
         view.findViewById(R.id.btn_logout)
                 .setOnClickListener(v -> showLogoutConfirmation());
+
+        view.findViewById(R.id.btn_devices)
+                .setOnClickListener(v -> Navigation.findNavController(v)
+                        .navigate(R.id.action_walletManagement_to_sessions));
     }
 
     private void showLogoutConfirmation() {
@@ -208,6 +212,8 @@ public class WalletManagementFragment extends Fragment
         pd.show();
 
         Context appCtx = requireContext().getApplicationContext();
+        // Best-effort: thu hồi phiên hiện tại phía server (client riêng nên không bị cancel ngay dưới).
+        vn.edu.usth.tip.network.RetrofitClient.logoutCurrentSession(TokenManager.getOrCreate(appCtx));
         // Huỷ tất cả request đang bay ngay lập tức (tránh zombie response).
         vn.edu.usth.tip.network.RetrofitClient.cancelAllRequests();
         // Cancel pending sync worker trước khi xóa DB.

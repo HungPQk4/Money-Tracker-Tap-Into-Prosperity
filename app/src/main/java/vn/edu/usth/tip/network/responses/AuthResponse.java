@@ -3,7 +3,8 @@ package vn.edu.usth.tip.network.responses;
 import java.util.UUID;
 
 public class AuthResponse {
-    private String token;
+    private String token;          // access token (JWT)
+    private String refreshToken;   // refresh token opaque (để xoay access token)
     private String tokenType;
     private UUID userId;
     private String email;
@@ -11,6 +12,7 @@ public class AuthResponse {
 
     // Getters
     public String getToken() { return token; }
+    public String getRefreshToken() { return refreshToken; }
     public String getTokenType() { return tokenType; }
     public UUID getUserId() { return userId; }
     public String getEmail() { return email; }

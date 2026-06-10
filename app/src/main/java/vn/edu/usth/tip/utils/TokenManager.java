@@ -11,9 +11,10 @@ import java.security.GeneralSecurityException;
 public class TokenManager {
     private static final String PREF_NAME        = "AuthPrefs";
     private static final String PREF_NAME_PLAIN  = "AuthPrefs_plain";
-    private static final String KEY_TOKEN        = "jwt_token";
-    private static final String KEY_FULL_NAME    = "user_full_name";
-    private static final String KEY_USER_ID      = "user_id";
+    private static final String KEY_TOKEN         = "jwt_token";
+    private static final String KEY_REFRESH_TOKEN = "refresh_token";
+    private static final String KEY_FULL_NAME     = "user_full_name";
+    private static final String KEY_USER_ID       = "user_id";
 
     // Singleton: the constructor accesses Android Keystore which can throw SecurityException
     // on background threads (OkHttp Dispatcher, WorkManager, etc.). Creating the instance once
@@ -36,15 +37,17 @@ public class TokenManager {
 
     // In-memory cache so background-thread reads (interceptors, workers) never touch Keystore.
     private volatile String cachedToken;
+    private volatile String cachedRefreshToken;
     private volatile String cachedFullName;
     private volatile String cachedUserId;
 
     public TokenManager(Context context) {
         this.appContext    = context.getApplicationContext();
         sharedPreferences  = createEncryptedPrefs(appContext);
-        cachedToken    = sharedPreferences.getString(KEY_TOKEN,     null);
-        cachedFullName = sharedPreferences.getString(KEY_FULL_NAME, null);
-        cachedUserId   = sharedPreferences.getString(KEY_USER_ID,   null);
+        cachedToken        = sharedPreferences.getString(KEY_TOKEN,         null);
+        cachedRefreshToken = sharedPreferences.getString(KEY_REFRESH_TOKEN, null);
+        cachedFullName     = sharedPreferences.getString(KEY_FULL_NAME,     null);
+        cachedUserId       = sharedPreferences.getString(KEY_USER_ID,       null);
     }
 
     private static SharedPreferences createEncryptedPrefs(Context context) {
@@ -85,25 +88,42 @@ public class TokenManager {
         }
     }
 
-    public void saveAuthData(String token, String fullName, String userId) {
-        cachedToken    = token;
-        cachedFullName = fullName;
-        cachedUserId   = userId;
+    public void saveAuthData(String token, String refreshToken, String fullName, String userId) {
+        cachedToken        = token;
+        cachedRefreshToken = refreshToken;
+        cachedFullName     = fullName;
+        cachedUserId       = userId;
         sharedPreferences.edit()
-                .putString(KEY_TOKEN,     token)
-                .putString(KEY_FULL_NAME, fullName)
-                .putString(KEY_USER_ID,   userId)
+                .putString(KEY_TOKEN,         token)
+                .putString(KEY_REFRESH_TOKEN, refreshToken)
+                .putString(KEY_FULL_NAME,     fullName)
+                .putString(KEY_USER_ID,       userId)
                 .apply();
     }
 
-    public String getToken()    { return cachedToken; }
-    public String getFullName() { return cachedFullName; }
-    public String getUserId()   { return cachedUserId; }
+    /**
+     * Cập nhật access + refresh token sau khi XOAY (refresh) — giữ nguyên user/fullName.
+     * Gọi từ OkHttp Authenticator (background thread) chỉ ghi prefs, không chạm Keystore lần đầu.
+     */
+    public void updateTokens(String token, String refreshToken) {
+        cachedToken = token;
+        if (refreshToken != null) cachedRefreshToken = refreshToken;
+        sharedPreferences.edit()
+                .putString(KEY_TOKEN,         cachedToken)
+                .putString(KEY_REFRESH_TOKEN, cachedRefreshToken)
+                .apply();
+    }
+
+    public String getToken()        { return cachedToken; }
+    public String getRefreshToken() { return cachedRefreshToken; }
+    public String getFullName()     { return cachedFullName; }
+    public String getUserId()       { return cachedUserId; }
 
     public void clear() {
-        cachedToken    = null;
-        cachedFullName = null;
-        cachedUserId   = null;
+        cachedToken        = null;
+        cachedRefreshToken = null;
+        cachedFullName     = null;
+        cachedUserId       = null;
         try {
             sharedPreferences.edit().clear().apply();
         } catch (RuntimeException e) {

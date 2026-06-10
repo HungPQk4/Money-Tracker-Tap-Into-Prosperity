@@ -8,6 +8,7 @@ import vn.edu.usth.tip.backend.dto.transaction.SyncRequest;
 import vn.edu.usth.tip.backend.dto.transaction.SyncResponse;
 import vn.edu.usth.tip.backend.dto.transaction.SyncTransactionRequest;
 import vn.edu.usth.tip.backend.dto.transaction.TransactionResponse;
+import vn.edu.usth.tip.backend.exception.ConflictException;
 import vn.edu.usth.tip.backend.exception.ResourceNotFoundException;
 import vn.edu.usth.tip.backend.models.*;
 import vn.edu.usth.tip.backend.models.enums.TransactionType;
@@ -45,6 +46,7 @@ public class TransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Account", "id", req.getAccountId()));
 
         Transaction tx = new Transaction();
+        tx.setId(UUID.randomUUID()); // Transaction.id không có @GeneratedValue → phải tự gán (vá bug endpoint trực tiếp)
         tx.setUser(userRepository.findById(req.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", req.getUserId())));
         tx.setAccount(account);
@@ -62,16 +64,9 @@ public class TransactionService {
         tx.setIsRecurring(req.getIsRecurring() != null ? req.getIsRecurring() : false);
         tx.setRecurInterval(req.getRecurInterval());
 
-        BigDecimal amount = req.getAmount();
-        BigDecimal currentBalance = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
-        if (TransactionType.income == req.getType()) {
-            account.setBalance(currentBalance.add(amount));
-        } else if (TransactionType.expense == req.getType() || TransactionType.transfer == req.getType()) {
-            account.setBalance(currentBalance.subtract(amount));
-        }
-        accountRepository.save(account);
-
-        return toResponse(transactionRepository.save(tx));
+        Transaction saved = transactionRepository.save(tx);
+        recomputeBalance(account); // số dư = Σ giao dịch (authoritative, không trôi LWW)
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -97,18 +92,14 @@ public class TransactionService {
         Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", "id", id));
 
-        // Reverse the old account's balance before applying new values
-        // so account switching within an edit is handled correctly.
-        Account oldAccount = tx.getAccount();
-        if (oldAccount != null && tx.getAmount() != null) {
-            BigDecimal current = oldAccount.getBalance() != null ? oldAccount.getBalance() : BigDecimal.ZERO;
-            if (TransactionType.income == tx.getType()) {
-                oldAccount.setBalance(current.subtract(tx.getAmount()));
-            } else if (TransactionType.expense == tx.getType() || TransactionType.transfer == tx.getType()) {
-                oldAccount.setBalance(current.add(tx.getAmount()));
-            }
-            accountRepository.save(oldAccount);
+        // Optimistic concurrency: client gửi expectedUpdatedAt; nếu bản trên server đã đổi
+        // (thiết bị khác sửa trong lúc đó) → 409, KHÔNG ghi đè âm thầm (chống lost-update).
+        if (req.getExpectedUpdatedAt() != null && tx.getUpdatedAt() != null
+                && !req.getExpectedUpdatedAt().isEqual(tx.getUpdatedAt())) {
+            throw new ConflictException("Giao dịch đã được thay đổi ở thiết bị khác. Hãy tải lại trước khi sửa.");
         }
+
+        Account oldAccount = tx.getAccount();
 
         tx.setAmount(req.getAmount());
         tx.setType(req.getType());
@@ -128,17 +119,13 @@ public class TransactionService {
                 : oldAccount;
         tx.setAccount(newAccount);
 
-        if (newAccount != null) {
-            BigDecimal current = newAccount.getBalance() != null ? newAccount.getBalance() : BigDecimal.ZERO;
-            if (TransactionType.income == req.getType()) {
-                newAccount.setBalance(current.add(req.getAmount()));
-            } else if (TransactionType.expense == req.getType() || TransactionType.transfer == req.getType()) {
-                newAccount.setBalance(current.subtract(req.getAmount()));
-            }
-            accountRepository.save(newAccount);
+        Transaction saved = transactionRepository.save(tx);
+        // Số dư = Σ giao dịch: tính lại cả ví cũ lẫn ví mới (xử lý đổi ví khi sửa).
+        recomputeBalance(oldAccount);
+        if (newAccount != null && (oldAccount == null || !newAccount.getId().equals(oldAccount.getId()))) {
+            recomputeBalance(newAccount);
         }
-
-        return toResponse(transactionRepository.save(tx));
+        return toResponse(saved);
     }
 
     @Transactional
@@ -146,20 +133,12 @@ public class TransactionService {
         Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", "id", id));
         Account account = tx.getAccount();
-        if (account != null && tx.getAmount() != null && tx.getDeletedAt() == null) {
-            BigDecimal currentBalance = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
-            if (TransactionType.income == tx.getType()) {
-                account.setBalance(currentBalance.subtract(tx.getAmount()));
-            } else if (TransactionType.expense == tx.getType() || TransactionType.transfer == tx.getType()) {
-                account.setBalance(currentBalance.add(tx.getAmount()));
-            }
-            accountRepository.save(account);
-        }
         OffsetDateTime now = OffsetDateTime.now();
         tx.setDeletedAt(now);
         tx.setUpdatedAt(now);
         tx.setClientSync(true);
         transactionRepository.save(tx);
+        recomputeBalance(account); // giao dịch đã soft-delete → bị loại khỏi tổng
     }
 
     // Batch sync API — Last-Write-Wins: PATH DELETE → PATH A (edit) → PATH B (new).
@@ -170,17 +149,18 @@ public class TransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", req.getUserId()));
 
         List<TransactionResponse> responseList = new ArrayList<>();
+        java.util.Set<UUID> touchedAccountIds = new java.util.LinkedHashSet<>();
         int savedCount = 0;
         int skippedCount = 0;
 
         for (SyncTransactionRequest item : req.getTransactions()) {
             if (item.isDeleted() && item.getTransactionId() != null) {
-                handleDeletedSync(item, user, responseList);
+                handleDeletedSync(item, user, responseList, touchedAccountIds);
                 continue;
             }
 
             if (item.getTransactionId() != null) {
-                Integer pathAResult = handleExistingSync(item, user, responseList);
+                Integer pathAResult = handleExistingSync(item, user, responseList, touchedAccountIds);
                 if (pathAResult != null) {
                     savedCount += pathAResult;
                     continue;
@@ -188,7 +168,7 @@ public class TransactionService {
                 // Not found on server → fall through to PATH B with this UUID
             }
 
-            int pathBResult = handleNewSync(item, user, responseList);
+            int pathBResult = handleNewSync(item, user, responseList, touchedAccountIds);
             if (pathBResult > 0) {
                 savedCount++;
             } else {
@@ -196,15 +176,19 @@ public class TransactionService {
             }
         }
 
+        // Deep Goal 3: số dư = Σ giao dịch → hết trôi lệch khi nhiều thiết bị cùng sync.
+        recomputeBalances(touchedAccountIds);
+
         return new SyncResponse(savedCount, skippedCount, responseList);
     }
 
     private void handleDeletedSync(SyncTransactionRequest item, User user,
-                                   List<TransactionResponse> responseList) {
+                                   List<TransactionResponse> responseList,
+                                   java.util.Set<UUID> touchedAccountIds) {
         transactionRepository.findByIdAndUser_Id(item.getTransactionId(), user.getId())
                 .ifPresent(existing -> {
                     if (existing.getDeletedAt() == null) {
-                        reverseBalanceEffect(existing.getAccount(), existing.getType(), existing.getAmount());
+                        if (existing.getAccount() != null) touchedAccountIds.add(existing.getAccount().getId());
                         OffsetDateTime nowDel = OffsetDateTime.now();
                         existing.setDeletedAt(nowDel);
                         existing.setUpdatedAt(nowDel);
@@ -224,7 +208,8 @@ public class TransactionService {
      * Returns 0 if server wins the LWW conflict (no save). Returns 1 if client wins (saved).
      */
     private Integer handleExistingSync(SyncTransactionRequest item, User user,
-                                       List<TransactionResponse> responseList) {
+                                       List<TransactionResponse> responseList,
+                                       java.util.Set<UUID> touchedAccountIds) {
         java.util.Optional<Transaction> existingOpt =
                 transactionRepository.findByIdAndUser_Id(item.getTransactionId(), user.getId());
         if (existingOpt.isEmpty()) return null;
@@ -241,11 +226,12 @@ public class TransactionService {
             return 0;
         }
 
-        reverseBalanceEffect(existing.getAccount(), existing.getType(), existing.getAmount());
+        if (existing.getAccount() != null) touchedAccountIds.add(existing.getAccount().getId());
         Account newAccount = item.getAccountId() != null
                 ? accountRepository.findById(item.getAccountId()).orElse(existing.getAccount())
                 : existing.getAccount();
         existing.setAccount(newAccount);
+        if (newAccount != null) touchedAccountIds.add(newAccount.getId());
         if (item.getCategoryId() != null) {
             existing.setCategory(categoryRepository.findById(item.getCategoryId())
                     .orElse(existing.getCategory()));
@@ -257,7 +243,6 @@ public class TransactionService {
         existing.setTransactionDate(item.getTransactionDate());
         existing.setIsRecurring(item.getIsRecurring() != null ? item.getIsRecurring() : false);
         existing.setRecurInterval(item.getRecurInterval());
-        applyBalanceEffect(newAccount, item.getType(), positiveAmount);
         // Use client timestamp as ground truth — disables @PreUpdate auto-stamp
         existing.setUpdatedAt(item.getClientUpdatedAt());
         existing.setClientSync(true);
@@ -268,7 +253,8 @@ public class TransactionService {
 
     /** Returns 1 if a new transaction was inserted, 0 if skipped (missing fields or duplicate). */
     private int handleNewSync(SyncTransactionRequest item, User user,
-                              List<TransactionResponse> responseList) {
+                              List<TransactionResponse> responseList,
+                              java.util.Set<UUID> touchedAccountIds) {
         if (item.getAccountId() == null || item.getCategoryId() == null || item.getAmount() == null) {
             return 0;
         }
@@ -282,9 +268,8 @@ public class TransactionService {
             // Client UUID not found in PATH A → INSERT with that UUID (trust client UUID, collision ≈ 0%)
             Transaction newTx = buildNewTransaction(user, account, category, item);
             newTx.setId(item.getTransactionId());
-            applyBalanceEffect(account, item.getType(), item.getAmount().abs());
-            accountRepository.save(account);
             transactionRepository.save(newTx);
+            touchedAccountIds.add(account.getId());
             responseList.add(toResponse(newTx));
             return 1;
         }
@@ -302,9 +287,8 @@ public class TransactionService {
 
         Transaction newTx = buildNewTransaction(user, account, category, item);
         newTx.setId(UUID.randomUUID()); // server assigns UUID for legacy records
-        applyBalanceEffect(account, item.getType(), item.getAmount().abs());
-        accountRepository.save(account);
         transactionRepository.save(newTx);
+        touchedAccountIds.add(account.getId());
         responseList.add(toResponse(newTx));
         return 1;
     }
@@ -333,26 +317,21 @@ public class TransactionService {
         return tx;
     }
 
-    private void reverseBalanceEffect(Account account, TransactionType type, BigDecimal amount) {
-        if (account == null || amount == null) return;
-        BigDecimal bal = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
-        if (type == TransactionType.income) {
-            account.setBalance(bal.subtract(amount));
-        } else {
-            account.setBalance(bal.add(amount));
+    /** Số dư ví = Σ giao dịch (income − expense/transfer), bỏ qua bản đã xóa. Chỉ ghi khi lệch. */
+    private void recomputeBalance(Account account) {
+        if (account == null) return;
+        BigDecimal computed = transactionRepository.computeBalanceForAccount(account.getId());
+        if (computed == null) computed = BigDecimal.ZERO;
+        if (account.getBalance() == null || account.getBalance().compareTo(computed) != 0) {
+            account.setBalance(computed);
+            accountRepository.save(account);
         }
-        accountRepository.save(account);
     }
 
-    private void applyBalanceEffect(Account account, TransactionType type, BigDecimal amount) {
-        if (account == null || amount == null) return;
-        BigDecimal bal = account.getBalance() != null ? account.getBalance() : BigDecimal.ZERO;
-        if (type == TransactionType.income) {
-            account.setBalance(bal.add(amount));
-        } else {
-            account.setBalance(bal.subtract(amount));
+    private void recomputeBalances(java.util.Set<UUID> accountIds) {
+        for (UUID accountId : accountIds) {
+            accountRepository.findById(accountId).ifPresent(this::recomputeBalance);
         }
-        accountRepository.save(account);
     }
 
     @Transactional(readOnly = true)
