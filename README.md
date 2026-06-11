@@ -112,6 +112,12 @@ The server query returns a `Slice<T>` (no `COUNT(*)`), and soft-deleted rows (`d
 
 Every entity carries `updatedAtMs`. On pull, the server version wins only if its timestamp is newer; otherwise the local version is kept and re-pushed in the next sync cycle.
 
+### Balance Integrity & Concurrent-Edit Safety
+
+Wallet balances are **recomputed from the sum of their transactions** (`Σ income − Σ expense/transfer`) after every create / update / delete / sync — never mutated as a running counter. Counters drift under last-write-wins when two devices edit concurrently; deriving the balance from the transaction log keeps it correct regardless of sync order. `POST /api/accounts/{id}/reconcile` (and `/reconcile-all`) re-derive balances on demand.
+
+Direct edits also support **optimistic concurrency**: a client may send the `updatedAt` it last saw as `expectedUpdatedAt`; if the server's row changed since (another device edited it), the update is rejected with **409 Conflict** instead of silently overwriting.
+
 ### Multi-Account Data Isolation
 
 User data is isolated across four layers:
@@ -135,7 +141,16 @@ Request  GET /api/...  +  Authorization: Bearer <token>
                     └─ missing / invalid / expired → 401 → client clears token, returns to Login
 ```
 
-Public routes (`/api/auth/**`) skip the filter; every other route requires a valid token (`anyRequest().authenticated()`). Because verification recomputes the HMAC with `JWT_SECRET`, rotating the secret invalidates every existing token at once.
+Public routes (`/api/auth/login`, `/register`, `/refresh`) skip the filter; every other route requires a valid token (`anyRequest().authenticated()`). Because verification recomputes the HMAC with `JWT_SECRET`, rotating the secret invalidates every existing token at once.
+
+### Multi-Device Sessions & Token Refresh
+
+The same account can be signed in on several devices at once, each tracked as a row in a `sessions` table. Login/register issue a short-lived **access token** (a JWT carrying a `sid` session-id claim) plus a long-lived, **rotating refresh token** (stored only as a SHA-256 hash).
+
+- **Auto-refresh** — an OkHttp `Authenticator` transparently swaps the refresh token for a fresh access token on `401`, so users stay logged in without re-entering credentials.
+- **Immediate remote revocation** — `JwtAuthFilter` checks the `sid` against the session store on every request, so revoking a device (or logging out) takes effect on its very next call.
+- **Device-management UI** — a "Thiết bị đăng nhập" screen lists active sessions and can revoke any device or "log out all other devices" (`GET`/`DELETE /api/auth/sessions`, `/sessions/logout-others`).
+- **Refresh rotation** — every refresh issues a new refresh token and invalidates the previous one (replay protection).
 
 ### Secure Token Management
 

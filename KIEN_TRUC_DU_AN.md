@@ -211,9 +211,9 @@ Kiến trúc 3 tầng chuẩn: **Controller → Service → Repository (JPA) →
 
 | Controller | Endpoint |
 |---|---|
-| `AuthController` | POST `/api/auth/login`, `/register` (PUBLIC) |
+| `AuthController` | `/login`, `/register`, `/refresh` (PUBLIC); `/logout`, `/sessions` (GET/DELETE), `/sessions/logout-others` |
 | `UserController` | thông tin người dùng |
-| `AccountController` | CRUD `/api/accounts` + `/delta` |
+| `AccountController` | CRUD `/api/accounts` + `/delta` + `/{id}/reconcile`, `/reconcile-all` (tính lại số dư) |
 | `CategoryController` | CRUD `/api/categories` + `/delta` |
 | `TransactionController` | CRUD `/api/transactions` + `/sync` + `/recent` + `/delta` |
 | `BudgetController` | CRUD `/api/budgets` + `/delta` |
@@ -227,7 +227,8 @@ Kiến trúc 3 tầng chuẩn: **Controller → Service → Repository (JPA) →
 
 Auth, User, Account, Category, Transaction, Budget, Goal, Debt, Dashboard Service: mỗi service lấy `userId` hiện tại từ SecurityContext (`SecurityUtils`) → chỉ trả/dữ liệu của đúng user đó.
 
-- `TransactionService`: xử lý batch sync, LWW (`clientUpdatedAt`), soft delete.
+- `TransactionService`: batch sync, LWW (`clientUpdatedAt`), soft delete. **Số dư ví = Σ giao dịch** (tính lại sau mọi create/update/delete/sync, không cộng dồn) + optimistic concurrency (`expectedUpdatedAt` → 409).
+- `SessionService`: quản lý phiên đa thiết bị — tạo & **xoay** refresh token (SHA-256), thu hồi, liệt kê phiên.
 - `GeminiService`: gọi Google Gemini API (AI) cho insight + OCR hóa đơn.
 - `InsightService`: tạo gợi ý tài chính từ dữ liệu người dùng.
 
@@ -238,15 +239,15 @@ Truy vấn PostgreSQL; delta dùng `Slice<T>` (cursor, không `COUNT(*)`).
 
 ### 3.4. Models (`models/`) — JPA Entities
 
-`User`, `Account` (= Wallet bên Android), `Category`, `Transaction`, `Budget`, `Goal`, `Debt`. Tất cả có `deletedAt` (soft delete) + `updatedAt` (cho delta sync).
+`User`, `Account` (= Wallet bên Android), `Category`, `Transaction`, `Budget`, `Goal`, `Debt`, **`Session`** (phiên đăng nhập đa thiết bị). Các entity dữ liệu đều có `deletedAt` (soft delete) + `updatedAt` (cho delta sync).
 
 `enums/`: `AccountType`, `CategoryType`, `TransactionType`, `BudgetPeriod`, `RecurrenceInterval`, `GoalStatus`, `DebtType`, `DebtStatus`.
 
 ### 3.5. Security (`security/`)
 
-- `JwtUtil`: tạo/giải mã/validate JWT (jjwt). Hết hạn 24h (`jwt.expiration`).
-- `JwtAuthFilter`: đọc header Authorization, validate token, set SecurityContext. Token lỗi → không set → Security tự lọc.
-- `SecurityConfig`: `/api/auth/**` PUBLIC; còn lại `.authenticated()`. Có `AuthenticationEntryPoint` → trả **401** (không phải 403) khi thiếu/sai token. Stateless, CSRF off, BCrypt.
+- `JwtUtil`: tạo/validate JWT (jjwt), access token mang claim **`sid`** (id phiên). Access 24h (`jwt.expiration`), refresh token 30 ngày (`jwt.refresh-expiration`).
+- `JwtAuthFilter`: validate token + **kiểm phiên `sid` còn sống** (qua `SessionService`) → thu hồi từ xa có hiệu lực tức thì; set SecurityContext.
+- `SecurityConfig`: `/api/auth/login|register|refresh` PUBLIC; còn lại `.authenticated()`. Có `AuthenticationEntryPoint` → trả **401** (không phải 403) khi thiếu/sai token. Stateless (servlet), CSRF off, BCrypt.
 - `CustomUserDetailsService`: load user theo email.
 
 ### 3.6. Khác
@@ -363,6 +364,11 @@ ORDER BY updatedAt ASC, id ASC
 
 > Cơ chế áp dụng cho **mọi** entity. Worker gọi các hàm `pullDelta*` theo đúng thứ tự khóa ngoại: categories → accounts → budgets → goals → transactions.
 
+### 6.4. Số dư = Σ giao dịch (chống trôi lệch) + Optimistic concurrency
+
+- **Số dư ví tính lại từ giao dịch**: thay vì cộng dồn kiểu LWW (dễ lệch khi 2 máy cùng sửa), số dư = **Σ(thu) − Σ(chi+chuyển)**, được tính lại sau **mọi** create/update/delete và sau **mỗi batch `/sync`**. Tính lại thủ công: `POST /api/accounts/{id}/reconcile` hoặc `/reconcile-all`.
+- **Optimistic concurrency (409)**: `PUT /api/transactions/{id}` nhận `expectedUpdatedAt` (tùy chọn) — nếu bản trên server đã đổi so với mốc client gửi → **409 Conflict**, không ghi đè âm thầm. *(Hiện app sửa giao dịch qua `/sync` LWW nên đây là năng lực backend, chưa nối vào UI sửa của Android.)*
+
 ---
 
 ## 7. Bảo mật & Cô lập dữ liệu (Data Isolation)
@@ -425,6 +431,16 @@ Authorization: Bearer <token> ───────▶   1. có "Bearer "? khôn
 ```
 
 > **Mấu chốt HMAC-SHA**: bước **ký** (A) và bước **xác minh** (B) dùng **chung một `SECRET`**. Vì vậy đổi `JWT_SECRET` rồi restart → mọi token cũ verify thất bại → 401 hàng loạt (xem mục 8).
+
+### Quản lý phiên đa thiết bị (sessions + refresh token)
+
+Một tài khoản đăng nhập đồng thời nhiều máy — mỗi máy là 1 dòng bảng `sessions`.
+
+- Login/register cấp **access token** (JWT, claim `sid` = id phiên) + **refresh token** opaque (lưu SHA-256, tự **xoay** mỗi lần refresh → chống replay).
+- **Tự refresh**: `RetrofitClient` dùng OkHttp `Authenticator` → gặp 401 thì tự đổi refresh token lấy access token mới, giữ đăng nhập (không bắt nhập lại).
+- **Thu hồi tức thì**: `JwtAuthFilter` kiểm `sid` còn sống mỗi request → đăng xuất từ xa / logout có hiệu lực ngay ở request kế tiếp.
+- **UI**: màn "Thiết bị đăng nhập" (`SessionManagementFragment`) — liệt kê phiên, thu hồi 1 thiết bị, "đăng xuất các thiết bị khác".
+- Endpoint: `POST /auth/refresh`, `/auth/logout`, `GET /auth/sessions`, `DELETE /auth/sessions/{id}`, `POST /auth/sessions/logout-others`.
 
 ### Cô lập dữ liệu giữa các tài khoản (4 lớp)
 

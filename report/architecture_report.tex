@@ -1,0 +1,439 @@
+\documentclass[11pt,a4paper]{article}
+
+% ─── Tiếng Việt qua XeLaTeX ──────────────────────────────────────────────────
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{vietnamese}
+\setmainfont{Latin Modern Roman}
+
+% ─── Layout & tiện ích ───────────────────────────────────────────────────────
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+
+% ─── Cấu hình listing cho code ───────────────────────────────────────────────
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\definecolor{codekw}{rgb}{0.13,0.29,0.53}
+\definecolor{codecmt}{rgb}{0.30,0.50,0.30}
+\definecolor{codestr}{rgb}{0.64,0.20,0.20}
+\definecolor{framecol}{rgb}{0.70,0.70,0.70}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=8pt,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{framecol},
+  breaklines=true,
+  breakatwhitespace=false,
+  showstringspaces=false,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecmt}\itshape,
+  stringstyle=\color{codestr},
+  tabsize=2,
+  captionpos=b,
+  literate=%
+    {á}{{\'a}}1 {à}{{\`a}}1 {ả}{{\h a}}1 {ã}{{\~a}}1 {ạ}{{\d a}}1
+    {â}{{\^a}}1 {ấ}{{\'{\^a}}}1 {ầ}{{\`{\^a}}}1
+    {ă}{{\u a}}1 {ắ}{{\'{\u a}}}1 {ằ}{{\`{\u a}}}1
+    {é}{{\'e}}1 {è}{{\`e}}1 {ế}{{\'{\^e}}}1 {ề}{{\`{\^e}}}1 {ệ}{{\d{\^e}}}1
+    {í}{{\'i}}1 {ì}{{\`i}}1 {ó}{{\'o}}1 {ò}{{\`o}}1 {ô}{{\^o}}1 {ố}{{\'{\^o}}}1
+    {ơ}{{\horn o}}1 {ớ}{{\'{\horn o}}}1 {ợ}{{\d{\horn o}}}1
+    {ú}{{\'u}}1 {ù}{{\`u}}1 {ư}{{\horn u}}1 {ứ}{{\'{\horn u}}}1 {ự}{{\d{\horn u}}}1
+    {đ}{{\dj}}1 {Đ}{{\DJ}}1 {ý}{{\'y}}1 {ị}{{\d i}}1 {ộ}{{\d{\^o}}}1
+}
+
+\lstdefinestyle{java}{language=Java}
+\lstdefinestyle{sql}{language=SQL}
+
+% ─── Header/Footer ───────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small TIP -- Money Tracker}
+\rhead{\small Kiến trúc \& Thiết kế Hệ thống}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ─── hyperref (load gần cuối) ────────────────────────────────────────────────
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue]{hyperref}
+
+% ─── Metadata ────────────────────────────────────────────────────────────────
+\title{\textbf{Kiến trúc \& Thiết kế Hệ thống}\\[4pt]
+       \large TIP -- Tap Into Prosperity (Money Tracker)\\
+       \normalsize Hỗ trợ đa thiết bị, đồng bộ Delta \& toàn vẹn số dư}
+\author{Nhóm phát triển TIP}
+\date{\today}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+\noindent Báo cáo trình bày các quyết định kiến trúc cốt lõi của ứng dụng quản lý
+tài chính cá nhân \textbf{TIP}: mô hình ba tầng \emph{offline-first}, cơ chế đồng bộ
+\emph{Delta Sync} dựa trên con trỏ, xác thực \emph{JWT (HMAC-SHA)} kết hợp quản lý
+phiên đa thiết bị, bảo đảm toàn vẹn số dư theo nguyên tắc \emph{số dư $=\Sigma$ giao dịch},
+cô lập dữ liệu đa tài khoản và kiểm thử tích hợp end-to-end. Mọi mô tả bám sát mã nguồn
+thực tế của dự án (package gốc \texttt{vn.edu.usth.tip}).
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Tổng quan kiến trúc ba tầng}
+\label{sec:overview}
+
+Hệ thống được tổ chức thành ba tầng rõ ràng, theo triết lý \textbf{Offline-First}:
+cơ sở dữ liệu cục bộ \texttt{Room/SQLite} là nguồn sự thật cho trải nghiệm người dùng,
+còn \texttt{PostgreSQL} trên cloud (Neon) là nguồn sự thật cho toàn hệ thống giữa nhiều
+thiết bị.
+
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{Tầng Android (offline-first).} Kiến trúc \texttt{MVVM + Repository}:
+        \texttt{Fragment/Activity} chỉ \texttt{observe} \texttt{LiveData} do \texttt{AppViewModel}
+        (Financial Engine) phát ra; \texttt{Repository} điều phối giữa Room (cache cục bộ)
+        và Retrofit (REST). Mọi thao tác CRUD ghi vào Room \emph{trước}, đồng bộ lên server
+        \emph{sau} qua \texttt{WorkManager}.
+  \item \textbf{Tầng Network/JWT.} \texttt{Retrofit/OkHttp} gắn header
+        \texttt{Authorization: Bearer <token>} cho mỗi request, tự động làm mới token qua
+        \texttt{Authenticator} và buộc đăng xuất khi gặp 401/403.
+  \item \textbf{Tầng Spring Boot $\rightarrow$ PostgreSQL.} Kiến trúc ba lớp chuẩn
+        \texttt{Controller} $\rightarrow$ \texttt{Service} $\rightarrow$ \texttt{JPA Repository},
+        mọi thao tác đổi số dư được bọc trong \texttt{@Transactional} (ACID), ràng buộc
+        \texttt{CHECK(amount > 0)} và khóa ngoại ở tầng database.
+\end{enumerate}
+
+\begin{center}
+\fbox{\parbox{0.92\textwidth}{\centering\ttfamily\small
+ANDROID (Java) \\
+UI (Fragment/ViewModel) $\rightarrow$ Repository (offline-first) \\
+Room SQLite (UX truth) \quad | \quad Retrofit/OkHttp (HTTP + JWT) \\[4pt]
+$\downarrow$ HTTPS + JWT \\[4pt]
+SPRING BOOT 4 / Java 21 \\
+Controller $\rightarrow$ Service $\rightarrow$ JPA Repository \quad @Transactional \\[4pt]
+$\downarrow$ JDBC \\[4pt]
+NEON POSTGRESQL (system truth) \quad CHECK(amount>0), FK
+}}
+\end{center}
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Đồng bộ: Delta Sync dựa trên con trỏ}
+\label{sec:sync}
+
+Thay vì tải lại toàn bộ dữ liệu mỗi lần đồng bộ, hệ thống chỉ truyền những bản ghi
+\emph{đã thay đổi kể từ lần đồng bộ trước} (delta). Mỗi entity
+(\texttt{transactions}, \texttt{accounts}, \texttt{categories}, \texttt{budgets},
+\texttt{goals}, \texttt{debts}) có một endpoint \texttt{/delta} và một con trỏ (cursor)
+riêng do \emph{server} cấp, lưu trong \texttt{SyncPrefs}.
+
+\subsection{Ba tham số đảm bảo ``không sót, không trùng''}
+
+\begin{itemize}[leftmargin=2em]
+  \item \texttt{updatedSince} (cursor cũ): chỉ lấy bản ghi \texttt{updatedAt > since};
+        lần đầu dùng \texttt{SyncConstants.EPOCH\_CURSOR}.
+  \item \texttt{untilTimestamp} (snapshot): chốt \texttt{until = now()} ngay đầu phiên;
+        mọi trang đều thấy cùng một ``ảnh chụp'' \texttt{updatedAt <= until}. Chính
+        \texttt{until} trở thành con trỏ mới cho phiên kế tiếp.
+  \item \texttt{lastUpdatedAt + lastId} (keyset pagination): phân trang theo cặp khóa
+        \texttt{(updatedAt, id)} thay cho \texttt{OFFSET}; \texttt{id} phá thế hòa khi
+        nhiều bản trùng \texttt{updatedAt} tới từng mili-giây.
+\end{itemize}
+
+Truy vấn delta dùng \texttt{Slice<T>} (\emph{không} \texttt{COUNT(*)}) -- client chỉ cần
+biết ``còn nữa hay không'' (\texttt{hasMore = slice.hasNext()}):
+
+\begin{lstlisting}[style=java,caption={Truy vấn delta keyset (TransactionRepository.findDelta)}]
+@Query("SELECT t FROM Transaction t WHERE t.user.id = :uid " +
+       "AND t.updatedAt > :since AND t.updatedAt <= :until " +     // cửa sổ (since, until]
+       "AND (:lastTs IS NULL OR t.updatedAt > :lastTs " +          // keyset pagination
+       "     OR (t.updatedAt = :lastTs AND t.id > :lastId)) " +
+       "ORDER BY t.updatedAt ASC, t.id ASC")
+Slice<Transaction> findDelta(uid, since, until, lastTs, lastId, pageable);
+\end{lstlisting}
+
+\subsection{Last-Write-Wins (LWW)}
+
+Khi cùng một bản ghi bị sửa ở nhiều nơi, hệ thống dùng chiến lược \textbf{Last-Write-Wins}
+dựa trên \texttt{updatedAt}: bản nào mới hơn sẽ thắng. Logic được xử lý null-safe để bản
+ghi cũ chưa từng được ``stamp'' không vô tình ghi đè dữ liệu tốt. Đặc biệt, server trả về
+\emph{cả} bản ghi đã soft-delete (\texttt{deletedAt != null}) để thiết bị khác biết mà xóa
+theo (cơ chế \emph{tombstone}); nếu lọc bỏ, lệnh xóa sẽ không bao giờ lan truyền.
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Xác thực JWT \& Quản lý phiên đa thiết bị}
+\label{sec:auth}
+
+Server chạy \textbf{stateless}: mỗi request tự mang danh tính qua một JWT đã ký bằng
+\texttt{HMAC-SHA} với khóa \texttt{jwt.secret}. Để hỗ trợ đa thiết bị và thu hồi tức thì,
+hệ thống bổ sung bảng \texttt{sessions} và claim \texttt{sid} (id phiên) trong access token.
+
+\subsection{Vòng đời token}
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Đăng nhập/đăng ký} cấp \emph{access token} (JWT mang claim \texttt{sid},
+        hạn \texttt{jwt.expiration} = 24h) + \emph{refresh token} opaque (lưu SHA-256,
+        hạn \texttt{jwt.refresh-expiration} = 30 ngày).
+  \item \textbf{Refresh xoay vòng (rotation).} Mỗi lần đổi refresh token, server sinh
+        token mới và lưu lại SHA-256 mới $\rightarrow$ token cũ trở nên vô hiệu, chống
+        replay.
+  \item \textbf{Thu hồi tức thì.} \texttt{JwtAuthFilter} kiểm tra phiên \texttt{sid} còn
+        sống ở \emph{mỗi} request; đăng xuất từ xa có hiệu lực ngay ở request kế tiếp.
+\end{itemize}
+
+\subsection{Access token mang claim \texttt{sid}}
+
+\begin{lstlisting}[style=java,caption={JwtUtil -- phát access token mang claim ``sid'' (id phiên)}]
+public String generateToken(UserDetails userDetails, UUID sessionId) {
+    Map<String, Object> claims = new HashMap<>();
+    if (sessionId != null) {
+        claims.put("sid", sessionId.toString());   // gắn id phiên vào token
+    }
+    return createToken(claims, userDetails.getUsername());
+}
+\end{lstlisting}
+
+\texttt{JwtAuthFilter} đọc \texttt{sid} và hỏi \texttt{SessionService.isActive(sid)}; nếu phiên
+đã bị thu hồi/hết hạn thì \emph{không} thiết lập authentication, khiến Spring Security trả
+401 ngay. Token cũ không mang \texttt{sid} vẫn được chấp nhận (tương thích ngược).
+
+\subsection{Refresh token xoay vòng (SHA-256)}
+
+Refresh token là chuỗi ngẫu nhiên 256-bit; server chỉ lưu \emph{băm} SHA-256 của nó, không
+bao giờ lưu token thô. Mỗi lần \texttt{rotate()} sẽ kiểm tra hợp lệ rồi thay băm mới:
+
+\begin{lstlisting}[style=java,caption={SessionService.rotate -- kiểm tra \& xoay refresh token}]
+public SessionCreation rotate(String rawRefresh) {
+    Session s = sessionRepository.findByRefreshTokenHash(sha256(rawRefresh))
+            .orElseThrow(() -> new InvalidTokenException("Refresh token không hợp lệ"));
+    if (s.isRevoked() || s.getExpiresAt().isBefore(OffsetDateTime.now())) {
+        throw new InvalidTokenException("Phiên đã hết hạn hoặc bị thu hồi");
+    }
+    String newRaw = generateRawToken();        // XOAY: sinh token mới
+    s.setRefreshTokenHash(sha256(newRaw));      // lưu băm mới -> token cũ vô hiệu
+    s.setLastSeenAt(OffsetDateTime.now());
+    s.setExpiresAt(OffsetDateTime.now().plus(refreshExpirationMs, ChronoUnit.MILLIS));
+    sessionRepository.save(s);
+    return new SessionCreation(s, newRaw);
+}
+\end{lstlisting}
+
+\subsection{Tự động làm mới phía client (OkHttp Authenticator)}
+
+Khi gặp 401, OkHttp gọi \texttt{Authenticator}: client dùng refresh token (qua client
+\emph{không} xác thực để tránh đệ quy) lấy access token mới rồi thử lại request, giữ người
+dùng đăng nhập mà không phải nhập lại. Một khóa (\texttt{refreshLock}) đảm bảo một loạt 401
+đồng thời chỉ kích hoạt tối đa một lần refresh.
+
+\begin{lstlisting}[style=java,caption={RetrofitClient -- OkHttp Authenticator tự refresh token}]
+private static okhttp3.Authenticator tokenAuthenticator(TokenManager tokenManager) {
+    return (route, response) -> {
+        if (tokenManager == null) return null;
+        if (responseCount(response) >= 2) return null;   // đã thử 1 lần -> ngừng
+        String refresh = tokenManager.getRefreshToken();
+        if (refresh == null) return null;
+        synchronized (refreshLock) {
+            String current = tokenManager.getToken();
+            String tried   = stripBearer(response.request().header("Authorization"));
+            if (current != null && !current.equals(tried)) {   // thread khác đã refresh
+                return response.request().newBuilder()
+                        .header("Authorization", "Bearer " + current).build();
+            }
+            retrofit2.Response<AuthResponse> r =
+                    getAuthApi().refresh(new RefreshRequest(refresh)).execute();
+            if (r.isSuccessful() && r.body() != null && r.body().getToken() != null) {
+                tokenManager.updateTokens(r.body().getToken(), r.body().getRefreshToken());
+                return response.request().newBuilder()
+                        .header("Authorization", "Bearer " + r.body().getToken()).build();
+            }
+            return null;   // refresh hỏng -> 401 lan ra -> interceptor đăng xuất
+        }
+    };
+}
+\end{lstlisting}
+
+\subsection{UI quản lý thiết bị}
+
+Màn \texttt{SessionManagementFragment} (``Thiết bị đăng nhập'') liệt kê các phiên đang hoạt
+động, đánh dấu thiết bị hiện tại, cho phép thu hồi một thiết bị hoặc ``đăng xuất các thiết bị
+khác''. Các endpoint mới do \texttt{AuthController} và \texttt{AccountController} cung cấp được
+tóm tắt ở Bảng~\ref{tab:endpoints}.
+
+\begin{table}[ht]
+\centering
+\caption{Các endpoint mới phục vụ đa thiết bị \& toàn vẹn số dư}
+\label{tab:endpoints}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Method} & \textbf{Đường dẫn} & \textbf{Quyền} & \textbf{Chức năng} \\
+\midrule
+POST   & \texttt{/api/auth/login}                    & public & Đăng nhập, cấp access + refresh token \\
+POST   & \texttt{/api/auth/register}                 & public & Đăng ký, tự tạo phiên đầu tiên \\
+POST   & \texttt{/api/auth/refresh}                  & public & Xoay refresh token, cấp access mới \\
+POST   & \texttt{/api/auth/logout}                   & auth   & Thu hồi phiên hiện tại \\
+GET    & \texttt{/api/auth/sessions}                 & auth   & Liệt kê phiên đang hoạt động \\
+DELETE & \texttt{/api/auth/sessions/\{id\}}          & auth   & Thu hồi một phiên (đăng xuất từ xa) \\
+POST   & \texttt{/api/auth/sessions/logout-others}   & auth   & Thu hồi mọi phiên khác, giữ phiên này \\
+\midrule
+POST   & \texttt{/api/accounts/\{id\}/reconcile}     & auth   & Tính lại số dư một ví từ giao dịch \\
+POST   & \texttt{/api/accounts/reconcile-all}        & auth   & Tính lại số dư tất cả ví \\
+GET    & \texttt{/api/accounts/delta}                & auth   & Delta sync ví (cursor-based) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Cấu hình \texttt{SecurityConfig}: chỉ \texttt{/api/auth/login|register|refresh} là
+\texttt{permitAll}, mọi đường dẫn còn lại \texttt{.authenticated()}; \texttt{csrf} tắt,
+\texttt{SessionCreationPolicy.STATELESS}, băm mật khẩu bằng BCrypt.
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Toàn vẹn số dư: số dư $=\Sigma$ giao dịch}
+\label{sec:balance}
+
+Số dư là một bộ đếm cộng dồn nên \emph{không an toàn} dưới LWW khi nhiều thiết bị cùng sửa
+(dễ ``trôi lệch''). Vì vậy hệ thống coi \textbf{số dư ví $=\Sigma(\text{thu}) - \Sigma(\text{chi}+\text{chuyển})$}
+và tính lại sau \emph{mọi} thao tác create/update/delete và sau \emph{mỗi} batch \texttt{/sync},
+thay vì cộng dồn.
+
+\subsection{Tính lại số dư (recompute / reconcile)}
+
+\begin{lstlisting}[style=java,caption={TransactionService.recomputeBalance \& truy vấn computeBalanceForAccount}]
+// TransactionService -- số dư = Sigma giao dịch (authoritative, không trôi LWW)
+private void recomputeBalance(Account account) {
+    if (account == null) return;
+    BigDecimal computed = transactionRepository.computeBalanceForAccount(account.getId());
+    if (computed == null) computed = BigDecimal.ZERO;
+    if (account.getBalance() == null || account.getBalance().compareTo(computed) != 0) {
+        account.setBalance(computed);   // chỉ ghi khi lệch -> tránh bump updatedAt thừa
+        accountRepository.save(account);
+    }
+}
+
+// TransactionRepository -- tổng có dấu theo loại giao dịch, bỏ qua bản đã xóa
+@Query("SELECT COALESCE(SUM(CASE WHEN t.type = ...TransactionType.income " +
+       "THEN t.amount ELSE -t.amount END), 0) " +
+       "FROM Transaction t WHERE t.account.id = :accountId AND t.deletedAt IS NULL")
+BigDecimal computeBalanceForAccount(@Param("accountId") UUID accountId);
+\end{lstlisting}
+
+Endpoint \texttt{/api/accounts/\{id\}/reconcile} (và \texttt{/reconcile-all}) cho phép gọi tính
+lại thủ công, đưa số dư về đúng tổng giao dịch -- kể cả khi số dư khởi tạo bị nhập lệch.
+
+\subsection{Optimistic concurrency (\texttt{expectedUpdatedAt} $\rightarrow$ 409)}
+
+Khi sửa giao dịch qua \texttt{PUT /api/transactions/\{id\}}, client có thể gửi
+\texttt{expectedUpdatedAt}. Nếu bản trên server đã đổi so với mốc client kỳ vọng (thiết bị khác
+vừa sửa), server ném \texttt{ConflictException} $\rightarrow$ \textbf{409}, \emph{không} ghi đè
+âm thầm (chống lost-update):
+
+\begin{lstlisting}[style=java,caption={TransactionService.updateTransaction -- optimistic concurrency check}]
+// Optimistic concurrency: nếu bản trên server đã đổi so với expectedUpdatedAt -> 409
+if (req.getExpectedUpdatedAt() != null && tx.getUpdatedAt() != null
+        && !req.getExpectedUpdatedAt().isEqual(tx.getUpdatedAt())) {
+    throw new ConflictException(
+        "Giao dịch đã được thay đổi ở thiết bị khác. Hãy tải lại trước khi sửa.");
+}
+\end{lstlisting}
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Cô lập dữ liệu đa tài khoản (4 lớp)}
+\label{sec:isolation}
+
+Một thiết bị có thể đăng nhập lần lượt nhiều tài khoản; dữ liệu giữa các tài khoản phải
+tuyệt đối tách biệt. Hệ thống áp dụng bốn lớp phòng vệ:
+
+\begin{table}[ht]
+\centering
+\caption{Bốn lớp cô lập dữ liệu giữa các tài khoản}
+\label{tab:isolation}
+\begin{tabular}{@{}lp{0.62\textwidth}@{}}
+\toprule
+\textbf{Lớp} & \textbf{Cơ chế} \\
+\midrule
+Lớp 1 -- Schema & Cột \texttt{user\_id} trên mọi entity; DAO lọc \texttt{WHERE user\_id = :id}. Backend luôn lấy \texttt{userId} từ \texttt{SecurityContext}, không tin tham số client. \\
+Lớp 2 -- Write  & Stamp \texttt{userId} trước mọi insert (cả hành động người dùng lẫn ghi từ sync). \\
+Lớp 3 -- Async  & ``Stale response guard'': bỏ qua response của user cũ nếu tài khoản đã đổi giữa lúc gửi và lúc nhận. \\
+Lớp 4 -- Switch & Đổi tài khoản $\rightarrow$ \texttt{cancelAllRequests} + hủy worker + \texttt{clearAllTables} + \texttt{SyncPrefs.clearAll} $\rightarrow$ tạo \texttt{AppViewModel} mới. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Phía Android, \texttt{TokenManager} (singleton) lưu token trong
+\texttt{EncryptedSharedPreferences} (AES256-GCM, backed by Android Keystore) và cache trong RAM
+để các luồng nền (OkHttp Dispatcher, WorkManager) không phải chạm Keystore vốn chậm. Tại tầng
+mạng, \texttt{RetrofitClient} dùng chung một \texttt{Dispatcher}; khi đăng xuất gọi
+\texttt{cancelAllRequests()} để hủy mọi request đang bay, tránh ``zombie response'' ghi dữ liệu
+của user cũ vào DB của user mới.
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Kiểm thử tích hợp end-to-end}
+\label{sec:testing}
+
+Lớp \texttt{MultiDeviceSessionFlowTest} boot toàn bộ ứng dụng trên \texttt{H2} in-memory
+(profile \texttt{test}, \emph{không} đụng Neon production) và gọi API thật qua JDK
+\texttt{HttpClient}. Một kịch bản kiểm chứng đồng thời cả ba mục: quản lý phiên đa thiết bị,
+toàn vẹn số dư và optimistic concurrency. Các bước và kết quả mong đợi (đều PASS) tóm tắt ở
+Bảng~\ref{tab:test}.
+
+\begin{table}[ht]
+\centering
+\caption{Các bước trong MultiDeviceSessionFlowTest}
+\label{tab:test}
+\begin{tabular}{@{}clc@{}}
+\toprule
+\textbf{\#} & \textbf{Bước kiểm thử} & \textbf{Kết quả} \\
+\midrule
+1  & Đăng ký ``Thiết bị A'' (tự tạo phiên A)                       & 201 \\
+2  & Đăng nhập ``Thiết bị B'' cùng tài khoản, song song           & 200 \\
+3  & A liệt kê phiên $\rightarrow$ đúng 2, đúng 1 phiên ``current'' & 200 \\
+4  & Xoay access token A bằng refresh token                       & 200 \\
+5  & Dùng lại refresh token A cũ (đã xoay)                         & 401 \\
+6  & A thu hồi phiên của B                                         & 204 \\
+7  & Token B dùng ngay sau khi bị thu hồi (thu hồi tức thì)        & 401 \\
+8  & Tạo ví số dư lệch 500k, không giao dịch $\rightarrow$ reconcile & 0 \\
+9  & Thu 100k $\rightarrow$ số dư ví                               & 100k \\
+10 & Chi 30k $\rightarrow$ số dư ví                                & 70k \\
+11 & Xóa giao dịch chi $\rightarrow$ số dư ví                      & 100k \\
+12 & Sửa với \texttt{expectedUpdatedAt} cũ (lost-update)          & 409 \\
+13 & Sửa không kèm \texttt{expectedUpdatedAt} $\rightarrow$ 120k   & 120k \\
+14 & Đăng xuất A $\rightarrow$ token A chết                        & 204/401 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Chuỗi số dư \textbf{100k $\rightarrow$ 70k $\rightarrow$ 100k $\rightarrow$ 120k}
+chứng minh nguyên tắc ``số dư $=\Sigma$ giao dịch'' hoạt động đúng qua create/expense/delete/update,
+trong khi 409 ở bước 12 (kèm khẳng định số dư \emph{không} đổi) xác nhận cơ chế optimistic
+concurrency chặn được lost-update từ thiết bị khác.
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Tổng kết}
+\label{sec:conclusion}
+
+\begin{table}[ht]
+\centering
+\caption{Tóm tắt quyết định kỹ thuật}
+\label{tab:summary}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Quyết định} & \textbf{Lựa chọn} & \textbf{Lý do} \\
+\midrule
+Nguồn sự thật     & Room (UX) + PostgreSQL (hệ thống)   & tức thì + nhất quán toàn cục \\
+Đồng bộ           & WorkManager + cursor delta (Slice)  & tiết kiệm băng thông, chịu lỗi \\
+Xung đột          & Last-Write-Wins (\texttt{updatedAt})& đơn giản, hội tụ cho single-user \\
+Toàn vẹn số dư    & $\Sigma$ giao dịch + 409             & chống trôi lệch, chống lost-update \\
+Xác thực          & JWT stateless + \texttt{sid} + rotation & mở rộng tốt, thu hồi tức thì \\
+Cô lập            & 4 lớp theo \texttt{user\_id}         & tách tuyệt đối dữ liệu đa tài khoản \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Các cơ chế trên phối hợp tạo nên một hệ thống offline-first vừa cho trải nghiệm tức
+thì, vừa giữ nhất quán dữ liệu tài chính giữa nhiều thiết bị, với khả năng thu hồi phiên tức
+thì và bảo đảm toàn vẹn số dư đã được kiểm chứng bằng kiểm thử tích hợp end-to-end.
+
+\end{document}
