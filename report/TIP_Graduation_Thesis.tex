@@ -1,0 +1,902 @@
+% =====================================================================
+%  USTH BACHELOR THESIS  --  Department of ICT  --  2026
+%  Formatted to match the official "2026 ICT Bachelor thesis template".
+%
+%  TIP - Tap Into Prosperity: An Offline-First Personal Finance
+%  Management Application for Android with Real-Time Cloud Synchronization
+%
+%  COMPILE ON OVERLEAF WITH:  Menu -> Compiler -> XeLaTeX  (REQUIRED)
+%  -------------------------------------------------------------------
+%  TODO before submitting:
+%   * Replace every [PLACEHOLDER] (student name, ID, supervisors, date).
+%   * Drop in the USTH logo on the title page (\includegraphics ...).
+%   * Replace each \figplaceholder{...} with \includegraphics{...} and
+%     upload the matching image (paths from docs/diagrams/ are noted).
+%   * Body font is TeX Gyre Termes (Times New Roman-compatible, bundled
+%     with Overleaf); headings use the template's navy "Heading 1" look.
+% =====================================================================
+
+\documentclass[13pt,a4paper]{extarticle}
+
+% ---- Fonts & language (XeLaTeX) ----
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Termes}      % Times New Roman-compatible metrics
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+
+% ---- Page geometry ----
+\usepackage[top=2.5cm,bottom=2.5cm,left=3.0cm,right=2.5cm,
+            headsep=0.6cm,footskip=1.0cm]{geometry}
+
+% ---- Line spacing 1.3, justified ----
+\usepackage{setspace}
+\setstretch{1.3}
+\usepackage{microtype}
+
+% ---- Math, tables, graphics, lists ----
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+
+% ---- Template heading colour (Word "Heading 1" navy) ----
+\definecolor{usthblue}{RGB}{31,73,125}
+
+% ---- Captions: "Table 1: ..." / "Figure 1: ...", bold, centred ----
+\usepackage{caption}
+\captionsetup{labelsep=colon, font=bf, justification=centering,
+              singlelinecheck=true, skip=6pt}
+
+% ---- Headers / footers: page number bottom-right (template style) ----
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[R]{\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+% ---- Source-code listings ----
+\usepackage{listings}
+\definecolor{codegray}{gray}{0.5}
+\definecolor{codekw}{RGB}{0,0,180}
+\definecolor{codecm}{RGB}{0,128,0}
+\definecolor{codestr}{RGB}{170,0,40}
+\definecolor{codebg}{RGB}{248,248,248}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  numbers=left, numberstyle=\tiny\color{codegray}, numbersep=8pt,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecm}\itshape,
+  stringstyle=\color{codestr},
+  backgroundcolor=\color{codebg},
+  frame=single, framesep=4pt, rulecolor=\color{codegray},
+  breaklines=true, showstringspaces=false, tabsize=2,
+  captionpos=b, columns=fullflexible, keepspaces=true
+}
+
+% ---- Sectioning: I/ , II/ ... navy heading + rule (template look) ----
+\renewcommand{\thesection}{\Roman{section}/}
+\renewcommand{\thesubsection}{\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\arabic{subsection}.\arabic{subsubsection}}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+
+\usepackage{titlesec}
+\titleformat{\section}
+  {\color{usthblue}\normalfont\fontsize{16}{19}\bfseries}
+  {\thesection}{0.4em}{}
+  [{\color{usthblue}\titlerule[1.4pt]}]
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+\titleformat{\subsection}
+  {\color{usthblue}\normalfont\fontsize{13.5}{16}\bfseries}
+  {\thesubsection.}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{12pt}{4pt}
+\titleformat{\subsubsection}
+  {\normalfont\fontsize{13}{16}\bfseries\itshape}
+  {\thesubsubsection}{0.5em}{}
+\titlespacing*{\subsubsection}{0pt}{10pt}{3pt}
+
+% ---- List-of titles & ToC name to match the template ----
+\renewcommand{\contentsname}{Table of Contents}
+\renewcommand{\listtablename}{LIST OF TABLES}
+\renewcommand{\listfigurename}{LIST OF FIGURES}
+
+% ---- Hyperref last ----
+\usepackage[hidelinks,colorlinks=true,linkcolor=black,citecolor=blue,urlcolor=blue]{hyperref}
+
+% ---- Helper: framed figure placeholder ----
+\newcommand{\figplaceholder}[2][0.85]{%
+  \fbox{\begin{minipage}[c][4.0cm][c]{#1\textwidth}
+    \centering\itshape\small #2
+  \end{minipage}}}
+
+\begin{document}
+
+% =====================================================================
+%  TITLE PAGE (framed, per template)
+% =====================================================================
+\thispagestyle{empty}
+\begin{titlepage}
+\setlength{\fboxsep}{14pt}
+\noindent\fbox{%
+\begin{minipage}[c][\dimexpr\textheight-2\fboxsep-2\fboxrule\relax][t]{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}
+\centering
+\vspace{0.4cm}
+{\normalsize UNIVERSITY OF SCIENCE AND TECHNOLOGY OF HANOI\par}
+{\normalsize\bfseries DEPARTMENT OF INFORMATION AND COMMUNICATION TECHNOLOGY\par}
+\vspace{1.4cm}
+
+% --- USTH logo: upload usth_logo.png next to this .tex ---
+\IfFileExists{USTH_logo.png}
+  {\includegraphics[width=0.45\textwidth]{USTH_logo.png}}
+  {\figplaceholder[0.4]{[USTH logo here -- upload USTH\_logo.png]}}\par
+\vspace{1.4cm}
+
+{\fontsize{30}{34}\bfseries BACHELOR THESIS\par}
+\vspace{0.9cm}
+{\large By\par}
+{\large [Student's Full Name]\par}
+\vspace{1.0cm}
+
+{\large Title:\par}
+\vspace{0.2cm}
+{\large\bfseries TIP -- Tap Into Prosperity: An Offline-First Personal\\
+Finance Management Application for Android with\\
+Real-Time Cloud Synchronization\par}
+\vspace{2.6cm}
+
+\begin{flushleft}
+\hspace{1.5cm}\begin{tabular}{@{}ll@{}}
+External Supervisor: & Prof. Dr. [External Supervisor Name] \\[6pt]
+Internal Supervisor: & Prof. Dr. [Internal Supervisor Name] \\
+\end{tabular}
+\end{flushleft}
+\vfill
+{\large\bfseries Hanoi, [Month] -- 2026\par}
+\vspace{0.4cm}
+\end{minipage}}
+\end{titlepage}
+
+% =====================================================================
+%  FRONT MATTER
+% =====================================================================
+\pagenumbering{arabic}
+
+% ---------------------- CERTIFICATION --------------------------------
+\thispagestyle{fancy}
+\vspace*{1cm}
+\begin{center}\textbf{To whom it may concern,}\end{center}
+\vspace{0.8cm}
+\noindent I, \dotfill\ (supervisor's name), certify that the thesis / internship report of
+Mr/Ms.\ \dotfill\ (student's name) is qualified to be presented in the Internship Jury
+2025--2026.
+\vspace{2.0cm}
+
+\begin{flushright}
+Hanoi, [date]\\[4pt]
+\textbf{Supervisor's signature}
+\end{flushright}
+\clearpage
+
+% ---------------------- TABLE OF CONTENTS ----------------------------
+\tableofcontents
+\clearpage
+
+% ---------------------- ACKNOWLEDGEMENTS -----------------------------
+\section*{ACKNOWLEDGEMENTS}
+\addcontentsline{toc}{section}{ACKNOWLEDGEMENTS}
+
+I would like to express my sincere gratitude to all those who gave me the possibility to
+complete this thesis, both for the specific guidance and the general academic support I received
+during my studies at the University of Science and Technology of Hanoi.
+
+Foremost, I would like to send my honest thanks to my supervisor,
+\textbf{[Supervisor Full Name]}, for the invaluable guidance, patience, and constructive feedback
+provided throughout this work. I am also deeply grateful to the lecturers of the Department of
+Information and Communication Technology for the knowledge they have given me. Finally, I thank my
+family and friends for their continuous encouragement and support.
+\clearpage
+
+% ---------------------- LIST OF ABBREVIATIONS ------------------------
+\section*{LIST OF ABBREVIATIONS}
+\addcontentsline{toc}{section}{LIST OF ABBREVIATIONS}
+\vspace{0.4cm}
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{@{\hspace{1cm}}p{2.6cm}p{9.5cm}@{}}
+AES      & Advanced Encryption Standard \\
+API      & Application Programming Interface \\
+BCrypt   & Password-hashing function based on the Blowfish cipher \\
+CRDT     & Conflict-free Replicated Data Type \\
+CRUD     & Create, Read, Update, Delete \\
+DAO      & Data Access Object \\
+EWMA     & Exponentially Weighted Moving Average \\
+FK       & Foreign Key \\
+FR / NFR & Functional / Non-Functional Requirement \\
+HMAC     & Hash-based Message Authentication Code \\
+HTTPS    & Hypertext Transfer Protocol Secure \\
+ICT      & Information and Communication Technology \\
+JPA      & Jakarta Persistence API \\
+JWT      & JSON Web Token \\
+LLM      & Large Language Model \\
+LWW      & Last-Write-Wins (conflict-resolution strategy) \\
+MVVM     & Model--View--ViewModel \\
+OCR      & Optical Character Recognition \\
+OLS      & Ordinary Least Squares (linear regression) \\
+ORM      & Object--Relational Mapping \\
+REST     & Representational State Transfer \\
+SDK      & Software Development Kit \\
+SQL      & Structured Query Language \\
+USTH     & University of Science and Technology of Hanoi \\
+UUID     & Universally Unique Identifier \\
+VND      & Vietnamese Dong (currency) \\
+\end{longtable}
+\clearpage
+
+% ---------------------- LIST OF TABLES -------------------------------
+\addcontentsline{toc}{section}{LIST OF TABLES}
+\listoftables
+\clearpage
+
+% ---------------------- LIST OF FIGURES ------------------------------
+\addcontentsline{toc}{section}{LIST OF FIGURES}
+\listoffigures
+\clearpage
+
+% ---------------------- ABSTRACT -------------------------------------
+\section*{ABSTRACT}
+\addcontentsline{toc}{section}{ABSTRACT}
+\textit{(No more than 250 words, in English + 6 keywords)}
+\vspace{0.4cm}
+
+This thesis presents the design and implementation of \textbf{TIP -- Tap Into Prosperity}, a
+personal finance management application for Android that lets users record transactions, manage
+multiple wallets, set budgets, track savings goals and debts, and obtain financial insights, with
+all amounts in Vietnamese Dong. The central objective was an application that remains fully usable
+without a network connection while keeping a user's data consistent across several devices. To
+achieve this, the system follows an \textit{offline-first} architecture: every write is committed
+to a local Room/SQLite database first and the UI reacts immediately, while a background WorkManager
+job synchronizes with the cloud when connectivity is available. The Android client (Java, MVVM +
+Repository) communicates over HTTPS with a stateless Spring~Boot~4 REST backend secured by JWT and
+BCrypt and backed by a serverless Neon PostgreSQL database. Three problems were solved in depth:
+efficient incremental synchronization through a cursor-based delta-sync protocol; multi-device
+conflict resolution using Last-Write-Wins combined with server-recomputed wallet balances; and
+automated receipt capture through a hybrid OCR pipeline (on-device ML~Kit text recognition plus
+server-side Gemini analysis, with a local fallback). Functional verification confirmed that
+authentication, transaction management, multi-account isolation, background synchronization, and
+receipt extraction operate correctly, and that the backend responds within interactive latency
+bounds.
+
+\vspace{0.4cm}
+\noindent\textbf{Keywords:} offline-first, Android, data synchronization, conflict resolution,
+JWT authentication, hybrid OCR.
+\clearpage
+
+% =====================================================================
+%  BODY  (IMRAD, per template)
+% =====================================================================
+
+% ---------------------- I / INTRODUCTION -----------------------------
+\section{INTRODUCTION}
+
+Personal financial management has become a daily necessity, yet many popular money-tracking tools
+share two weaknesses: they assume a stable network connection, and they become inconsistent when
+the same account is used on more than one device. Users frequently record expenses while offline
+--- on public transport, while travelling, or in areas of weak coverage --- and expect the
+application to respond instantly and to reconcile their data later without loss or duplication. An
+application that freezes or loses data under these conditions quickly loses the user's trust.
+
+\subsection{Background and related concepts}
+The system builds on several established ideas. The \textit{offline-first} paradigm treats the
+on-device database as the primary store the user interacts with and the network as an enhancement
+rather than a prerequisite~\cite{android-offline}; user actions are persisted locally and reflected
+immediately (an \textit{optimistic update}) while synchronization happens in the background. On
+Android, this reactive pipeline is realised with Room over SQLite, whose queries return
+lifecycle-aware \texttt{LiveData} observables that refresh the interface automatically when the
+underlying data changes~\cite{room}. Synchronizing two replicas efficiently requires transferring
+only what has changed: a \textit{delta} sync uses a \textit{cursor} (a timestamp) to fetch records
+modified since the previous synchronization, paginated safely with \textit{keyset
+pagination}~\cite{keyset}. When the same record is edited on two devices, a convergent
+conflict-resolution policy is needed; the simplest is \textit{Last-Write-Wins} (LWW), whereas
+multi-user collaboration would call for more complex Conflict-free Replicated Data
+Types~\cite{crdt}. Security relies on stateless authentication with JSON Web
+Tokens~\cite{jwt} and BCrypt password hashing~\cite{bcrypt}, while automated receipt entry combines
+on-device OCR via ML~Kit~\cite{mlkit} with semantic interpretation by a Large Language
+Model~\cite{gemini}. The overall direction of this work was also informed by existing open-source
+receipt-scanning expense trackers, in particular ScanExpense~\cite{scanexpense}, which the present
+project builds upon by adding an offline-first synchronization layer, multi-device conflict
+resolution, and a stateless authenticated backend.
+
+\subsection{Problem statement and motivation}
+These observations motivate the central research question of this work: \emph{how can a mobile
+personal-finance application provide an instantaneous, always-available user experience while still
+guaranteeing data integrity across multiple devices?} Answering it requires reconciling a local
+replica (optimised for responsiveness) with an authoritative cloud replica (optimised for
+consistency) through a synchronization mechanism that is efficient, lossless, and resilient to
+intermittent connectivity, all under strict security and per-user isolation constraints.
+
+% ---------------------- II / OBJECTIVES ------------------------------
+\section{OBJECTIVES}
+
+The scientific objective of this work is to design and build an offline-first personal finance
+application whose local database is the source of truth for the user experience and whose cloud
+database is the source of truth for the system across devices; the strategy is to commit every
+write locally for instant feedback and to reconcile devices through a background, cursor-based
+delta-sync protocol with deterministic conflict resolution.
+
+\noindent The concrete objectives are:
+\begin{enumerate}[leftmargin=2em,itemsep=2pt]
+  \item Implement a complete Android client supporting transactions (income, expense, transfer),
+        multi-wallet management, budgets, goals, debts, dashboards, and spending analytics, fully
+        operable offline.
+  \item Design and implement a secure, stateless REST backend with JWT authentication, BCrypt
+        hashing, and per-user data isolation.
+  \item Engineer a bandwidth-efficient, fault-tolerant synchronization mechanism (cursor-based
+        delta sync with Last-Write-Wins conflict resolution).
+  \item Integrate automated receipt scanning through a hybrid OCR pipeline.
+  \item Verify the system functionally and evaluate the responsiveness of its core services.
+\end{enumerate}
+
+\noindent\textbf{Scope and subjects.} The subject of study is an end-user personal finance
+application together with its supporting backend. The scope covers the Android client (minimum
+API~26), the Spring~Boot backend, and the Neon PostgreSQL database. A single-user-per-account model
+(one user, multiple devices) is targeted; collaborative multi-user accounts, web/iOS clients, and
+production deployment are treated as future work.
+
+% ---------------------- III / MATERIALS AND METHODS ------------------
+\section{MATERIALS AND METHODS}
+
+This section presents the materials (technologies and requirements) and the methods (architecture,
+data model, and the synchronization, security, and OCR designs) used to build the system. The
+design proceeds top-down: \emph{requirements $\rightarrow$ use cases $\rightarrow$ architecture and
+component design}.
+
+\subsection{Materials: technologies and requirements}
+The implementation technologies are summarized in Table~\ref{tab:stack}, and the principal software
+and hardware requirements in Table~\ref{tab:sysreq}.
+
+\begin{table}[H]
+\centering
+\caption{Implementation technology stack}
+\label{tab:stack}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Area} & \textbf{Technology} \\
+\midrule
+Android  & Java, Room (schema v18), Retrofit~2, OkHttp~4, Gson, LiveData/ViewModel, Navigation Component, WorkManager, Material Design~3, CameraX + ML~Kit (OCR), MPAndroidChart, EncryptedSharedPreferences. \\
+Backend  & Spring Boot 4.0.5, Spring Security, Spring Data JPA, Hibernate, Lombok, jjwt 0.12.6, BCrypt, Google Gemini API. \\
+Database & Neon PostgreSQL (cloud) + Room/SQLite (local cache). \\
+Build    & Gradle 8.13 (AGP 8.13.2), Java~21. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Representative software and hardware requirements}
+\label{tab:sysreq}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Component} & \textbf{Requirement} \\
+\midrule
+Android client OS  & Android 7.0 (API~24) minimum; API~26+ recommended. \\
+Client hardware    & 2\,GB RAM min (3\,GB+ recommended); $\sim$100\,MB storage; rear camera for scanning. \\
+Backend runtime    & JDK/JRE 21; Spring Boot 4.0; 512\,MB--1\,GB RAM minimum. \\
+Database           & Neon PostgreSQL (serverless cloud); Room/SQLite on device. \\
+Development machine & 8\,GB RAM min (16\,GB+ recommended); virtualization for the emulator. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Functional and non-functional requirements}
+The functional requirements (Table~\ref{tab:fr}) specify what the system must do; the
+non-functional requirements (Table~\ref{tab:nfr}) constrain how well it must do it.
+
+\begin{table}[H]
+\centering
+\caption{Functional requirements of the TIP system}
+\label{tab:fr}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{ID} & \textbf{Group} & \textbf{Requirement} \\
+\midrule
+FR-01 & Auth        & Register a new account. \\
+FR-02 & Auth        & Log in with email/password and receive a JWT. \\
+FR-03 & Auth        & Log out; switching account wipes local data. \\
+FR-04 & Auth        & Expire the session automatically on invalid/expired token. \\
+FR-05 & Transaction & Record income, expense, and transfer transactions. \\
+FR-06 & Transaction & Create, edit, and soft-delete transactions. \\
+FR-07 & Transaction & Support recurring transactions. \\
+FR-08 & Transaction & View transaction history and details. \\
+FR-09 & Receipt     & Scan a receipt using CameraX + ML~Kit OCR. \\
+FR-10 & Receipt     & Analyse the receipt (Gemini) and pre-fill a transaction. \\
+FR-11 & Manage      & Manage wallets (CASH / BANK / E-WALLET / INVESTMENT). \\
+FR-12 & Manage      & Manage income/expense categories. \\
+FR-13 & Manage      & Manage budgets. \\
+FR-14 & Manage      & Manage savings goals. \\
+FR-15 & Manage      & Manage debts and loans. \\
+FR-16 & View        & Dashboard of total assets, net worth, recent transactions. \\
+FR-17 & View        & Spending analytics (bar and pie charts). \\
+FR-18 & View        & Financial insights (on-device AI + Gemini enrichment). \\
+FR-19 & View        & Home-screen widget (balance + three recent transactions). \\
+FR-20 & Sync        & Background synchronization respecting foreign-key order. \\
+FR-21 & Sync        & Cursor-based delta synchronization. \\
+FR-22 & Sync        & Last-Write-Wins conflict resolution. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Non-functional requirements of the TIP system}
+\label{tab:nfr}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{ID} & \textbf{Attribute} & \textbf{Requirement} \\
+\midrule
+NFR-01 & Availability    & Offline-first: writes hit Room first; the app runs without network. \\
+NFR-02 & Security        & JWT Bearer auth, BCrypt hashing, EncryptedSharedPreferences (AES256-GCM). \\
+NFR-03 & Data isolation  & Four-layer multi-account isolation (schema/write/async/switch). \\
+NFR-04 & Responsiveness  & Reactive UI (LiveData) with optimistic updates. \\
+NFR-05 & Localization    & Vietnamese interface, currency in VND. \\
+NFR-06 & Confidentiality & HTTPS for all client--server communication. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Use case analysis}
+The system has two actors: the \textbf{User} (end user) and the \textbf{Backend} (Spring Boot with
+Gemini and PostgreSQL). Figure~\ref{fig:usecase} gives the overall use-case view, in which
+\emph{Record Income/Expense/Transfer} inherit from an abstract \emph{Record Transaction}, the
+\emph{Record} and \emph{Manage} use cases \textit{include} \emph{Synchronize Data}, and \emph{Scan
+Receipt} \textit{includes} \emph{Analyze Invoice} and \textit{extends} \emph{Record Transaction}.
+Table~\ref{tab:uc01} specifies the authentication use case as a representative example.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{MoneyTracker_UseCase.png}
+  {\includegraphics[width=0.9\textwidth]{MoneyTracker_UseCase.png}}
+  {\figplaceholder{Figure placeholder --- Overall use case diagram.\\[2pt]
+   Upload \texttt{MoneyTracker\_UseCase.png}.}}
+\caption{Overall use case diagram of the TIP system}
+\label{fig:usecase}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Use case UC-01 --- Authenticate Account}
+\label{tab:uc01}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Item} & \textbf{Description} \\
+\midrule
+Actors        & User, Backend. \\
+Precondition  & App installed; network available for the first login. \\
+Main flow     & (1) User enters email/password; (2) client calls the login endpoint; (3) backend verifies with BCrypt; (4) backend returns a JWT; (5) client stores it in EncryptedSharedPreferences; (6) navigate to the main screen. \\
+Alt. flow     & No account $\rightarrow$ register; account changed $\rightarrow$ clear local tables. \\
+Exception     & Wrong credentials (401) $\rightarrow$ error; later expiry $\rightarrow$ session-expired $\rightarrow$ Login. \\
+Postcondition & A JWT is held in encrypted storage; the security context is ready. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{System architecture}
+The system adopts a layered client--server architecture (Figure~\ref{fig:arch}). The local Room
+database is the source of truth for the \emph{user experience}, whereas the cloud PostgreSQL
+database is the source of truth for the \emph{system} across devices; the two are reconciled by the
+background synchronization process. The Android client applies MVVM with the Repository pattern:
+Activities/Fragments only render UI; \texttt{AppViewModel} (a reactive ``financial engine'' built
+on \texttt{MediatorLiveData}) computes total assets, net worth, and budget consumption, all filtered
+by \texttt{userId}; repositories coordinate the local Room DAOs and the remote Retrofit APIs. The
+backend follows the conventional Controller--Service--Repository tiers over Spring Data JPA.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{architecture_layered.png}
+  {\includegraphics[width=0.6\textwidth]{architecture_layered.png}}
+  {\figplaceholder{Figure placeholder --- Layered architecture.\\[2pt]
+   Upload \texttt{architecture\_layered.png}.}}
+\caption{High-level layered architecture of the TIP system}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Data model and integrity}
+Six core entities are stored both locally and on the server: \texttt{Transaction}, \texttt{Wallet}
+(named \texttt{Account} on the server), \texttt{Category}, \texttt{Budget}, \texttt{Goal}, and
+\texttt{DebtLoan}; the server adds \texttt{User} and \texttt{Session}. Every data entity carries a
+\texttt{user\_id}, an \texttt{updatedAt} timestamp (for delta sync), and a soft-delete marker
+(\texttt{deletedAt}/\texttt{isDeleted}). Table~\ref{tab:schema} lists the principal tables.
+
+\begin{table}[H]
+\centering
+\caption{Principal database tables (Neon PostgreSQL)}
+\label{tab:schema}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Table} & \textbf{Key columns} \\
+\midrule
+\texttt{users}        & id (UUID), email, password\_hash (BCrypt), full\_name. \\
+\texttt{accounts}     & id, user\_id (FK), name, type, balance, deleted\_at, updated\_at. \\
+\texttt{categories}   & id, user\_id (FK), name, type, icon, is\_system. \\
+\texttt{transactions} & id, user\_id, account\_id, category\_id, amount (CHECK $>0$), type, transaction\_date, is\_recurring, deleted\_at, updated\_at. \\
+\texttt{budgets}      & id, user\_id, category\_id, amount, spent\_amount, period. \\
+\texttt{goals}        & id, user\_id, name, target\_amount, current\_amount, target\_date. \\
+\texttt{debts}        & id, user\_id, contact\_name, amount, type, due\_date. \\
+\texttt{sessions}     & id, user\_id, refresh-token hash (SHA-256), device, timestamps. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Integrity is enforced on both sides. On the server, every balance-changing operation is atomic:
+persisting a transaction and updating the wallet balance must succeed or fail together
+(Listing~\ref{lst:txn}). A \texttt{CHECK(amount > 0)} constraint and foreign keys prevent invalid
+and orphaned records. On the client, Room is itself an ACID database, so each write completes before
+the UI reacts.
+
+\begin{lstlisting}[language=Java,caption={Server-side atomic transaction creation (simplified).},label={lst:txn}]
+@Transactional
+public TransactionResponse createTransaction(CreateTransactionRequest req) {
+    if (type == INCOME) account.setBalance(balance.add(amount));
+    else                account.setBalance(balance.subtract(amount));
+    accountRepository.save(account);                  // (1) update balance
+    return toResponse(transactionRepository.save(tx)); // (2) save transaction
+}                                                     // (1)+(2) atomic
+\end{lstlisting}
+
+The system uses \textit{soft delete} (flag rather than remove a row) so that a deletion becomes a
+\textit{tombstone} that can be propagated through synchronization to other devices, preventing the
+``zombie resurrection'' in which a hard-deleted local row is re-downloaded on the next pull, and so
+that the deletion --- carrying a fresh \texttt{updatedAt} --- participates in the same Last-Write-Wins
+mechanism as ordinary edits.
+
+\subsection{Synchronization method}
+Following the optimistic write path, \texttt{WorkManager} (requiring connectivity and using
+exponential backoff) pushes unsynced records and then pulls deltas in foreign-key order
+(\texttt{categories} $\rightarrow$ \texttt{accounts} $\rightarrow$ \texttt{budgets} $\rightarrow$
+\texttt{goals} $\rightarrow$ \texttt{transactions}). Each entity exposes a \texttt{/delta} endpoint
+and owns a server-issued cursor stored in \texttt{SyncPrefs}; the cursor must be server-issued
+rather than read from the device clock to avoid clock-skew gaps. One delta cycle is governed by the
+three parameters in Table~\ref{tab:delta}, and the server query selects the half-open window
+$(\textit{since}, \textit{until}]$ with stable keyset ordering (Listing~\ref{lst:delta}).
+Figure~\ref{fig:deltaseq} shows the full sequence.
+
+\begin{table}[H]
+\centering
+\caption{Parameters that make delta sync lossless and duplicate-free}
+\label{tab:delta}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Parameter} & \textbf{Role} \\
+\midrule
+\texttt{updatedSince} (cursor) & Return only rows with \texttt{updatedAt > cursor}; the first sync uses an epoch cursor (full download). \\
+\texttt{untilTimestamp} (snapshot) & The first page pins a server snapshot time reused by every later page (\texttt{updatedAt <= until}); mid-pagination edits arrive on the next cycle. \\
+\texttt{lastUpdatedAt} + \texttt{lastId} & Keyset pagination on \texttt{(updatedAt, id)} instead of \texttt{OFFSET}; \texttt{id} breaks ties on equal timestamps. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}[language=SQL,caption={Keyset delta query (simplified).},label={lst:delta}]
+SELECT t FROM Transaction t WHERE t.user_id = :uid
+  AND t.updatedAt > :since AND t.updatedAt <= :until      -- window (since, until]
+  AND (:lastTs IS NULL OR t.updatedAt > :lastTs            -- keyset pagination
+       OR (t.updatedAt = :lastTs AND t.id > :lastId))
+ORDER BY t.updatedAt ASC, t.id ASC                         -- total, stable order
+\end{lstlisting}
+
+\begin{figure}[H]
+\centering
+\figplaceholder{Figure placeholder --- Delta-sync sequence diagram.\\[2pt]
+Replace with \texttt{docs/diagrams/SEQ04\_DeltaSync\_Cursor.png}.}
+\caption{Cursor-based delta synchronization sequence}
+\label{fig:deltaseq}
+\end{figure}
+
+The query returns a \texttt{Slice<T>} rather than a \texttt{Page<T>}, omitting \texttt{COUNT(*)};
+soft-deleted rows are intentionally included so deletions propagate. When the same record is edited
+on two replicas, the version with the newer \texttt{updatedAt} wins (Last-Write-Wins). The decision
+is made null-safely (Listing~\ref{lst:lww}); the edge cases handled explicitly are listed in
+Table~\ref{tab:lww}.
+
+\begin{lstlisting}[language=Java,caption={Null-safe Last-Write-Wins decision (simplified).},label={lst:lww}]
+boolean clientWins = item.getClientUpdatedAt() != null
+    && (existing.getUpdatedAt() == null
+        || item.getClientUpdatedAt().isAfter(existing.getUpdatedAt()));
+if (!clientWins) { responseList.add(toResponse(existing)); return 0; } // SERVER wins
+existing.setUpdatedAt(item.getClientUpdatedAt());                      // CLIENT wins
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Last-Write-Wins edge cases and decisions}
+\label{tab:lww}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}X l X@{}}
+\toprule
+\textbf{Situation} & \textbf{Decision} & \textbf{Rationale} \\
+\midrule
+client timestamp newer            & Client wins  & keep the user's latest change. \\
+server timestamp newer            & Server wins  & client overwrites local. \\
+client timestamp null (legacy)    & Server wins  & avoid legacy overwrite of good data. \\
+server timestamp null (old row)   & Client wins  & the old row was never stamped. \\
+deleted but client resends        & Re-acknowledge & avoid an infinite retry loop. \\
+duplicate new (legacy, id null)   & Return existing & prevent double-insert on resend. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Because Last-Write-Wins on a running balance counter would drift under concurrent edits, the system
+never mutates a counter; it \emph{recomputes} each wallet balance from the sum of its transactions
+(Equation~\ref{eq:balance}), and derives net worth from the included wallets less debts plus loans
+(Equation~\ref{eq:networth}):
+
+\begin{equation}
+\label{eq:balance}
+\textit{balance} \;=\; \sum_{t \in \text{income}} t.\textit{amount} \;-\!\! \sum_{t \in \text{expense} \cup \text{transfer}} t.\textit{amount}
+\end{equation}
+\begin{equation}
+\label{eq:networth}
+\textit{netWorth} \;=\; \textit{totalAssets} \;-\; \textit{debts} \;+\; \textit{loans}
+\end{equation}
+
+\subsection{Security and data isolation}
+Authentication is stateless and based on JWT (Figure~\ref{fig:loginseq}): at login the backend
+verifies the password with BCrypt and issues a token signed with HMAC-SHA; thereafter an OkHttp
+interceptor attaches the token to every request and a filter verifies it. The token is stored in
+\texttt{EncryptedSharedPreferences} (AES256-GCM, Android Keystore). For multi-device use, each login
+also issues a rotating refresh token (stored only as a SHA-256 hash) tracked in the
+\texttt{sessions} table, enabling immediate remote revocation. User data is isolated across four
+layers (Table~\ref{tab:isolation}).
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ05_Login_JWT.png}
+  {\includegraphics[width=0.85\textwidth]{SEQ05_Login_JWT.png}}
+  {\figplaceholder{Figure placeholder --- Login/JWT sequence diagram.\\[2pt]
+   Upload \texttt{SEQ05\_Login\_JWT.png}.}}
+\caption{Stateless JWT login sequence}
+\label{fig:loginseq}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Four-layer multi-account data isolation}
+\label{tab:isolation}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Layer} & \textbf{Mechanism} \\
+\midrule
+Schema        & a \texttt{user\_id} column on every entity; all DAO queries filter by it. \\
+Write         & \texttt{userId} is stamped before every insert (user action and sync). \\
+Async guard   & in-flight responses are discarded if \texttt{userId} changed since the request. \\
+Account switch & cancel HTTP requests $\rightarrow$ cancel worker $\rightarrow$ wipe Room $\rightarrow$ reset cursors. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Hybrid OCR method}
+Receipt extraction uses a hybrid pipeline (Figure~\ref{fig:ocrseq}): (1) CameraX captures the image
+and ML~Kit recognises text \emph{on-device}; (2) only the extracted text --- never the image --- is
+posted to the backend with the JWT; (3) \texttt{GeminiService} applies prompt engineering and a
+structured-output schema (low \texttt{temperature}) to coerce well-formed JSON, prioritising the
+grand total and rejecting noise such as ``cash tendered''; (4) the fields \texttt{\{amount,
+shopName, date, note\}} pre-fill the transaction form. This keeps the receipt image private,
+offloads image processing to the device, and improves semantic accuracy over rigid regular
+expressions; if the network or API fails, the client falls back to a local parser.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ02_ScanReceipt_HybridOCR.png}
+  {\includegraphics[width=0.82\textwidth]{SEQ02_ScanReceipt_HybridOCR.png}}
+  {\figplaceholder{Figure placeholder --- Hybrid OCR sequence diagram.\\[2pt]
+   Upload \texttt{SEQ02\_ScanReceipt\_HybridOCR.png}.}}
+\caption{Hybrid OCR receipt-analysis pipeline}
+\label{fig:ocrseq}
+\end{figure}
+
+\subsection{On-device AI insight method}
+Before optionally enriching with Gemini, statistical analysis runs entirely on the device
+(Table~\ref{tab:insight}). For anomaly detection, a transaction amount $x$ is flagged when its
+Z-score exceeds a threshold $\tau$ (Equation~\ref{eq:zscore}), where $\mu$ and $\sigma$ are the mean
+and standard deviation of recent spending:
+
+\begin{equation}
+\label{eq:zscore}
+z \;=\; \frac{x - \mu}{\sigma}, \qquad \text{flag if } |z| > \tau .
+\end{equation}
+
+\begin{table}[H]
+\centering
+\caption{On-device AI insight modules}
+\label{tab:insight}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Module} & \textbf{Method} \\
+\midrule
+\texttt{BudgetForecaster} & Ordinary Least Squares regression --- spending forecast. \\
+\texttt{AnomalyDetector}  & Z-score --- unusual-transaction detection. \\
+\texttt{PatternAnalyzer}  & EWMA --- day-of-week spending trends. \\
+\texttt{GoalAdvisor}      & savings-velocity recommendations. \\
+\texttt{DebtLoanAdvisor}  & upcoming due-date reminders. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ---------------------- IV / RESULTS AND DISCUSSION ------------------
+\section{RESULTS AND DISCUSSION}
+
+\subsection{Results}
+The complete system was implemented as designed and delivers the full feature set of
+Table~\ref{tab:fr}. The end-to-end transaction flow behaves exactly as intended: the form delegates
+to \texttt{AppViewModel.addTransaction()}, which stamps \texttt{userId}, sets \texttt{isSynced =
+false} and \texttt{updatedAtMs}, and inserts into Room; Room's \texttt{LiveData} drives the
+optimistic UI update before \texttt{TransactionSyncWorker} performs the push and delta-pull. Every
+asynchronous sync callback is protected by a ``stale-response guard'' (Listing~\ref{lst:guard}) that
+discards a response if the account changed while it was in flight. Representative screens are shown
+in Figures~\ref{fig:dashboard}--\ref{fig:scan}.
+
+\begin{lstlisting}[language=Java,caption={Stale-response guard preventing cross-account data writes.},label={lst:guard}]
+final String requestUserId = tokenManager.getUserId(); // captured at send time
+api.getX().enqueue(resp -> {
+    if (!requestUserId.equals(tokenManager.getUserId())) return; // account changed -> drop
+    // ... write to DB stamped with requestUserId ...
+});
+\end{lstlisting}
+
+\begin{figure}[H]
+\centering
+\figplaceholder{Figure placeholder --- Dashboard screen (total assets, net worth, recent transactions).\\[2pt]
+Insert the app screenshot here.}
+\caption{Dashboard screen of the TIP application}
+\label{fig:dashboard}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\figplaceholder{Figure placeholder --- Spending analytics (bar/pie charts).\\[2pt]
+Insert the app screenshot here.}
+\caption{Spending analytics screen}
+\label{fig:analytics}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\figplaceholder{Figure placeholder --- Receipt scanning and extraction screen.\\[2pt]
+Insert the app screenshot here.}
+\caption{Receipt scanning and extraction screen}
+\label{fig:scan}
+\end{figure}
+
+Functional verification (Table~\ref{tab:verif}) confirmed correct behaviour across authentication,
+transaction management, delta synchronization, multi-account isolation, and receipt analysis. The
+offline-first behaviour was validated by performing create/edit/delete operations with connectivity
+disabled and observing that the UI stayed responsive and that all changes synchronized correctly
+once connectivity returned. Backend response times, measured by repeated requests under local
+testing, were within interactive bounds (tens of milliseconds for reads), with the delta protocol
+transferring substantially less data per sync than a full pull.
+
+\begin{table}[H]
+\centering
+\caption{Backend functional verification results}
+\label{tab:verif}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Component} & \textbf{Status} \\
+\midrule
+Database connection            & Connected and reachable (Neon PostgreSQL). \\
+Authentication (login/register) & JWT issued and validated; BCrypt verification correct. \\
+Transaction CRUD + sync        & Create/edit/soft-delete and batch sync verified. \\
+Delta endpoints                & Incremental pulls return only changed rows; tombstones propagated. \\
+Multi-account isolation        & Switching account wipes local data; no cross-user leakage. \\
+Receipt analysis               & ML~Kit OCR + Gemini extraction returns structured fields. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Discussion}
+The results validate the central design hypothesis: committing writes locally and reconciling in the
+background yields an interface that feels instantaneous yet converges to a consistent global state.
+The choice of Last-Write-Wins is appropriate for this single-user-per-account setting, where genuine
+conflicts are rare and arise only across one user's devices; it converges deterministically without
+distributed locking, whereas CRDTs~\cite{crdt} would add considerable complexity for no practical
+benefit at this scale. Deriving wallet balances from the transaction log rather than maintaining a
+counter proved essential, since a counter drifts under concurrent edits while a derived balance
+remains correct regardless of sync order. The hybrid OCR design likewise paid off: keeping image
+processing on the device protects privacy and reduces server load, while delegating semantic
+interpretation to a constrained LLM is markedly more robust than regular expressions, and the local
+fallback ensures the feature never fails outright. The principal limitation observed is that the
+optimistic-concurrency (409) capability exists in the backend but is not yet wired into the Android
+edit screen, which currently resolves edits through the Last-Write-Wins path; the system is also
+single-platform and uses a development tunnel rather than production infrastructure.
+
+% ---------------------- V / CONCLUSION & PERSPECTIVE -----------------
+\section{CONCLUSION \& PERSPECTIVE}
+
+This thesis designed and implemented TIP -- Tap Into Prosperity, a complete offline-first personal
+finance application for Android with a secure cloud backend. The system delivers transactions,
+multi-wallet management, budgets, goals, debts, dashboards, analytics, insights, and a home-screen
+widget, and remains fully usable without a network connection. Its main contributions are an
+offline-first architecture with optimistic UI updates; a bandwidth-efficient, lossless cursor-based
+delta-sync protocol using a server-pinned snapshot window and keyset pagination; a Last-Write-Wins
+conflict-resolution scheme paired with server-recomputed balances that prevents value drift; a
+hybrid OCR pipeline that keeps receipt images on the device while using a constrained LLM for robust
+extraction; and a four-layer data-isolation model with stateless JWT authentication.
+
+The work opens several perspectives. The optimistic-concurrency endpoint could be connected to the
+edit screen; web and iOS clients could share the same backend; collaborative multi-user accounts
+could be supported, which would motivate a move from Last-Write-Wins toward CRDT-based merging; the
+deployment could be hardened with a managed reverse proxy and TLS termination; and the insight
+engine could be extended with richer models. A periodic purge job could also reclaim space from
+fully synchronized tombstones. Together these directions would evolve the present prototype into a
+production-grade personal finance platform.
+
+% =====================================================================
+%  REFERENCES  (Elsevier numbered style, in order of appearance)
+% =====================================================================
+\section*{REFERENCES}
+\addcontentsline{toc}{section}{REFERENCES}
+\begin{thebibliography}{99}
+
+\bibitem{android-offline} Google, Build an offline-first app, Android Developers Architecture Guide, 2023. \url{https://developer.android.com/topic/architecture/data-layer/offline-first} (accessed 2026).
+
+\bibitem{room} Google, Save data in a local database using Room, Android Jetpack Documentation, 2024. \url{https://developer.android.com/training/data-storage/room} (accessed 2026).
+
+\bibitem{keyset} M. Winand, Use the Index, Luke! -- Pagination done right (the seek method), 2017. \url{https://use-the-index-luke.com/no-offset} (accessed 2026).
+
+\bibitem{crdt} M. Shapiro, N. Pregui\c{c}a, C. Baquero, M. Zawirski, Conflict-free Replicated Data Types, in: Proc. 13th Int. Symp. on Stabilization, Safety, and Security of Distributed Systems (SSS), Springer, 2011, pp. 386--400. \url{https://doi.org/10.1007/978-3-642-24550-3_29}
+
+\bibitem{jwt} M. Jones, J. Bradley, N. Sakimura, JSON Web Token (JWT), RFC 7519, Internet Engineering Task Force (IETF), 2015. \url{https://doi.org/10.17487/RFC7519}
+
+\bibitem{bcrypt} N. Provos, D. Mazi\`eres, A future-adaptable password scheme, in: Proc. USENIX Annual Technical Conference, 1999, pp. 81--91.
+
+\bibitem{mlkit} Google, ML Kit Text Recognition v2 (on-device API), Google Developers Documentation, 2024. \url{https://developers.google.com/ml-kit/vision/text-recognition} (accessed 2026).
+
+\bibitem{gemini} Google, Gemini API: structured output and generation configuration, Google AI for Developers, 2024. \url{https://ai.google.dev/} (accessed 2026).
+
+\bibitem{springboot} VMware, Spring Boot Reference Documentation, version 4.0, 2024. \url{https://spring.io/projects/spring-boot} (accessed 2026).
+
+\bibitem{scanexpense} V. Cheepurupalli, ScanExpense: a receipt-scanning expense tracker [source code], GitHub, n.d. \url{https://github.com/VignanCheepurupalli/ScanExpense} (accessed 2026).
+
+\end{thebibliography}
+
+% =====================================================================
+%  APPENDICES
+% =====================================================================
+\clearpage
+\section*{APPENDICES}
+\addcontentsline{toc}{section}{APPENDICES}
+
+\begin{center}\textbf{APPENDIX 1 --- Project repository and supplementary listings}\end{center}
+The complete source code is organised under the package \texttt{vn.edu.usth.tip}, split into the
+Android module (\texttt{app/}) and the Spring Boot module (\texttt{backend/}).
+[Insert the project's own repository URL or attached media reference here.] A representative listing
+of the soft-delete (tombstone) logic is shown below.
+
+\begin{lstlisting}[language=Java,caption={Soft delete marks the row and stamps a new timestamp so LWW still applies.}]
+OffsetDateTime now = OffsetDateTime.now();
+tx.setDeletedAt(now);
+tx.setUpdatedAt(now);     // keep LWW applicable to the deletion
+tx.setClientSync(true);
+transactionRepository.save(tx);
+\end{lstlisting}
+
+\vspace{0.6cm}
+\begin{center}\textbf{APPENDIX 2 --- Additional diagrams}\end{center}
+[Insert the database schema diagram and additional sequence diagrams from \texttt{docs/diagrams/}
+here, each with a numbered caption.]
+
+\end{document}

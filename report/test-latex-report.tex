@@ -1,0 +1,78 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Vietnamese support (compile with XeLaTeX hoặc LuaLaTeX) ---
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{vietnamese}
+\setmainfont{Latin Modern Roman}
+
+% --- Layout & utilities ---
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+
+% --- Cấu hình listings cho code ---
+\lstset{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=single,
+  breaklines=true,
+  showstringspaces=false,
+  keywordstyle=\color{blue},
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{red!60!black},
+  tabsize=2
+}
+
+% --- hyperref nạp gần cuối ---
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue]{hyperref}
+
+\title{Kiểm tra hoạt động của agent latex-report}
+\author{Agent latex-report}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Giới thiệu}
+Đây là một báo cáo ngắn dùng làm bài kiểm tra (\textit{smoke test}) nhằm xác
+nhận rằng agent \texttt{latex-report} hoạt động đúng: tạo được tài liệu LaTeX
+hoàn chỉnh, hỗ trợ tiếng Việt có dấu, dựng được bảng và chèn được đoạn mã. Nếu
+tài liệu này biên dịch thành công ra tệp PDF với đầy đủ dấu tiếng Việt, bảng và
+khối mã, thì agent được xem là hoạt động bình thường.
+
+Bảng~\ref{tab:checklist} liệt kê các hạng mục kiểm tra cùng trạng thái mong đợi.
+
+\begin{table}[h]
+  \centering
+  \caption{Danh sách hạng mục kiểm tra}
+  \label{tab:checklist}
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Hạng mục} & \textbf{Trạng thái} \\
+    \midrule
+    Hỗ trợ tiếng Việt   & Đạt \\
+    Dựng bảng           & Đạt \\
+    Chèn đoạn mã        & Đạt \\
+    Biên dịch ra PDF    & Cần xác nhận \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Dưới đây là một đoạn mã mẫu minh hoạ khối \texttt{lstlisting}:
+
+\begin{lstlisting}[language=Python, caption={Đoạn mã mẫu in thông báo}]
+def smoke_test():
+    """Kiem tra agent latex-report."""
+    message = "Agent hoat dong binh thuong!"
+    print(message)
+    return True
+
+
+if __name__ == "__main__":
+    smoke_test()
+\end{lstlisting}
+
+\end{document}
