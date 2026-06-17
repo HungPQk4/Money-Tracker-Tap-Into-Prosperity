@@ -3,7 +3,7 @@
 %  Formatted to match the official "2026 ICT Bachelor thesis template".
 %
 %  TIP - Tap Into Prosperity: An Offline-First Personal Finance
-%  Management Application for Android with Real-Time Cloud Synchronization
+%  Management Application for Android with Eventually-Consistent Cloud Synchronization
 %
 %  COMPILE ON OVERLEAF WITH:  Menu -> Compiler -> XeLaTeX  (REQUIRED)
 %  -------------------------------------------------------------------
@@ -148,7 +148,7 @@
 \vspace{0.2cm}
 {\large\bfseries TIP -- Tap Into Prosperity: An Offline-First Personal\\
 Finance Management Application for Android with\\
-Real-Time Cloud Synchronization\par}
+Eventually-Consistent Cloud Synchronization\par}
 \vspace{2.6cm}
 
 \begin{flushleft}
@@ -287,7 +287,7 @@ JWT authentication, hybrid OCR.
 Personal financial management has become a daily necessity, yet many popular money-tracking tools
 share two weaknesses: they assume a stable network connection, and they become inconsistent when
 the same account is used on more than one device. Users frequently record expenses while offline
---- on public transport, while travelling, or in areas of weak coverage --- and expect the
+--- on public transport, while traveling, or in areas of weak coverage --- and expect the
 application to respond instantly and to reconcile their data later without loss or duplication. An
 application that freezes or loses data under these conditions quickly loses the user's trust.
 
@@ -296,7 +296,7 @@ The system builds on several established ideas. The \textit{offline-first} parad
 on-device database as the primary store the user interacts with and the network as an enhancement
 rather than a prerequisite~\cite{android-offline}; user actions are persisted locally and reflected
 immediately (an \textit{optimistic update}) while synchronization happens in the background. On
-Android, this reactive pipeline is realised with Room over SQLite, whose queries return
+Android, this reactive pipeline is realized with Room over SQLite, whose queries return
 lifecycle-aware \texttt{LiveData} observables that refresh the interface automatically when the
 underlying data changes~\cite{room}. Synchronizing two replicas efficiently requires transferring
 only what has changed: a \textit{delta} sync uses a \textit{cursor} (a timestamp) to fetch records
@@ -316,7 +316,7 @@ resolution, and a stateless authenticated backend.
 These observations motivate the central research question of this work: \emph{how can a mobile
 personal-finance application provide an instantaneous, always-available user experience while still
 guaranteeing data integrity across multiple devices?} Answering it requires reconciling a local
-replica (optimised for responsiveness) with an authoritative cloud replica (optimised for
+replica (optimized for responsiveness) with an authoritative cloud replica (optimized for
 consistency) through a synchronization mechanism that is efficient, lossless, and resilient to
 intermittent connectivity, all under strict security and per-user isolation constraints.
 
@@ -417,7 +417,7 @@ FR-06 & Transaction & Create, edit, and soft-delete transactions. \\
 FR-07 & Transaction & Support recurring transactions. \\
 FR-08 & Transaction & View transaction history and details. \\
 FR-09 & Receipt     & Scan a receipt using CameraX + ML~Kit OCR. \\
-FR-10 & Receipt     & Analyse the receipt (Gemini) and pre-fill a transaction. \\
+FR-10 & Receipt     & Analyze the receipt (Gemini) and pre-fill a transaction. \\
 FR-11 & Manage      & Manage wallets (CASH / BANK / E-WALLET / INVESTMENT). \\
 FR-12 & Manage      & Manage income/expense categories. \\
 FR-13 & Manage      & Manage budgets. \\
@@ -458,7 +458,7 @@ The system has two actors: the \textbf{User} (end user) and the \textbf{Backend}
 Gemini and PostgreSQL). Figure~\ref{fig:usecase} gives the overall use-case view, in which
 \emph{Record Income/Expense/Transfer} inherit from an abstract \emph{Record Transaction}, the
 \emph{Record} and \emph{Manage} use cases \textit{include} \emph{Synchronize Data}, and \emph{Scan
-Receipt} \textit{includes} \emph{Analyze Invoice} and \textit{extends} \emph{Record Transaction}.
+Receipt} \textit{includes} \emph{Analyze Receipt} and \textit{extends} \emph{Record Transaction}.
 Table~\ref{tab:uc01} specifies the authentication use case as a representative example.
 
 \begin{figure}[H]
@@ -688,9 +688,9 @@ Account switch & cancel HTTP requests $\rightarrow$ cancel worker $\rightarrow$ 
 
 \subsection{Hybrid OCR method}
 Receipt extraction uses a hybrid pipeline (Figure~\ref{fig:ocrseq}): (1) CameraX captures the image
-and ML~Kit recognises text \emph{on-device}; (2) only the extracted text --- never the image --- is
+and ML~Kit recognizes text \emph{on-device}; (2) only the extracted text --- never the image --- is
 posted to the backend with the JWT; (3) \texttt{GeminiService} applies prompt engineering and a
-structured-output schema (low \texttt{temperature}) to coerce well-formed JSON, prioritising the
+structured-output schema (low \texttt{temperature}) to coerce well-formed JSON, prioritizing the
 grand total and rejecting noise such as ``cash tendered''; (4) the fields \texttt{\{amount,
 shopName, date, note\}} pre-fill the transaction form. This keeps the receipt image private,
 offloads image processing to the device, and improves semantic accuracy over rigid regular
@@ -780,9 +780,9 @@ Insert the app screenshot here.}
 \label{fig:scan}
 \end{figure}
 
-Functional verification (Table~\ref{tab:verif}) confirmed correct behaviour across authentication,
+Functional verification (Table~\ref{tab:verif}) confirmed correct behavior across authentication,
 transaction management, delta synchronization, multi-account isolation, and receipt analysis. The
-offline-first behaviour was validated by performing create/edit/delete operations with connectivity
+offline-first behavior was validated by performing create/edit/delete operations with connectivity
 disabled and observing that the UI stayed responsive and that all changes synchronized correctly
 once connectivity returned. Backend response times, measured by repeated requests under local
 testing, were within interactive bounds (tens of milliseconds for reads), with the delta protocol
@@ -881,7 +881,7 @@ production-grade personal finance platform.
 \addcontentsline{toc}{section}{APPENDICES}
 
 \begin{center}\textbf{APPENDIX 1 --- Project repository and supplementary listings}\end{center}
-The complete source code is organised under the package \texttt{vn.edu.usth.tip}, split into the
+The complete source code is organized under the package \texttt{vn.edu.usth.tip}, split into the
 Android module (\texttt{app/}) and the Spring Boot module (\texttt{backend/}).
 [Insert the project's own repository URL or attached media reference here.] A representative listing
 of the soft-delete (tombstone) logic is shown below.

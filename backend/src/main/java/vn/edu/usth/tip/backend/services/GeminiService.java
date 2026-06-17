@@ -66,7 +66,8 @@ public class GeminiService {
 
         if (response.statusCode() != 200) {
             log.error("Gemini API returned status {}: {}", response.statusCode(), response.body());
-            throw new RuntimeException("Gemini API error: HTTP " + response.statusCode());
+            throw new RuntimeException("Gemini API error: HTTP " + response.statusCode()
+                    + " — " + response.body());
         }
 
         log.debug("Gemini response received, parsing...");
