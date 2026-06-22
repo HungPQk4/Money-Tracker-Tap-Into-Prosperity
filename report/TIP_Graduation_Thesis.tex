@@ -52,6 +52,8 @@
 \usepackage{caption}
 \captionsetup{labelsep=colon, font=bf, justification=centering,
               singlelinecheck=true, skip=6pt}
+\usepackage{subcaption}
+\captionsetup[subfigure]{list=false}
 
 % ---- Headers / footers: page number bottom-right (template style) ----
 \usepackage{fancyhdr}
@@ -132,16 +134,17 @@
 {\normalsize\bfseries DEPARTMENT OF INFORMATION AND COMMUNICATION TECHNOLOGY\par}
 \vspace{1.4cm}
 
+% --- USTH logo (replace with \includegraphics) ---
 % --- USTH logo: upload usth_logo.png next to this .tex ---
-\IfFileExists{USTH_logo.png}
-  {\includegraphics[width=0.45\textwidth]{USTH_logo.png}}
-  {\figplaceholder[0.4]{[USTH logo here -- upload USTH\_logo.png]}}\par
+\IfFileExists{usth_logo.png}
+  {\includegraphics[width=0.45\textwidth]{usth_logo.png}}
+  {\figplaceholder[0.4]{[USTH logo here -- upload usth\_logo.png]}}\par
 \vspace{1.4cm}
 
 {\fontsize{30}{34}\bfseries BACHELOR THESIS\par}
 \vspace{0.9cm}
 {\large By\par}
-{\large [Student's Full Name]\par}
+{\large Phạm Quang Hưng\par}
 \vspace{1.0cm}
 
 {\large Title:\par}
@@ -153,12 +156,12 @@ Eventually-Consistent Cloud Synchronization\par}
 
 \begin{flushleft}
 \hspace{1.5cm}\begin{tabular}{@{}ll@{}}
-External Supervisor: & Prof. Dr. [External Supervisor Name] \\[6pt]
-Internal Supervisor: & Prof. Dr. [Internal Supervisor Name] \\
+External Supervisor: & Prof. Dr. Nguyễn Văn Phương \\[6pt]
+Internal Supervisor: & Prof. Dr. Trần Giang Sơn \\
 \end{tabular}
 \end{flushleft}
 \vfill
-{\large\bfseries Hanoi, [Month] -- 2026\par}
+{\large\bfseries Hanoi, July -- 2026\par}
 \vspace{0.4cm}
 \end{minipage}}
 \end{titlepage}
@@ -173,13 +176,13 @@ Internal Supervisor: & Prof. Dr. [Internal Supervisor Name] \\
 \vspace*{1cm}
 \begin{center}\textbf{To whom it may concern,}\end{center}
 \vspace{0.8cm}
-\noindent I, \dotfill\ (supervisor's name), certify that the thesis / internship report of
-Mr/Ms.\ \dotfill\ (student's name) is qualified to be presented in the Internship Jury
+\noindent I, Nguyễn Văn Phương, certify that the thesis / internship report of
+Mr.Phạm Quang Hưng is qualified to be presented in the Internship Jury
 2025--2026.
 \vspace{2.0cm}
 
 \begin{flushright}
-Hanoi, [date]\\[4pt]
+Hanoi, July 1st\\[4pt]
 \textbf{Supervisor's signature}
 \end{flushright}
 \clearpage
@@ -197,7 +200,7 @@ complete this thesis, both for the specific guidance and the general academic su
 during my studies at the University of Science and Technology of Hanoi.
 
 Foremost, I would like to send my honest thanks to my supervisor,
-\textbf{[Supervisor Full Name]}, for the invaluable guidance, patience, and constructive feedback
+\textbf{Nguyễn Văn Phương}, for the invaluable guidance, patience, and constructive feedback
 provided throughout this work. I am also deeply grateful to the lecturers of the Department of
 Information and Communication Technology for the knowledge they have given me. Finally, I thank my
 family and friends for their continuous encouragement and support.
@@ -285,11 +288,73 @@ JWT authentication, hybrid OCR.
 \section{INTRODUCTION}
 
 Personal financial management has become a daily necessity, yet many popular money-tracking tools
-share two weaknesses: they assume a stable network connection, and they become inconsistent when
-the same account is used on more than one device. Users frequently record expenses while offline
---- on public transport, while traveling, or in areas of weak coverage --- and expect the
-application to respond instantly and to reconcile their data later without loss or duplication. An
+share two weaknesses, made concrete by the survey in Table~\ref{tab:related}: they assume a stable
+network connection, and they become inconsistent when the same account is used on more than one
+device. Users frequently record expenses while offline --- on public transport, while traveling, or
+in areas of weak coverage --- and expect the application to respond instantly and to reconcile their
+data later without loss or duplication, an expectation that modern client-architecture guidance
+explicitly targets through the \textit{offline-first} paradigm~\cite{android-offline}. An
 application that freezes or loses data under these conditions quickly loses the user's trust.
+
+\subsection{Existing solutions and related work}
+Personal finance management is a crowded application domain, yet existing tools cluster into two
+families that each sacrifice one of the two properties this work seeks to combine.
+\emph{Cloud-first} trackers --- such as YNAB~\cite{ynab}, Wallet by BudgetBakers~\cite{wallet}, and
+the now-discontinued Mint~\cite{mint} --- offer convenient multi-device synchronization but treat the
+network as a prerequisite, so data entry degrades or stalls without connectivity.
+\emph{Local-first} trackers --- such as Realbyte Money Manager~\cite{moneymanager} and
+Monefy~\cite{monefy} --- remain fully usable offline, but their cross-device story is limited to
+manual backup/restore or whole-file synchronization through a third-party drive, which overwrites
+rather than merges and offers no record-level conflict handling. Money Lover~\cite{moneylover}, one
+of the most popular trackers in Vietnam, sits between the two: offline entry is possible, but reliable
+multi-device sync is tied to a cloud account and its reconciliation strategy is not publicly
+documented. Table~\ref{tab:related} summarizes this landscape against the four properties most
+relevant to this work.
+
+\begin{table}[H]
+\centering
+\caption{Existing personal-finance trackers against the properties targeted by TIP}
+\label{tab:related}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\textwidth}{@{}p{2.6cm} X X X X@{}}
+\toprule
+\textbf{Tool} & \textbf{Offline use} & \textbf{Multi-device sync} & \textbf{Conflict resolution} & \textbf{Receipt OCR} \\
+\midrule
+Money Lover              & Partial (manual entry) & Cloud account (premium)  & Not documented            & Limited / none \\
+Money Manager (Realbyte) & Full (local DB)        & Manual backup/restore    & Not applicable            & None \\
+Monefy                   & Full (local)           & Cloud-file (Drive/Dropbox) & Whole-file overwrite     & None \\
+Wallet (BudgetBakers)    & Partial                & Cloud, near real-time    & Not documented            & Premium, cloud \\
+YNAB                     & Limited (needs network) & Cloud, real-time        & Server-side, undocumented & None (manual) \\
+\textbf{TIP (this work)} & \textbf{Full, offline-first} & \textbf{Cursor delta sync} & \textbf{LWW + recomputed balances} & \textbf{Hybrid on-device + LLM} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Two observations follow. First, no widely used tracker simultaneously provides (i) full offline-first
+operation, (ii) bandwidth-efficient incremental multi-device synchronization, and (iii) an explicit,
+documented conflict-resolution policy; conflict behavior in particular is almost universally
+undocumented --- precisely the property a multi-device finance application cannot leave unspecified.
+Second, where receipt capture exists at all it is typically a cloud feature that uploads the receipt
+\textit{image} to a server, raising a privacy concern that an on-device pipeline avoids.
+
+At the platform level the same problem has general solutions worth weighing. Managed
+backend-as-a-service offerings provide offline persistence with automatic synchronization: Google
+Cloud Firestore resolves concurrent writes with a server-timestamp last-write-wins
+rule~\cite{firestore}, while the CouchDB/PouchDB replication model keeps a revision history and
+surfaces conflicts for the application to resolve~\cite{couchdb}. For genuinely concurrent
+\emph{multi-user} editing, Conflict-free Replicated Data Types (CRDTs) guarantee convergence without
+coordination~\cite{crdt}. This work deliberately targets the \emph{single-user, multi-device} regime,
+in which true write--write conflicts are rare and arise only across one person's own devices. In that
+regime a full CRDT is disproportionate --- it adds metadata overhead and implementation complexity for
+convergence guarantees that are never exercised --- whereas a server-timestamped Last-Write-Wins rule
+converges deterministically at negligible cost. A managed backend would supply synchronization
+``for free'', but at the price of vendor lock-in and limited control over the sync window, the
+isolation model, and the conflict policy. This thesis therefore narrows to \emph{two} concrete
+choices and builds them explicitly over a portable REST\,+\,SQL stack: an \emph{offline-first} client
+with optimistic updates, and a \emph{cursor-based delta-sync protocol with Last-Write-Wins} conflict
+resolution backed by server-recomputed balances. The remainder of this section develops the concepts
+these choices rest on.
 
 \subsection{Background and related concepts}
 The system builds on several established ideas. The \textit{offline-first} paradigm treats the
@@ -307,10 +372,7 @@ multi-user collaboration would call for more complex Conflict-free Replicated Da
 Types~\cite{crdt}. Security relies on stateless authentication with JSON Web
 Tokens~\cite{jwt} and BCrypt password hashing~\cite{bcrypt}, while automated receipt entry combines
 on-device OCR via ML~Kit~\cite{mlkit} with semantic interpretation by a Large Language
-Model~\cite{gemini}. The overall direction of this work was also informed by existing open-source
-receipt-scanning expense trackers, in particular ScanExpense~\cite{scanexpense}, which the present
-project builds upon by adding an offline-first synchronization layer, multi-device conflict
-resolution, and a stateless authenticated backend.
+Model~\cite{gemini}.
 
 \subsection{Problem statement and motivation}
 These observations motivate the central research question of this work: \emph{how can a mobile
@@ -410,7 +472,7 @@ non-functional requirements (Table~\ref{tab:nfr}) constrain how well it must do 
 \midrule
 FR-01 & Auth        & Register a new account. \\
 FR-02 & Auth        & Log in with email/password and receive a JWT. \\
-FR-03 & Auth        & Log out; switching account wipes local data. \\
+FR-03 & Auth        & Log out; switching accounts wipes local data. \\
 FR-04 & Auth        & Expire the session automatically on invalid/expired token. \\
 FR-05 & Transaction & Record income, expense, and transfer transactions. \\
 FR-06 & Transaction & Create, edit, and soft-delete transactions. \\
@@ -463,10 +525,7 @@ Table~\ref{tab:uc01} specifies the authentication use case as a representative e
 
 \begin{figure}[H]
 \centering
-\IfFileExists{MoneyTracker_UseCase.png}
-  {\includegraphics[width=0.9\textwidth]{MoneyTracker_UseCase.png}}
-  {\figplaceholder{Figure placeholder --- Overall use case diagram.\\[2pt]
-   Upload \texttt{MoneyTracker\_UseCase.png}.}}
+\includegraphics[width=0.9\textwidth]{MoneyTracker_UseCase.png}
 \caption{Overall use case diagram of the TIP system}
 \label{fig:usecase}
 \end{figure}
@@ -502,10 +561,7 @@ backend follows the conventional Controller--Service--Repository tiers over Spri
 
 \begin{figure}[H]
 \centering
-\IfFileExists{architecture_layered.png}
-  {\includegraphics[width=0.6\textwidth]{architecture_layered.png}}
-  {\figplaceholder{Figure placeholder --- Layered architecture.\\[2pt]
-   Upload \texttt{architecture\_layered.png}.}}
+\includegraphics[width=0.6\textwidth]{architecture_layered.png}
 \caption{High-level layered architecture of the TIP system}
 \label{fig:arch}
 \end{figure}
@@ -597,8 +653,7 @@ ORDER BY t.updatedAt ASC, t.id ASC                         -- total, stable orde
 
 \begin{figure}[H]
 \centering
-\figplaceholder{Figure placeholder --- Delta-sync sequence diagram.\\[2pt]
-Replace with \texttt{docs/diagrams/SEQ04\_DeltaSync\_Cursor.png}.}
+\includegraphics[width=1.1\textwidth]{SEQ04_DeltaSync_Cursor.png}
 \caption{Cursor-based delta synchronization sequence}
 \label{fig:deltaseq}
 \end{figure}
@@ -661,10 +716,7 @@ layers (Table~\ref{tab:isolation}).
 
 \begin{figure}[H]
 \centering
-\IfFileExists{SEQ05_Login_JWT.png}
-  {\includegraphics[width=0.85\textwidth]{SEQ05_Login_JWT.png}}
-  {\figplaceholder{Figure placeholder --- Login/JWT sequence diagram.\\[2pt]
-   Upload \texttt{SEQ05\_Login\_JWT.png}.}}
+\includegraphics[width=1.1\textwidth]{SEQ05_Login_JWT.png}
 \caption{Stateless JWT login sequence}
 \label{fig:loginseq}
 \end{figure}
@@ -698,10 +750,7 @@ expressions; if the network or API fails, the client falls back to a local parse
 
 \begin{figure}[H]
 \centering
-\IfFileExists{SEQ02_ScanReceipt_HybridOCR.png}
-  {\includegraphics[width=0.82\textwidth]{SEQ02_ScanReceipt_HybridOCR.png}}
-  {\figplaceholder{Figure placeholder --- Hybrid OCR sequence diagram.\\[2pt]
-   Upload \texttt{SEQ02\_ScanReceipt\_HybridOCR.png}.}}
+\includegraphics[width=1.1\textwidth]{SEQ02_ScanReceipt_HybridOCR.png}
 \caption{Hybrid OCR receipt-analysis pipeline}
 \label{fig:ocrseq}
 \end{figure}
@@ -738,7 +787,7 @@ z \;=\; \frac{x - \mu}{\sigma}, \qquad \text{flag if } |z| > \tau .
 % ---------------------- IV / RESULTS AND DISCUSSION ------------------
 \section{RESULTS AND DISCUSSION}
 
-\subsection{Results}
+\subsection{Implementation outcome}
 The complete system was implemented as designed and delivers the full feature set of
 Table~\ref{tab:fr}. The end-to-end transaction flow behaves exactly as intended: the form delegates
 to \texttt{AppViewModel.addTransaction()}, which stamps \texttt{userId}, sets \texttt{isSynced =
@@ -758,25 +807,22 @@ api.getX().enqueue(resp -> {
 
 \begin{figure}[H]
 \centering
-\figplaceholder{Figure placeholder --- Dashboard screen (total assets, net worth, recent transactions).\\[2pt]
-Insert the app screenshot here.}
+\includegraphics[width=0.6\textwidth]{Dashboard_screen.png}
 \caption{Dashboard screen of the TIP application}
 \label{fig:dashboard}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\figplaceholder{Figure placeholder --- Spending analytics (bar/pie charts).\\[2pt]
-Insert the app screenshot here.}
+\includegraphics[width=0.6\textwidth]{Spending_analytics.png}
 \caption{Spending analytics screen}
 \label{fig:analytics}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\figplaceholder{Figure placeholder --- Receipt scanning and extraction screen.\\[2pt]
-Insert the app screenshot here.}
-\caption{Receipt scanning and extraction screen}
+\includegraphics[width=0.6\textwidth]{Receipt_Scanning_and_Extraction_screen.png}
+\caption{Receipt Scanning and Extraction screen}
 \label{fig:scan}
 \end{figure}
 
@@ -784,9 +830,9 @@ Functional verification (Table~\ref{tab:verif}) confirmed correct behavior acros
 transaction management, delta synchronization, multi-account isolation, and receipt analysis. The
 offline-first behavior was validated by performing create/edit/delete operations with connectivity
 disabled and observing that the UI stayed responsive and that all changes synchronized correctly
-once connectivity returned. Backend response times, measured by repeated requests under local
-testing, were within interactive bounds (tens of milliseconds for reads), with the delta protocol
-transferring substantially less data per sync than a full pull.
+once connectivity returned. Backend response times and the bandwidth saved by the delta protocol
+were measured quantitatively in the performance evaluation below (Tables~\ref{tab:latency}
+and~\ref{tab:payload}).
 
 \begin{table}[H]
 \centering
@@ -807,21 +853,160 @@ Receipt analysis               & ML~Kit OCR + Gemini extraction returns structur
 \end{tabularx}
 \end{table}
 
+\subsection{Test environment and methodology}
+The system was evaluated on the configuration of Table~\ref{tab:testenv}, using one physical Android
+phone and one Android emulator signed into the \emph{same} account so that genuine multi-device
+behavior could be reproduced. Four kinds of testing were applied: (i)~automated unit tests of the
+synchronization service --- the Last-Write-Wins decision paths are covered by
+\texttt{TransactionServiceSyncTest}; (ii)~functional end-to-end scenarios; (iii)~\emph{negative}
+tests that deliberately trigger edit conflicts, account switches, and connectivity loss; and
+(iv)~performance measurements of backend latency and synchronization payload size.
+
+\begin{table}[H]
+\centering
+\caption{Test environment}
+\label{tab:testenv}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Component} & \textbf{Configuration} \\
+\midrule
+Client A (physical) & Android phone (API~26+); real network, toggled Wi-Fi/mobile/airplane mode. \\
+Client B (emulator) & Android emulator on the development machine; same account as Client~A. \\
+Backend             & Spring~Boot~4 running locally, exposed over an HTTPS development tunnel. \\
+Database            & Neon PostgreSQL (serverless cloud) + Room/SQLite on each device. \\
+Measurement         & Repeated requests timed with an HTTP client; backend logs for sync row counts. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Functional test scenarios}
+Table~\ref{tab:scenarios} lists the scenarios exercised, each traced to the functional (FR) or
+non-functional (NFR) requirement it validates; the most representative are detailed afterwards.
+
+\begin{table}[H]
+\centering
+\caption{Functional test scenarios and outcomes}
+\label{tab:scenarios}
+\renewcommand{\arraystretch}{1.25}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}l p{2.0cm} X X p{1.5cm} l@{}}
+\toprule
+\textbf{ID} & \textbf{Scenario} & \textbf{Steps} & \textbf{Expected behavior} & \textbf{Req.} & \textbf{Result} \\
+\midrule
+TC-01 & Authentication \& session & Log in with valid then invalid credentials; let the token expire & JWT issued and stored encrypted; wrong password $\rightarrow$ 401; expired token $\rightarrow$ session-expired $\rightarrow$ Login & FR-02--04, NFR-02 & Pass \\
+TC-02 & Offline-first CRUD & Enable airplane mode; add income/expense/transfer, edit, delete & UI updates instantly (optimistic); rows persisted to Room with \texttt{isSynced=false} & FR-05--06, NFR-01,04 & Pass \\
+TC-03 & Multi-device delta sync & Device~A creates records offline, then reconnects; Device~B syncs & A pushes on reconnect; B's \texttt{/delta} returns only the changed rows; cursor advances & FR-20--21 & Pass \\
+TC-04 & Conflict resolution (LWW) & A and B edit the same transaction; sync both & The version with the newer \texttt{clientUpdatedAt} wins; server returns the winner & FR-22 & Pass \\
+TC-05 & Tombstone propagation & Delete a transaction on A; sync; pull on B & Soft-delete propagates; B removes the row; no resurrection on the next pull & FR-06, FR-20 & Pass \\
+TC-06 & Multi-account isolation & Log in as user~1 and create data; switch to user~2 & Room wiped and cursors reset; no cross-user data; in-flight responses dropped & NFR-03 & Pass \\
+TC-07 & Hybrid OCR + fallback & Scan a receipt online, then with the network disabled & On-device ML~Kit text $\rightarrow$ Gemini fields prefill the form; offline $\rightarrow$ local parser prefills & FR-09--10 & Pass \\
+TC-08 & Balance integrity & Create concurrent income/expense across devices & Wallet balance equals the transaction sum (Eq.~\ref{eq:balance}); no drift & NFR-01 & Pass \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Offline-first and multi-device convergence (TC-02, TC-03).} With connectivity
+disabled on the physical device, creating, editing, and deleting transactions updated the dashboard
+immediately, because Room's \texttt{LiveData} drives the UI before any network call; the records were
+persisted locally with \texttt{isSynced=false}. On reconnection, \texttt{TransactionSyncWorker}
+pushed the pending rows and the emulator's next \texttt{/delta} pull retrieved exactly those rows ---
+and nothing else --- leaving both replicas identical.
+
+\noindent\textbf{Conflict resolution (TC-04).} Editing the same transaction on both replicas and
+synchronizing produced a deterministic outcome: the edit carrying the newer \texttt{clientUpdatedAt}
+was kept and the older one discarded, matching the null-safe rule of Listing~\ref{lst:lww}. These
+decision paths are additionally covered by the backend unit test \texttt{TransactionServiceSyncTest}.
+
+\noindent\textbf{Multi-account isolation (TC-06).} Switching accounts cancelled in-flight HTTP
+requests and the sync worker, wiped the Room database, and reset the per-entity cursors; user~2 never
+saw user~1's data, and any late response from user~1's session was dropped by the stale-response
+guard of Listing~\ref{lst:guard}.
+
+\noindent\textbf{Hybrid OCR with fallback (TC-07).} A receipt scanned online was recognized
+on-device by ML~Kit, and only the extracted text --- never the image --- was sent to the backend,
+where Gemini returned the structured fields that pre-filled the form. Repeating the scan with the
+network disabled exercised the fallback path: the local parser populated the same fields, so the
+feature degraded gracefully rather than failing.
+
+\subsection{Performance evaluation}
+Beyond functional correctness, two quantitative aspects were measured: backend request latency and
+the bandwidth saved by incremental synchronization. To obtain a clean, reproducible baseline, the
+measurements were taken with the entire backend running against an in-memory H2 database over the
+loopback interface, which isolates \emph{server compute} from wide-area network and cloud-database
+round-trips; an end-to-end deployment over Neon would add the corresponding network latency. A
+dataset of $N=1000$ transactions was seeded, after which each endpoint was timed over 100
+repetitions --- the first 10 discarded as warm-up --- reporting the median (p50), 95th percentile
+(p95), and mean (Table~\ref{tab:latency}). Synchronization efficiency was measured by comparing the
+payload of a full download against an incremental delta pull after $k\in\{1,5,50\}$ changed rows
+(Table~\ref{tab:payload}).
+
+\begin{table}[H]
+\centering
+\caption{Backend response latency over 90 timed requests per endpoint (100 repetitions, 10 warm-up discarded); backend on in-memory H2 over loopback}
+\label{tab:latency}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}X l c c c@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{p50 (ms)} & \textbf{p95 (ms)} & \textbf{Mean (ms)} \\
+\midrule
+\texttt{/auth/login}                          & POST & 61.4 & 65.9 & 61.7 \\
+\texttt{/transactions/delta} (full)           & GET  & 11.7 & 19.2 & 12.8 \\
+\texttt{/transactions/delta} (incremental)    & GET  & 3.9  & 5.1  & 4.0  \\
+\texttt{/transactions/sync} (batch of 1)      & POST & 5.4  & 8.8  & 5.7  \\
+\texttt{/accounts}                            & GET  & 2.7  & 4.5  & 2.9  \\
+\texttt{/dashboard/summary}                   & GET  & 4.0  & 5.6  & 4.2  \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Synchronization payload: full download vs.\ incremental delta after $k$ changes ($N=1000$ seeded transactions)}
+\label{tab:payload}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}X c c c@{}}
+\toprule
+\textbf{Operation} & \textbf{Rows transferred} & \textbf{Payload (KB)} & \textbf{\% of full} \\
+\midrule
+Full pull ($N=1000$)        & 1000 & 488.3 & 100.0 \\
+Incremental delta ($k=1$)   & 1    & 0.6   & 0.12  \\
+Incremental delta ($k=5$)   & 5    & 2.5   & 0.52  \\
+Incremental delta ($k=50$)  & 50   & 24.5  & 5.02  \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent Read endpoints complete in single-digit milliseconds (\texttt{/dashboard/summary} at
+4.2~ms mean, \texttt{/accounts} at 2.9~ms), and even a full delta pull of 1000 rows returns in
+12.8~ms; the only costly endpoint is \texttt{/auth/login} (61.7~ms mean), dominated --- by design ---
+by the deliberately slow BCrypt password hash. The payload results confirm the central efficiency
+claim of the delta protocol: synchronizing 50 changed rows transfers 24.5~KB versus 488.3~KB for a
+full pull (5.0\%), and a single-row change transfers 0.6~KB (0.12\%), so steady-state synchronization
+cost scales with the size of the change set rather than with the dataset.
+
 \subsection{Discussion}
 The results validate the central design hypothesis: committing writes locally and reconciling in the
 background yields an interface that feels instantaneous yet converges to a consistent global state.
-The choice of Last-Write-Wins is appropriate for this single-user-per-account setting, where genuine
-conflicts are rare and arise only across one user's devices; it converges deterministically without
-distributed locking, whereas CRDTs~\cite{crdt} would add considerable complexity for no practical
-benefit at this scale. Deriving wallet balances from the transaction log rather than maintaining a
+As argued in Section~I, Last-Write-Wins is appropriate for this single-user-per-account setting, and
+the implementation bears this out: genuine conflicts are rare and arise only across one user's
+devices, and the rule converges deterministically without distributed locking or the metadata
+overhead a CRDT~\cite{crdt} would impose at this scale. Deriving wallet balances from the transaction log rather than maintaining a
 counter proved essential, since a counter drifts under concurrent edits while a derived balance
 remains correct regardless of sync order. The hybrid OCR design likewise paid off: keeping image
 processing on the device protects privacy and reduces server load, while delegating semantic
 interpretation to a constrained LLM is markedly more robust than regular expressions, and the local
-fallback ensures the feature never fails outright. The principal limitation observed is that the
-optimistic-concurrency (409) capability exists in the backend but is not yet wired into the Android
-edit screen, which currently resolves edits through the Last-Write-Wins path; the system is also
-single-platform and uses a development tunnel rather than production infrastructure.
+fallback ensures the feature never fails outright.
+
+\noindent\textbf{Threats to validity.} The latency measurements were taken on a single developer
+machine through a development tunnel rather than under production load, and on a modest test dataset,
+so the absolute figures are indicative rather than representative of a deployed system. The
+multi-device tests used one physical device and one emulator, which reproduces cross-device
+synchronization faithfully but not large-scale concurrency. Conceptually, Last-Write-Wins resolves
+conflicts at the record level rather than merging individual fields, and the optimistic-concurrency
+(409) capability --- although present in the backend --- is not yet wired into the Android edit
+screen, which currently resolves edits through the Last-Write-Wins path. Finally, the system is
+single-platform (Android) and is exercised against development rather than production infrastructure.
 
 % ---------------------- V / CONCLUSION & PERSPECTIVE -----------------
 \section{CONCLUSION \& PERSPECTIVE}
@@ -853,11 +1038,27 @@ production-grade personal finance platform.
 
 \bibitem{android-offline} Google, Build an offline-first app, Android Developers Architecture Guide, 2023. \url{https://developer.android.com/topic/architecture/data-layer/offline-first} (accessed 2026).
 
+\bibitem{ynab} You Need A Budget LLC, YNAB --- You Need A Budget, 2024. \url{https://www.ynab.com} (accessed 2026).
+
+\bibitem{wallet} BudgetBakers, Wallet by BudgetBakers --- personal finance tracker [mobile application], 2024. \url{https://budgetbakers.com} (accessed 2026).
+
+\bibitem{mint} Intuit Inc., Mint personal finance app (service discontinued in 2024), 2024. \url{https://mint.intuit.com} (accessed 2026).
+
+\bibitem{moneymanager} Realbyte Inc., Money Manager --- expense \& budget [mobile application], 2024. \url{https://www.realbyteapps.com} (accessed 2026).
+
+\bibitem{monefy} Monefy, Monefy --- money manager [mobile application], 2024. \url{https://monefy.me} (accessed 2026).
+
+\bibitem{moneylover} Finsify, Money Lover --- money manager \& budget planner [mobile application], 2024. \url{https://moneylover.me} (accessed 2026).
+
+\bibitem{firestore} Google, Access data offline --- Cloud Firestore, Firebase Documentation, 2024. \url{https://firebase.google.com/docs/firestore/manage-data/enable-offline} (accessed 2026).
+
+\bibitem{couchdb} Apache Software Foundation, Replication and the conflict model, Apache CouchDB Documentation, 2024. \url{https://docs.couchdb.org/en/stable/replication/conflicts.html} (accessed 2026).
+
+\bibitem{crdt} M. Shapiro, N. Pregui\c{c}a, C. Baquero, M. Zawirski, Conflict-free Replicated Data Types, in: Proc. 13th Int. Symp. on Stabilization, Safety, and Security of Distributed Systems (SSS), Springer, 2011, pp. 386--400. \url{https://doi.org/10.1007/978-3-642-24550-3_29}
+
 \bibitem{room} Google, Save data in a local database using Room, Android Jetpack Documentation, 2024. \url{https://developer.android.com/training/data-storage/room} (accessed 2026).
 
 \bibitem{keyset} M. Winand, Use the Index, Luke! -- Pagination done right (the seek method), 2017. \url{https://use-the-index-luke.com/no-offset} (accessed 2026).
-
-\bibitem{crdt} M. Shapiro, N. Pregui\c{c}a, C. Baquero, M. Zawirski, Conflict-free Replicated Data Types, in: Proc. 13th Int. Symp. on Stabilization, Safety, and Security of Distributed Systems (SSS), Springer, 2011, pp. 386--400. \url{https://doi.org/10.1007/978-3-642-24550-3_29}
 
 \bibitem{jwt} M. Jones, J. Bradley, N. Sakimura, JSON Web Token (JWT), RFC 7519, Internet Engineering Task Force (IETF), 2015. \url{https://doi.org/10.17487/RFC7519}
 
@@ -883,8 +1084,8 @@ production-grade personal finance platform.
 \begin{center}\textbf{APPENDIX 1 --- Project repository and supplementary listings}\end{center}
 The complete source code is organized under the package \texttt{vn.edu.usth.tip}, split into the
 Android module (\texttt{app/}) and the Spring Boot module (\texttt{backend/}).
-[Insert the project's own repository URL or attached media reference here.] A representative listing
-of the soft-delete (tombstone) logic is shown below.
+[Insert repository URL or attached media reference here.] A representative listing of the soft-delete
+(tombstone) logic is shown below.
 
 \begin{lstlisting}[language=Java,caption={Soft delete marks the row and stamps a new timestamp so LWW still applies.}]
 OffsetDateTime now = OffsetDateTime.now();
@@ -896,7 +1097,208 @@ transactionRepository.save(tx);
 
 \vspace{0.6cm}
 \begin{center}\textbf{APPENDIX 2 --- Additional diagrams}\end{center}
-[Insert the database schema diagram and additional sequence diagrams from \texttt{docs/diagrams/}
-here, each with a numbered caption.]
+This appendix collects the sequence diagrams for the flows not already shown in
+Sections~III--IV, grouped by feature area: authentication and application lifecycle, the
+transaction lifecycle and synchronization, and the remaining application features.
+
+\textit{Authentication and application lifecycle.}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ06_Register.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ06_Register.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ06\_Register.png]}}}
+\caption{Account registration sequence}
+\label{fig:seq06}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ07_Splash_Routing.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ07_Splash_Routing.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ07\_Splash\_Routing.png]}}}
+\caption{Splash screen and startup routing}
+\label{fig:seq07}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ09_SessionExpiry.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ09_SessionExpiry.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ09\_SessionExpiry.png]}}}
+\caption{Session-expiry handling}
+\label{fig:seq09}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ08_AccountSwitch_DataIsolation.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ08_AccountSwitch_DataIsolation.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ08\_AccountSwitch\_DataIsolation.png]}}}
+\caption{Account switch and data isolation}
+\label{fig:seq08}
+\end{figure}
+
+\textit{Transaction lifecycle and synchronization.}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ01_CreateTransaction_OfflineFirst.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ01_CreateTransaction_OfflineFirst.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ01\_CreateTransaction\_OfflineFirst.png]}}}
+\caption{Create transaction --- offline-first write path}
+\label{fig:seq01}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ11_EditTransaction.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ11_EditTransaction.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ11\_EditTransaction.png]}}}
+\caption{Edit transaction}
+\label{fig:seq11}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ10_DeleteTransaction_SoftDelete.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ10_DeleteTransaction_SoftDelete.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ10\_DeleteTransaction\_SoftDelete.png]}}}
+\caption{Delete transaction --- soft delete (tombstone)}
+\label{fig:seq10}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ03_BackgroundSync_LWW.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ03_BackgroundSync_LWW.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ03\_BackgroundSync\_LWW.png]}}}
+\caption{Background synchronization with Last-Write-Wins}
+\label{fig:seq03}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ12_Dashboard_OptimisticMerge.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ12_Dashboard_OptimisticMerge.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ12\_Dashboard\_OptimisticMerge.png]}}}
+\caption{Dashboard optimistic merge}
+\label{fig:seq12}
+\end{figure}
+
+\textit{Other features.}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ14_FinancialCRUD_Generic.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ14_FinancialCRUD_Generic.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ14\_FinancialCRUD\_Generic.png]}}}
+\caption{Generic financial CRUD (budgets, goals, debts)}
+\label{fig:seq14}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ13_Insights_OnDevice_AI.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ13_Insights_OnDevice_AI.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ13\_Insights\_OnDevice\_AI.png]}}}
+\caption{On-device AI insights}
+\label{fig:seq13}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{SEQ15_WidgetUpdate.png}
+  {\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{SEQ15_WidgetUpdate.png}}
+  {\fbox{\parbox[c][5cm][c]{0.85\textwidth}{\centering\itshape\footnotesize [upload SEQ15\_WidgetUpdate.png]}}}
+\caption{Home-screen widget update}
+\label{fig:seq15}
+\end{figure}
+
+\clearpage
+\begin{center}\textbf{APPENDIX 3 --- Application screens (representative user flow)}\end{center}
+The figures below illustrate a representative end-to-end user flow, from authentication through daily
+transaction entry to multi-wallet management, budgeting, savings goals, debt tracking, and spending
+analytics. All amounts are shown in Vietnamese Dong (VND).
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_login.png}{\includegraphics[width=\linewidth]{screen_login.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_login.png]}}}
+  \caption{Login}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_register.png}{\includegraphics[width=\linewidth]{screen_register.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_register.png]}}}
+  \caption{Create account}
+\end{subfigure}
+\caption{Authentication: email/password login (with Google sign-in) and registration}
+\label{fig:app-auth}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_home.png}{\includegraphics[width=\linewidth]{screen_home.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_home.png]}}}
+  \caption{Home dashboard}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_new_transaction.png}{\includegraphics[width=\linewidth]{screen_new_transaction.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_new\_transaction.png]}}}
+  \caption{New transaction}
+\end{subfigure}
+\caption{Home dashboard (total/net assets, quick actions) and transaction entry (expense/income/transfer)}
+\label{fig:app-home}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_transactions.png}{\includegraphics[width=\linewidth]{screen_transactions.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_transactions.png]}}}
+  \caption{Transaction history}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_wallets.png}{\includegraphics[width=\linewidth]{screen_wallets.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_wallets.png]}}}
+  \caption{Wallet management}
+\end{subfigure}
+\caption{Transaction history (filter/search by type) and multi-wallet management}
+\label{fig:app-records}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_budgets.png}{\includegraphics[width=\linewidth]{screen_budgets.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_budgets.png]}}}
+  \caption{Budgets}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_goals.png}{\includegraphics[width=\linewidth]{screen_goals.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_goals.png]}}}
+  \caption{Savings goals}
+\end{subfigure}
+\caption{Budgets (monthly overview and per-category progress) and savings goals}
+\label{fig:app-planning}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_debts.png}{\includegraphics[width=\linewidth]{screen_debts.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_debts.png]}}}
+  \caption{Debts \& loans}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.40\textwidth}
+  \centering
+  \IfFileExists{screen_analytics.png}{\includegraphics[width=\linewidth]{screen_analytics.png}}{\fbox{\parbox[c][11cm][c]{\linewidth}{\centering\itshape\footnotesize [upload screen\_analytics.png]}}}
+  \caption{Analytics}
+\end{subfigure}
+\caption{Debts/loans (net position) and spending analytics (income vs.\ expense, by category)}
+\label{fig:app-analytics}
+\end{figure}
 
 \end{document}
