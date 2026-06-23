@@ -148,8 +148,9 @@ public class TransactionRepository {
                     UUID serverTxId = null;
                     try { serverTxId = UUID.fromString(tx.getId()); } catch (IllegalArgumentException ignored) {}
 
-                    String clientUpdatedAt = ISO_UTC.format(Instant.ofEpochMilli(
-                            tx.getUpdatedAtMs() > 0 ? tx.getUpdatedAtMs() : tx.getTimestampMs()));
+                    long editMs = tx.getClientUpdatedAtMs() > 0 ? tx.getClientUpdatedAtMs()
+                            : (tx.getUpdatedAtMs() > 0 ? tx.getUpdatedAtMs() : tx.getTimestampMs());
+                    String clientUpdatedAt = ISO_UTC.format(Instant.ofEpochMilli(editMs));
 
                     SyncBatchRequest.SyncItem item = new SyncBatchRequest.SyncItem(
                             serverTxId,
@@ -316,8 +317,9 @@ public class TransactionRepository {
                 }
 
                 String createdAt     = ISO_UTC.format(Instant.ofEpochMilli(tx.getTimestampMs()));
-                String clientUpdated = ISO_UTC.format(Instant.ofEpochMilli(
-                        tx.getUpdatedAtMs() > 0 ? tx.getUpdatedAtMs() : tx.getTimestampMs()));
+                long editMs = tx.getClientUpdatedAtMs() > 0 ? tx.getClientUpdatedAtMs()
+                        : (tx.getUpdatedAtMs() > 0 ? tx.getUpdatedAtMs() : tx.getTimestampMs());
+                String clientUpdated = ISO_UTC.format(Instant.ofEpochMilli(editMs));
 
                 SyncBatchRequest.SyncItem syncItem = new SyncBatchRequest.SyncItem(
                         serverTxId, accountId, categoryId,
@@ -916,9 +918,12 @@ public class TransactionRepository {
         tx.setRecurring(dto.isRecurring());
         tx.setRecurInterval(dto.getRecurInterval());
         tx.setUserId(tokenManager.getUserId());
-        // Parse server updatedAt → updatedAtMs for LWW pull guard
+        // Server updatedAt → updatedAtMs (version/cursor); clientUpdatedAt → clientUpdatedAtMs (LWW guard)
         if (dto.getUpdatedAt() != null) {
             tx.setUpdatedAtMs(parseServerUpdatedAt(dto.getUpdatedAt()));
+        }
+        if (dto.getClientUpdatedAt() != null) {
+            tx.setClientUpdatedAtMs(parseServerUpdatedAt(dto.getClientUpdatedAt()));
         }
         return tx;
     }
@@ -949,10 +954,10 @@ public class TransactionRepository {
      */
     private boolean shouldSkipServerVersion(Transaction local, Transaction serverTx) {
         if (local.isSynced()) return false; // already in sync — let server win
-        long localTs = local.getUpdatedAtMs() > 0
-                ? local.getUpdatedAtMs()
-                : local.getTimestampMs();
-        return localTs >= serverTx.getUpdatedAtMs();
+        // LWW on the client EDIT-time (mirrors the server). updatedAtMs is the server version/cursor.
+        long localEdit = local.getClientUpdatedAtMs() > 0 ? local.getClientUpdatedAtMs()
+                : (local.getUpdatedAtMs() > 0 ? local.getUpdatedAtMs() : local.getTimestampMs());
+        return localEdit >= serverTx.getClientUpdatedAtMs();
     }
 
     /** Returns true if a local unsynced record matches a server DTO (same date/amount/type/account/category). */

@@ -68,6 +68,15 @@ public class Transaction {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
+    /**
+     * Client-reported edit time, CLAMPED to {@code <= serverNow} by the service (Cách 0).
+     * Used ONLY for the Last-Write-Wins decision ("newer edit wins"). The delta cursor /
+     * version uses {@link #updatedAt}, which is ALWAYS server-issued (skew-free). May be
+     * null for legacy rows created before this column existed.
+     */
+    @Column(name = "client_updated_at")
+    private OffsetDateTime clientUpdatedAt;
+
     @PrePersist
     protected void onCreate() {
         // Chỉ set createdAt nếu chưa có — để API sync giữ nguyên thời gian gốc của client
@@ -79,7 +88,8 @@ public class Transaction {
         }
     }
 
-    // Không lưu vào DB — báo hiệu @PreUpdate rằng timestamp của client đã được set thủ công
+    // Giữ lại để tương thích các lời gọi setClientSync(...) cũ. KHÔNG còn ảnh hưởng updatedAt
+    // (biến thể A: updatedAt LUÔN do server cấp; edit-time của client nằm ở clientUpdatedAt).
     @Transient
     private boolean isClientSync = false;
 
@@ -87,10 +97,7 @@ public class Transaction {
 
     @PreUpdate
     protected void onUpdate() {
-        if (!isClientSync) {
-            // Thao tác thông thường (admin, web) → auto-stamp now()
-            updatedAt = OffsetDateTime.now();
-        }
-        // isClientSync=true → giữ nguyên timestamp client (LWW PATH A)
+        // Biến thể A: updatedAt LUÔN là mốc version/cursor do server cấp (skew-free).
+        updatedAt = OffsetDateTime.now();
     }
 }

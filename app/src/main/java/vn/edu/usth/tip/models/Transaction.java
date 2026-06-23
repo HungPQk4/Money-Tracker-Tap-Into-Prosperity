@@ -27,7 +27,8 @@ public class Transaction {
     private String note;        // Ghi chú giao dịch
     private String photoUri;    // Ảnh đính kèm
     private boolean isSynced = false; // Mặc định là false cho tạo mới cục bộ
-    private long updatedAtMs;   // epoch ms — set khi tạo/sửa local; ghi đè khi pull từ server
+    private long updatedAtMs;   // epoch ms — SERVER version/cursor; set local khi tạo/sửa, ghi đè khi pull
+    private long clientUpdatedAtMs; // epoch ms — client edit-time cho LWW (clamp ở server, ghi đè khi pull)
     private boolean isDeleted = false; // soft delete — push lên server trước khi hard delete
     private boolean isRecurring = false; // giao dịch định kỳ — server sinh clone hàng ngày/tuần/tháng/năm
     private String recurInterval; // "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" | null
@@ -52,9 +53,10 @@ public class Transaction {
         this.type        = type;
         this.timestampMs = timestampMs;
         this.note        = note;
-        this.isSynced      = false;
-        this.updatedAtMs   = System.currentTimeMillis();
-        this.isDeleted     = false;
+        this.isSynced          = false;
+        this.updatedAtMs       = System.currentTimeMillis();
+        this.clientUpdatedAtMs = System.currentTimeMillis();
+        this.isDeleted         = false;
         this.isRecurring   = false;
         this.recurInterval = null;
     }
@@ -120,6 +122,7 @@ public class Transaction {
     public String getPhotoUri()     { return photoUri; }
     public boolean isSynced()       { return isSynced; }
     public long getUpdatedAtMs()    { return updatedAtMs; }
+    public long getClientUpdatedAtMs() { return clientUpdatedAtMs; }
     public boolean isDeleted()       { return isDeleted; }
     public boolean isRecurring()     { return isRecurring; }
     public String getRecurInterval() { return recurInterval; }
@@ -137,6 +140,7 @@ public class Transaction {
     public void setPhotoUri(String photoUri) { this.photoUri = photoUri; }
     public void setSynced(boolean synced) { isSynced = synced; }
     public void setUpdatedAtMs(long updatedAtMs) { this.updatedAtMs = updatedAtMs; }
+    public void setClientUpdatedAtMs(long v) { this.clientUpdatedAtMs = v; }
     public void setDeleted(boolean deleted) { isDeleted = deleted; }
     public void setRecurring(boolean recurring) { isRecurring = recurring; }
     public void setRecurInterval(String recurInterval) { this.recurInterval = recurInterval; }

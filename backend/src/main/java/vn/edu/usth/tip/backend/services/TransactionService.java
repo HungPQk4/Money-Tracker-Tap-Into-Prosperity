@@ -63,6 +63,7 @@ public class TransactionService {
         tx.setReceiptUrl(req.getReceiptUrl());
         tx.setIsRecurring(req.getIsRecurring() != null ? req.getIsRecurring() : false);
         tx.setRecurInterval(req.getRecurInterval());
+        tx.setClientUpdatedAt(OffsetDateTime.now()); // direct create: edit-time = now
 
         Transaction saved = transactionRepository.save(tx);
         recomputeBalance(account); // số dư = Σ giao dịch (authoritative, không trôi LWW)
@@ -118,6 +119,7 @@ public class TransactionService {
                         .orElseThrow(() -> new ResourceNotFoundException("Account", "id", req.getAccountId()))
                 : oldAccount;
         tx.setAccount(newAccount);
+        tx.setClientUpdatedAt(OffsetDateTime.now()); // direct update: edit-time = now
 
         Transaction saved = transactionRepository.save(tx);
         // Số dư = Σ giao dịch: tính lại cả ví cũ lẫn ví mới (xử lý đổi ví khi sửa).
@@ -136,7 +138,7 @@ public class TransactionService {
         OffsetDateTime now = OffsetDateTime.now();
         tx.setDeletedAt(now);
         tx.setUpdatedAt(now);
-        tx.setClientSync(true);
+        tx.setClientUpdatedAt(now); // deletion edit-time = now
         transactionRepository.save(tx);
         recomputeBalance(account); // giao dịch đã soft-delete → bị loại khỏi tổng
     }
@@ -192,7 +194,7 @@ public class TransactionService {
                         OffsetDateTime nowDel = OffsetDateTime.now();
                         existing.setDeletedAt(nowDel);
                         existing.setUpdatedAt(nowDel);
-                        existing.setClientSync(true);
+                        existing.setClientUpdatedAt(nowDel); // deletion edit-time
                         transactionRepository.save(existing);
                     }
                 });
@@ -215,11 +217,14 @@ public class TransactionService {
         if (existingOpt.isEmpty()) return null;
 
         Transaction existing = existingOpt.get();
-        // Null-safe LWW: clientUpdatedAt=null → Server Wins (legacy client without timestamps)
-        // existing.updatedAt=null → Client Wins (legacy record inserted before updatedAt was tracked)
+        // Null-safe LWW on the CLAMPED client edit-time (Variant A):
+        //  - item.clientUpdatedAt == null     → Server wins (legacy client without timestamps)
+        //  - existing.clientUpdatedAt == null → Client wins (legacy row never stamped)
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime incomingEdit = clampClientTime(item.getClientUpdatedAt(), now);
         boolean clientWins = item.getClientUpdatedAt() != null
-                && (existing.getUpdatedAt() == null
-                    || item.getClientUpdatedAt().isAfter(existing.getUpdatedAt()));
+                && (existing.getClientUpdatedAt() == null
+                    || incomingEdit.isAfter(existing.getClientUpdatedAt()));
         if (!clientWins) {
             // Return server version so Android exits the Sync Blackhole
             responseList.add(toResponse(existing));
@@ -243,9 +248,9 @@ public class TransactionService {
         existing.setTransactionDate(item.getTransactionDate());
         existing.setIsRecurring(item.getIsRecurring() != null ? item.getIsRecurring() : false);
         existing.setRecurInterval(item.getRecurInterval());
-        // Use client timestamp as ground truth — disables @PreUpdate auto-stamp
-        existing.setUpdatedAt(item.getClientUpdatedAt());
-        existing.setClientSync(true);
+        // Variant A: store the clamped client edit-time for future LWW; updatedAt = serverNow (version).
+        existing.setClientUpdatedAt(incomingEdit);
+        existing.setUpdatedAt(now);
         transactionRepository.save(existing);
         responseList.add(toResponse(existing));
         return 1;
@@ -309,11 +314,10 @@ public class TransactionService {
         tx.setReceiptUrl(item.getReceiptUrl());
         tx.setIsRecurring(item.getIsRecurring() != null ? item.getIsRecurring() : false);
         tx.setRecurInterval(item.getRecurInterval());
-        tx.setCreatedAt(item.getCreatedAt() != null ? item.getCreatedAt() : OffsetDateTime.now());
-        if (item.getClientUpdatedAt() != null) {
-            tx.setUpdatedAt(item.getClientUpdatedAt());
-            tx.setClientSync(true);
-        }
+        OffsetDateTime now = OffsetDateTime.now();
+        tx.setCreatedAt(item.getCreatedAt() != null ? item.getCreatedAt() : now);
+        tx.setClientUpdatedAt(clampClientTime(item.getClientUpdatedAt(), now)); // clamped edit-time (may be null = legacy)
+        tx.setUpdatedAt(now); // server-issued version
         return tx;
     }
 
@@ -351,6 +355,15 @@ public class TransactionService {
         return getRecentTransactions(user.getId(), days);
     }
 
+    /**
+     * Cách 0 (clamp): never trust a client edit-time from the future. {@code null} stays null
+     * (legacy client without timestamps → server wins in the LWW decision).
+     */
+    private OffsetDateTime clampClientTime(OffsetDateTime clientTime, OffsetDateTime now) {
+        if (clientTime == null) return null;
+        return clientTime.isAfter(now) ? now : clientTime;
+    }
+
     private TransactionResponse toResponse(Transaction tx) {
         TransactionResponse res = new TransactionResponse();
         res.setId(tx.getId());
@@ -369,6 +382,7 @@ public class TransactionService {
         res.setRecurInterval(tx.getRecurInterval());
         res.setCreatedAt(tx.getCreatedAt());
         res.setUpdatedAt(tx.getUpdatedAt());
+        res.setClientUpdatedAt(tx.getClientUpdatedAt());
         res.setDeleted(tx.getDeletedAt() != null);
         return res;
     }

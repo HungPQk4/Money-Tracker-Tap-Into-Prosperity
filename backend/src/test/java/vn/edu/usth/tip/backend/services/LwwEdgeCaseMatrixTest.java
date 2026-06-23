@@ -158,6 +158,9 @@ class LwwEdgeCaseMatrixTest {
         UUID id = UUID.randomUUID();
         Transaction tx = baseTx(id);
         tx.setUpdatedAt(serverUpdatedAt);
+        // Variant A: LWW compares the CLIENT edit-time (updatedAt is now the server version/cursor).
+        // The test's "existing timestamp" models the stored edit-time.
+        tx.setClientUpdatedAt(serverUpdatedAt);
         when(transactionRepository.findByIdAndUser_Id(id, user.getId())).thenReturn(Optional.of(tx));
         return id;
     }

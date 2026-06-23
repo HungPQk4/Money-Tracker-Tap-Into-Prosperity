@@ -385,6 +385,7 @@ public class AppViewModel extends AndroidViewModel {
 
     public void addTransaction(Transaction tx) {
         tx.setUpdatedAtMs(System.currentTimeMillis());
+        tx.setClientUpdatedAtMs(System.currentTimeMillis()); // LWW edit-time
         tx.setSynced(false);
         tx.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
@@ -396,6 +397,7 @@ public class AppViewModel extends AndroidViewModel {
 
     public void updateTransaction(Transaction tx) {
         tx.setUpdatedAtMs(System.currentTimeMillis());
+        tx.setClientUpdatedAtMs(System.currentTimeMillis()); // LWW edit-time
         tx.setSynced(false);
         if (tx.getUserId() == null) tx.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
         AppDatabase.databaseWriteExecutor.execute(() -> {
@@ -409,6 +411,7 @@ public class AppViewModel extends AndroidViewModel {
         tx.setDeleted(true);
         tx.setSynced(false);
         tx.setUpdatedAtMs(System.currentTimeMillis());
+        tx.setClientUpdatedAtMs(System.currentTimeMillis()); // LWW edit-time
         AppDatabase.databaseWriteExecutor.execute(() -> {
             transactionDao.insert(tx); // soft delete — push lên server trước khi hard delete
             enqueueSync();

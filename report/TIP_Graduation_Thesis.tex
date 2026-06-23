@@ -177,7 +177,7 @@ Internal Supervisor: & Prof. Dr. Trần Giang Sơn \\
 \begin{center}\textbf{To whom it may concern,}\end{center}
 \vspace{0.8cm}
 \noindent I, Nguyễn Văn Phương, certify that the thesis / internship report of
-Mr.Phạm Quang Hưng is qualified to be presented in the Internship Jury
+Mr. Phạm Quang Hưng is qualified to be presented in the Internship Jury
 2025--2026.
 \vspace{2.0cm}
 
@@ -212,6 +212,7 @@ family and friends for their continuous encouragement and support.
 \vspace{0.4cm}
 \renewcommand{\arraystretch}{1.25}
 \begin{longtable}{@{\hspace{1cm}}p{2.6cm}p{9.5cm}@{}}
+ACID     & Atomicity, Consistency, Isolation, Durability (DB transactions) \\
 AES      & Advanced Encryption Standard \\
 API      & Application Programming Interface \\
 BCrypt   & Password-hashing function based on the Blowfish cipher \\
@@ -234,7 +235,9 @@ OLS      & Ordinary Least Squares (linear regression) \\
 ORM      & Object--Relational Mapping \\
 REST     & Representational State Transfer \\
 SDK      & Software Development Kit \\
+SHA      & Secure Hash Algorithm \\
 SQL      & Structured Query Language \\
+TLS      & Transport Layer Security \\
 USTH     & University of Science and Technology of Hanoi \\
 UUID     & Universally Unique Identifier \\
 VND      & Vietnamese Dong (currency) \\
@@ -254,7 +257,6 @@ VND      & Vietnamese Dong (currency) \\
 % ---------------------- ABSTRACT -------------------------------------
 \section*{ABSTRACT}
 \addcontentsline{toc}{section}{ABSTRACT}
-\textit{(No more than 250 words, in English + 6 keywords)}
 \vspace{0.4cm}
 
 This thesis presents the design and implementation of \textbf{TIP -- Tap Into Prosperity}, a
@@ -431,7 +433,7 @@ and hardware requirements in Table~\ref{tab:sysreq}.
 \toprule
 \textbf{Area} & \textbf{Technology} \\
 \midrule
-Android  & Java, Room (schema v18), Retrofit~2, OkHttp~4, Gson, LiveData/ViewModel, Navigation Component, WorkManager, Material Design~3, CameraX + ML~Kit (OCR), MPAndroidChart, EncryptedSharedPreferences. \\
+Android  & Java, Room (schema v19), Retrofit~2, OkHttp~4, Gson, LiveData/ViewModel, Navigation Component, WorkManager, Material Design~3, CameraX + ML~Kit (OCR), MPAndroidChart, EncryptedSharedPreferences. \\
 Backend  & Spring Boot 4.0.5, Spring Security, Spring Data JPA, Hibernate, Lombok, jjwt 0.12.6, BCrypt, Google Gemini API. \\
 Database & Neon PostgreSQL (cloud) + Room/SQLite (local cache). \\
 Build    & Gradle 8.13 (AGP 8.13.2), Java~21. \\
@@ -660,16 +662,22 @@ ORDER BY t.updatedAt ASC, t.id ASC                         -- total, stable orde
 
 The query returns a \texttt{Slice<T>} rather than a \texttt{Page<T>}, omitting \texttt{COUNT(*)};
 soft-deleted rows are intentionally included so deletions propagate. When the same record is edited
-on two replicas, the version with the newer \texttt{updatedAt} wins (Last-Write-Wins). The decision
-is made null-safely (Listing~\ref{lst:lww}); the edge cases handled explicitly are listed in
-Table~\ref{tab:lww}.
+on two replicas, the conflict is resolved by Last-Write-Wins on the client \emph{edit-time}. To keep
+this decision immune to client clock skew, two timestamps are kept separate: \texttt{updatedAt} is
+always server-issued --- the monotonic version that also drives the delta cursor --- while
+\texttt{clientUpdatedAt} carries the client's edit-time \emph{clamped} to the server clock, so a wrong
+(e.g.\ future-dated) device clock cannot ``poison'' a record. The decision is made null-safely on the
+clamped \texttt{clientUpdatedAt} (Listing~\ref{lst:lww}); the edge cases are listed in Table~\ref{tab:lww}.
 
-\begin{lstlisting}[language=Java,caption={Null-safe Last-Write-Wins decision (simplified).},label={lst:lww}]
+\begin{lstlisting}[language=Java,caption={Skew-resistant Last-Write-Wins decision (simplified).},label={lst:lww}]
+OffsetDateTime now = OffsetDateTime.now();
+OffsetDateTime incoming = clamp(item.getClientUpdatedAt(), now); // never trust a future client clock
 boolean clientWins = item.getClientUpdatedAt() != null
-    && (existing.getUpdatedAt() == null
-        || item.getClientUpdatedAt().isAfter(existing.getUpdatedAt()));
+    && (existing.getClientUpdatedAt() == null
+        || incoming.isAfter(existing.getClientUpdatedAt()));
 if (!clientWins) { responseList.add(toResponse(existing)); return 0; } // SERVER wins
-existing.setUpdatedAt(item.getClientUpdatedAt());                      // CLIENT wins
+existing.setClientUpdatedAt(incoming); // CLIENT wins: store clamped edit-time ...
+existing.setUpdatedAt(now);            // ... and bump the server-issued version
 \end{lstlisting}
 
 \begin{table}[H]
@@ -681,10 +689,11 @@ existing.setUpdatedAt(item.getClientUpdatedAt());                      // CLIENT
 \toprule
 \textbf{Situation} & \textbf{Decision} & \textbf{Rationale} \\
 \midrule
-client timestamp newer            & Client wins  & keep the user's latest change. \\
-server timestamp newer            & Server wins  & client overwrites local. \\
-client timestamp null (legacy)    & Server wins  & avoid legacy overwrite of good data. \\
-server timestamp null (old row)   & Client wins  & the old row was never stamped. \\
+client edit-time newer            & Client wins  & keep the user's latest change. \\
+server edit-time newer            & Server wins  & reject the stale client overwrite. \\
+client edit-time null (legacy)    & Server wins  & avoid legacy overwrite of good data. \\
+server edit-time null (old row)   & Client wins  & the old row was never stamped. \\
+client edit-time in the future    & Clamp to serverNow & a skewed clock cannot poison the record. \\
 deleted but client resends        & Re-acknowledge & avoid an infinite retry loop. \\
 duplicate new (legacy, id null)   & Return existing & prevent double-insert on resend. \\
 \bottomrule
@@ -1003,10 +1012,13 @@ machine through a development tunnel rather than under production load, and on a
 so the absolute figures are indicative rather than representative of a deployed system. The
 multi-device tests used one physical device and one emulator, which reproduces cross-device
 synchronization faithfully but not large-scale concurrency. Conceptually, Last-Write-Wins resolves
-conflicts at the record level rather than merging individual fields, and the optimistic-concurrency
-(409) capability --- although present in the backend --- is not yet wired into the Android edit
-screen, which currently resolves edits through the Last-Write-Wins path. Finally, the system is
-single-platform (Android) and is exercised against development rather than production infrastructure.
+conflicts at the record level rather than merging individual fields; its ordering is made robust to
+client clock skew by separating a server-issued version (\texttt{updatedAt}) from a clamped client
+edit-time (\texttt{clientUpdatedAt}), while a fully causal order (e.g.\ hybrid logical clocks) remains
+future work. The optimistic-concurrency (409) capability --- although present in the backend --- is
+not yet wired into the Android edit screen, which currently resolves interactive edits through the
+Last-Write-Wins path. Finally, the system is single-platform (Android) and is exercised against
+development rather than production infrastructure.
 
 % ---------------------- V / CONCLUSION & PERSPECTIVE -----------------
 \section{CONCLUSION \& PERSPECTIVE}
