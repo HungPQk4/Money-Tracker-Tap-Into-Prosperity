@@ -31,6 +31,8 @@ public class SyncTransactionRequest {
 
     // ── Transaction fields (null OK cho delete items) ─────────────────────────
     private UUID accountId;
+    /** Ví đích cho transfer (null cho income/expense). */
+    private UUID toAccountId;
     private UUID categoryId;
     private UUID goalId;
 

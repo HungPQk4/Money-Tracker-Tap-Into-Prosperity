@@ -34,12 +34,13 @@ public class AuthService {
     private final SecurityUtils securityUtils;
 
     public AuthResponse register(RegisterRequest req) {
-        if (userRepository.findByEmail(req.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Email already in use: " + req.getEmail());
+        String email = normalizeEmail(req.getEmail());
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("Email already in use: " + email);
         }
 
         User user = new User();
-        user.setEmail(req.getEmail());
+        user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         user.setFullName(req.getFullName());
         user.setCurrencyCode(req.getCurrencyCode());
@@ -50,14 +51,23 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest req) {
+        String email = normalizeEmail(req.getEmail());
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
+                new UsernamePasswordAuthenticationToken(email, req.getPassword())
         );
 
-        User user = userRepository.findByEmail(req.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", req.getEmail()));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
 
         return issueTokens(user, req.getDeviceName());
+    }
+
+    /**
+     * Chuẩn hoá email về chữ thường + bỏ khoảng trắng để đăng nhập không phân biệt hoa/thường
+     * (tránh trường hợp đăng ký "Hung@Gmail.com" nhưng đăng nhập "hung@gmail.com" bị báo sai).
+     */
+    private static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     /** Cấp access token + tạo phiên mới (refresh token) cho một thiết bị. */

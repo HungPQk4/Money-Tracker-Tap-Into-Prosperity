@@ -26,7 +26,7 @@ public class AuthRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     successData.postValue(response.body());
                 } else {
-                    errorData.postValue("Đăng nhập thất bại: " + response.code());
+                    errorData.postValue(parseError(response, "Đăng nhập thất bại (" + response.code() + ")"));
                 }
             }
 
@@ -46,7 +46,7 @@ public class AuthRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     successData.postValue(response.body());
                 } else {
-                    errorData.postValue("Đăng ký thất bại: " + response.code());
+                    errorData.postValue(parseError(response, "Đăng ký thất bại (" + response.code() + ")"));
                 }
             }
 
@@ -55,6 +55,38 @@ public class AuthRepository {
                 errorData.postValue("Lỗi kết nối: " + t.getMessage());
             }
         });
+    }
+
+    /**
+     * Trích message lỗi do backend trả về ({@code {"message":...}} hoặc {@code {"messages":[...]}})
+     * để hiển thị câu thông báo có nghĩa (vd "Sai email hoặc mật khẩu!") thay vì chỉ mã HTTP.
+     * Mọi lỗi parse/IO đều rơi về {@code fallback}.
+     */
+    private static String parseError(Response<?> response, String fallback) {
+        try {
+            if (response.errorBody() != null) {
+                String body = response.errorBody().string();
+                if (body != null && !body.isEmpty()) {
+                    com.google.gson.JsonObject obj =
+                            com.google.gson.JsonParser.parseString(body).getAsJsonObject();
+                    if (obj.has("message") && obj.get("message").isJsonPrimitive()) {
+                        return obj.get("message").getAsString();
+                    }
+                    if (obj.has("messages") && obj.get("messages").isJsonArray()) {
+                        com.google.gson.JsonArray arr = obj.getAsJsonArray("messages");
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 0; i < arr.size(); i++) {
+                            if (i > 0) sb.append('\n');
+                            sb.append(arr.get(i).getAsString());
+                        }
+                        if (sb.length() > 0) return sb.toString();
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // body rỗng / không phải JSON / đọc lỗi → dùng fallback
+        }
+        return fallback;
     }
 
     /** Tên thiết bị hiển thị trong danh sách phiên (vd "samsung SM-G991B"). */

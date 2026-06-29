@@ -58,12 +58,15 @@ class TransactionServiceSyncTest {
         testAccount = new Account();
         testAccount.setId(UUID.randomUUID());
         testAccount.setBalance(BigDecimal.ZERO);
+        testAccount.setUser(testUser); // account phải thuộc về user (ownership check chống IDOR)
 
         testCategory = new Category();
         testCategory.setId(UUID.randomUUID());
         testCategory.setName("Food");
+        testCategory.setUser(testUser);
 
-        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+        // syncTransactions giờ lấy user từ security context (KHÔNG còn tin req.userId)
+        when(securityUtils.getCurrentUser()).thenReturn(testUser);
         when(accountRepository.findById(testAccount.getId())).thenReturn(Optional.of(testAccount));
         when(categoryRepository.findById(testCategory.getId())).thenReturn(Optional.of(testCategory));
 

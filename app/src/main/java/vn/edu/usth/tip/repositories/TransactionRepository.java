@@ -163,6 +163,9 @@ public class TransactionRepository {
                             createdAtStr,
                             clientUpdatedAt
                     );
+                    if (tx.getType() == Transaction.Type.TRANSFER && tx.getToWalletName() != null) {
+                        item.setToAccountId(resolveToAccountId(tx.getToWalletName()));
+                    }
                     item.setRecurring(tx.isRecurring());
                     if (tx.isRecurring()) item.setRecurInterval(tx.getRecurInterval());
                     items.add(item);
@@ -328,6 +331,9 @@ public class TransactionRepository {
                         tx.getNote(),
                         dateFormat.format(new Date(tx.getTimestampMs())),
                         createdAt, clientUpdated);
+                if (tx.getType() == Transaction.Type.TRANSFER && tx.getToWalletName() != null) {
+                    syncItem.setToAccountId(resolveToAccountId(tx.getToWalletName()));
+                }
                 syncItem.setRecurring(tx.isRecurring());
                 if (tx.isRecurring()) syncItem.setRecurInterval(tx.getRecurInterval());
                 items.add(syncItem);
@@ -450,6 +456,9 @@ public class TransactionRepository {
                 );
 
                 req.setNote(tx.getNote());
+                if (tx.getType() == Transaction.Type.TRANSFER && tx.getToWalletName() != null) {
+                    req.setToAccountId(resolveToAccountId(tx.getToWalletName()));
+                }
 
                 android.util.Log.d("TX_SYNC", "POST /transactions: userId=" + userId
                         + " accountId=" + accountId + " categoryId=" + categoryId
@@ -518,6 +527,9 @@ public class TransactionRepository {
                         dateFormat.format(new Date(tx.getTimestampMs()))
                 );
                 req.setNote(tx.getNote());
+                if (tx.getType() == Transaction.Type.TRANSFER && tx.getToWalletName() != null) {
+                    req.setToAccountId(resolveToAccountId(tx.getToWalletName()));
+                }
 
                 UUID id = UUID.fromString(tx.getId());
                 transactionApi.updateTransaction(id, req).enqueue(new Callback<TransactionDto>() {
@@ -742,6 +754,28 @@ public class TransactionRepository {
         return null;
     }
 
+    /**
+     * Resolve UUID ví đích (transfer) theo tên — chỉ tra cứu trên server, KHÔNG tạo mới.
+     * Trả null nếu không tìm thấy (giao dịch vẫn ghi nhận vế nguồn).
+     */
+    private UUID resolveToAccountId(String toWalletName) {
+        if (toWalletName == null || toWalletName.trim().isEmpty()) return null;
+        try {
+            Response<List<AccountDto>> resp = financialApi.getAllAccounts().execute();
+            if (resp.isSuccessful() && resp.body() != null) {
+                String key = toWalletName.trim().toLowerCase();
+                for (AccountDto dto : resp.body()) {
+                    if (dto.getName() != null && dto.getName().trim().toLowerCase().equals(key)) {
+                        return dto.getId();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e("TX_SYNC", "resolveToAccountId error: " + e.getMessage());
+        }
+        return null;
+    }
+
     private UUID syncWalletToNeon(Wallet wallet) {
         try {
             String userIdStr = tokenManager.getUserId();
@@ -915,6 +949,12 @@ public class TransactionRepository {
                 dto.getNote()
         );
         tx.setSynced(true);
+        tx.setToWalletName(dto.getToAccountName());
+        // Server không lưu title — dựng lại "Nguồn → Đích" để hiển thị transfer sau khi pull.
+        if (type == Transaction.Type.TRANSFER && dto.getToAccountName() != null) {
+            tx.setTitle((dto.getAccountName() != null ? dto.getAccountName() : "")
+                    + " → " + dto.getToAccountName());
+        }
         tx.setRecurring(dto.isRecurring());
         tx.setRecurInterval(dto.getRecurInterval());
         tx.setUserId(tokenManager.getUserId());

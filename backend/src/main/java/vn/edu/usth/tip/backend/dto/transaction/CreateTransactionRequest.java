@@ -15,6 +15,8 @@ import java.util.UUID;
 public class CreateTransactionRequest {
     @NotNull private UUID userId;
     @NotNull private UUID accountId;
+    /** Ví đích — bắt buộc về mặt logic khi type = transfer; null cho income/expense. */
+    private UUID toAccountId;
     @NotNull private UUID categoryId;
     private UUID goalId;
 

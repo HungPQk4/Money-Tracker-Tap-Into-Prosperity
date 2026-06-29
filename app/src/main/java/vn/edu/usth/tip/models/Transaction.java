@@ -21,6 +21,7 @@ public class Transaction {
     private String category;
     private String icon;        // emoji
     private String walletName;
+    private String toWalletName; // ví đích cho TRANSFER (null cho income/expense)
     private long   amountVnd;   // luôn dương; type quyết định dấu hiển thị
     private Type   type;
     private long   timestampMs; // epoch milliseconds
@@ -115,6 +116,7 @@ public class Transaction {
     public String getCategory()     { return category; }
     public String getIcon()         { return icon; }
     public String getWalletName()   { return walletName; }
+    public String getToWalletName() { return toWalletName; }
     public long   getAmountVnd()    { return amountVnd; }
     public Type   getType()         { return type; }
     public long   getTimestampMs()  { return timestampMs; }
@@ -133,6 +135,7 @@ public class Transaction {
     public void setCategory(String category) { this.category = category; }
     public void setIcon(String icon) { this.icon = icon; }
     public void setWalletName(String walletName) { this.walletName = walletName; }
+    public void setToWalletName(String toWalletName) { this.toWalletName = toWalletName; }
     public void setAmountVnd(long amountVnd) { this.amountVnd = amountVnd; }
     public void setType(Type type) { this.type = type; }
     public void setTimestampMs(long timestampMs) { this.timestampMs = timestampMs; }

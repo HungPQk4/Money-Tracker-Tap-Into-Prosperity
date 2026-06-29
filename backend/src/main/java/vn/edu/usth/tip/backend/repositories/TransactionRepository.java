@@ -99,12 +99,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     );
 
     /**
-     * Tính số dư ví từ giao dịch: Σ(income) − Σ(expense + transfer), bỏ qua bản đã xóa.
+     * Tính số dư ví từ giao dịch (bỏ qua bản đã xóa):
+     *   + income vào ví này, − expense/transfer-out khỏi ví này, + transfer-in tới ví này (ví đích).
+     * Dùng LEFT JOIN t.toAccount để KHÔNG loại các dòng có toAccount = null (income/expense thường).
      * Dùng cho reconciliation — khắc phục trôi lệch số dư khi đồng bộ đa thiết bị
      * (số dư là counter, không an toàn dưới LWW).
      */
-    @Query("SELECT COALESCE(SUM(CASE WHEN t.type = vn.edu.usth.tip.backend.models.enums.TransactionType.income " +
-           "THEN t.amount ELSE -t.amount END), 0) " +
-           "FROM Transaction t WHERE t.account.id = :accountId AND t.deletedAt IS NULL")
+    @Query("SELECT COALESCE(SUM(CASE " +
+           "WHEN t.account.id = :accountId AND t.type = vn.edu.usth.tip.backend.models.enums.TransactionType.income THEN t.amount " +
+           "WHEN t.account.id = :accountId THEN -t.amount " +
+           "WHEN ta.id = :accountId AND t.type = vn.edu.usth.tip.backend.models.enums.TransactionType.transfer THEN t.amount " +
+           "ELSE 0 END), 0) " +
+           "FROM Transaction t LEFT JOIN t.toAccount ta " +
+           "WHERE (t.account.id = :accountId OR ta.id = :accountId) AND t.deletedAt IS NULL")
     BigDecimal computeBalanceForAccount(@Param("accountId") UUID accountId);
 }

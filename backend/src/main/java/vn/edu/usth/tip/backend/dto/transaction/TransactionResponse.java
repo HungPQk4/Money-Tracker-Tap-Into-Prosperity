@@ -15,6 +15,8 @@ public class TransactionResponse {
     private UUID userId;
     private UUID accountId;
     private String accountName;
+    private UUID toAccountId;     // ví đích (transfer); null cho income/expense
+    private String toAccountName;
     private UUID categoryId;
     private String categoryName;
     private UUID goalId;

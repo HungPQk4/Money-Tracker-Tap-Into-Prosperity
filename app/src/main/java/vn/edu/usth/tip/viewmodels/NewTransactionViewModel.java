@@ -112,12 +112,15 @@ public class NewTransactionViewModel extends AndroidViewModel {
             state.selectedAccountName = tx.getWalletName() != null ? tx.getWalletName() : "Chọn ví...";
             state.isRecurring = tx.isRecurring();
             state.recurInterval = tx.getRecurInterval();
-            // Khôi phục tài khoản đích từ title khi edit TRANSFER
-            if (tx.getType() == Transaction.Type.TRANSFER && tx.getTitle() != null) {
-                String title = tx.getTitle();
-                int arrowIdx = title.indexOf('→');
-                if (arrowIdx >= 0 && arrowIdx + 1 < title.length()) {
-                    state.selectedToAccountName = title.substring(arrowIdx + 1).trim();
+            // Khôi phục ví đích khi edit TRANSFER: ưu tiên toWalletName, fallback parse title (dữ liệu cũ).
+            if (tx.getType() == Transaction.Type.TRANSFER) {
+                if (tx.getToWalletName() != null && !tx.getToWalletName().isEmpty()) {
+                    state.selectedToAccountName = tx.getToWalletName();
+                } else if (tx.getTitle() != null) {
+                    int arrowIdx = tx.getTitle().indexOf('→');
+                    if (arrowIdx >= 0 && arrowIdx + 1 < tx.getTitle().length()) {
+                        state.selectedToAccountName = tx.getTitle().substring(arrowIdx + 1).trim();
+                    }
                 }
             }
             uiState.setValue(state);
@@ -237,6 +240,7 @@ public class NewTransactionViewModel extends AndroidViewModel {
             tx.setCategory(category);
             tx.setIcon(icon);
             tx.setWalletName(state.selectedAccountName);
+            tx.setToWalletName(state.selectedToAccountName);
             tx.setAmountVnd(amount);
             tx.setType(Transaction.Type.TRANSFER);
             tx.setTimestampMs(state.timestampMs);
@@ -251,6 +255,7 @@ public class NewTransactionViewModel extends AndroidViewModel {
                     state.selectedAccountName, amount,
                     Transaction.Type.TRANSFER, state.timestampMs, state.note
             );
+            tx.setToWalletName(state.selectedToAccountName);
             tx.setRecurring(state.isRecurring);
             tx.setRecurInterval(state.isRecurring ? state.recurInterval : null);
             if (state.selectedAccountId != null) tx.setAccountId(state.selectedAccountId);

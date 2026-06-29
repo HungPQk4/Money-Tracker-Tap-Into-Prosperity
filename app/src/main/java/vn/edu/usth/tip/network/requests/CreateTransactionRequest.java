@@ -6,6 +6,7 @@ import java.util.UUID;
 public class CreateTransactionRequest {
     private UUID userId;
     private UUID accountId;
+    private UUID toAccountId; // ví đích cho transfer (null cho income/expense)
     private UUID categoryId;
     private UUID goalId;
     private BigDecimal amount;
@@ -38,6 +39,8 @@ public class CreateTransactionRequest {
     public Boolean getIsRecurring()     { return isRecurring; }
     public String getRecurInterval()    { return recurInterval; }
 
+    public UUID getToAccountId()        { return toAccountId; }
+    public void setToAccountId(UUID toAccountId) { this.toAccountId = toAccountId; }
     public void setNote(String note) { this.note = note; }
     public void setGoalId(UUID goalId) { this.goalId = goalId; }
 }

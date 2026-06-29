@@ -90,6 +90,8 @@ public class LoginActivity extends AppCompatActivity {
             
             if (email.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show();
+            } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                Toast.makeText(this, "Email không hợp lệ", Toast.LENGTH_SHORT).show();
             } else {
                 viewModel.login(email, password);
             }

@@ -7,6 +7,8 @@ public class TransactionDto {
     private UUID id;
     private UUID accountId;
     private String accountName;
+    private UUID toAccountId;     // ví đích cho transfer (null cho income/expense)
+    private String toAccountName;
     private UUID categoryId;
     private String categoryName;
     private BigDecimal amount;
@@ -23,6 +25,8 @@ public class TransactionDto {
     public UUID getId() { return id; }
     public UUID getAccountId() { return accountId; }
     public String getAccountName() { return accountName; }
+    public UUID getToAccountId() { return toAccountId; }
+    public String getToAccountName() { return toAccountName; }
     public UUID getCategoryId() { return categoryId; }
     public String getCategoryName() { return categoryName; }
     public BigDecimal getAmount() { return amount; }

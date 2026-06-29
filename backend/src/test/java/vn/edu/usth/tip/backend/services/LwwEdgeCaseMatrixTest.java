@@ -62,8 +62,12 @@ class LwwEdgeCaseMatrixTest {
     void setUp() {
         user = new User();         user.setId(UUID.randomUUID());
         account = new Account();   account.setId(UUID.randomUUID()); account.setBalance(BigDecimal.ZERO);
+        account.setUser(user);     // account thuộc về user (ownership check chống IDOR)
         category = new Category(); category.setId(UUID.randomUUID()); category.setName("Food");
+        category.setUser(user);
 
+        // syncTransactions giờ lấy user từ security context (KHÔNG còn tin req.userId)
+        when(securityUtils.getCurrentUser()).thenReturn(user);
         when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
         when(accountRepository.findById(account.getId())).thenReturn(Optional.of(account));
         when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));

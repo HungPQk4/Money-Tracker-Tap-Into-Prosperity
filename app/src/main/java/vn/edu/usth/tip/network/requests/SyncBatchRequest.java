@@ -24,6 +24,7 @@ public class SyncBatchRequest {
     // ─── Mỗi bản ghi trong batch ──────────────────────────────────────────────
     public static class SyncItem {
         private UUID accountId;
+        private UUID toAccountId; // ví đích cho transfer (null cho income/expense)
         private UUID categoryId;
         private BigDecimal amount;
         private String type;           // "income" | "expense" | "transfer"
@@ -65,6 +66,8 @@ public class SyncBatchRequest {
         }
 
         public UUID getAccountId()         { return accountId; }
+        public UUID getToAccountId()       { return toAccountId; }
+        public void setToAccountId(UUID toAccountId) { this.toAccountId = toAccountId; }
         public UUID getCategoryId()        { return categoryId; }
         public BigDecimal getAmount()      { return amount; }
         public String getType()            { return type; }

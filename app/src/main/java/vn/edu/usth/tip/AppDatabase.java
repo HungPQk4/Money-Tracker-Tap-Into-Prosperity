@@ -31,7 +31,7 @@ import vn.edu.usth.tip.models.GoalDao;
 @Database(
         entities = {Transaction.class, Category.class, Wallet.class,
                 Budget.class, DebtLoan.class, Goal.class},
-        version = 19,
+        version = 20,
         exportSchema = false
 )
 @TypeConverters({Converters.class})
@@ -86,7 +86,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "money_tracker_database")
-                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
                             .fallbackToDestructiveMigration()
                             .addCallback(sRoomDatabaseCallback)
                             .build();
@@ -153,6 +153,14 @@ public abstract class AppDatabase extends RoomDatabase {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE transactions ADD COLUMN clientUpdatedAtMs INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
+    // 19→20: thêm toWalletName (ví đích cho giao dịch chuyển khoản — sửa lỗi transfer mất tiền)
+    static final Migration MIGRATION_19_20 = new Migration(19, 20) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE transactions ADD COLUMN toWalletName TEXT");
         }
     };
 
