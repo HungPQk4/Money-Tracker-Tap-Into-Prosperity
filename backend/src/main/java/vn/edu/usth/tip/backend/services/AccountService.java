@@ -44,7 +44,10 @@ public class AccountService {
         account.setUser(user);
         account.setName(request.getName());
         account.setType(request.getType());
-        account.setBalance(request.getBalance());
+        // Số dư nhập lúc lập ví = số dư đầu kỳ; chưa có giao dịch nên balance = openingBalance.
+        BigDecimal opening = request.getBalance() != null ? request.getBalance() : BigDecimal.ZERO;
+        account.setOpeningBalance(opening);
+        account.setBalance(opening);
         account.setColorHex(request.getColorHex());
         account.setIcon(request.getIcon());
         account.setIncludeInTotal(request.getIncludeInTotal() != null ? request.getIncludeInTotal() : true);
@@ -70,6 +73,11 @@ public class AccountService {
             account.setType(request.getType());
         }
         if (request.getBalance() != null) {
+            // Người dùng nhập số dư MONG MUỐN (tổng) → suy ngược số dư đầu kỳ, giữ nguyên giao dịch:
+            //   openingBalance = số_dư_nhập − Σ giao dịch  ⇒  balance hiển thị = số_dư_nhập.
+            BigDecimal txSum = transactionRepository.computeBalanceForAccount(id);
+            if (txSum == null) txSum = BigDecimal.ZERO;
+            account.setOpeningBalance(request.getBalance().subtract(txSum));
             account.setBalance(request.getBalance());
         }
         if (request.getColorHex() != null) {
@@ -108,6 +116,7 @@ public class AccountService {
         res.setName(acc.getName());
         res.setType(acc.getType());
         res.setBalance(acc.getBalance());
+        res.setOpeningBalance(acc.getOpeningBalance());
         res.setCurrencyCode(acc.getCurrencyCode());
         res.setColorHex(acc.getColorHex());
         res.setIcon(acc.getIcon());
@@ -172,6 +181,9 @@ public class AccountService {
     private void applyReconciledBalance(Account account) {
         BigDecimal computed = transactionRepository.computeBalanceForAccount(account.getId());
         if (computed == null) computed = BigDecimal.ZERO;
+        // Số dư = số dư đầu kỳ + Σ giao dịch (đầu kỳ null = 0 cho dòng cũ).
+        BigDecimal opening = account.getOpeningBalance() != null ? account.getOpeningBalance() : BigDecimal.ZERO;
+        computed = opening.add(computed);
         // Chỉ ghi khi lệch → tránh bump updatedAt thừa (đỡ tạo delta vô ích).
         if (account.getBalance() == null || account.getBalance().compareTo(computed) != 0) {
             account.setBalance(computed);

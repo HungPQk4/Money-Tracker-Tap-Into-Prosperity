@@ -13,6 +13,7 @@ public class AccountResponse {
     private String name;
     private AccountType type;
     private BigDecimal balance;
+    private BigDecimal openingBalance; // số dư đầu kỳ (balance = openingBalance + Σ giao dịch)
     private String currencyCode;
     private String colorHex;
     private String icon;

@@ -173,6 +173,7 @@ public class GoalsRepository {
         String lastUpdAt   = null;
         String lastIdStr   = null;
         String finalCursor = null;
+        boolean completed  = false; // chỉ advance cursor khi đã kéo HẾT các trang trong window
 
         while (true) {
             Response<DeltaResponse<GoalDto>> resp = financialApi
@@ -206,7 +207,7 @@ public class GoalsRepository {
                 });
             }
 
-            if (!page.isHasMore()) break;
+            if (!page.isHasMore()) { completed = true; break; }
             if (items != null && !items.isEmpty()) {
                 GoalDto last = items.get(items.size() - 1);
                 lastUpdAt = last.getUpdatedAt();
@@ -214,7 +215,7 @@ public class GoalsRepository {
             }
         }
 
-        if (finalCursor != null)
+        if (completed && finalCursor != null)
             SyncPrefs.setCursor(appContext, SyncPrefs.KEY_GOAL, finalCursor);
         return false;
     }

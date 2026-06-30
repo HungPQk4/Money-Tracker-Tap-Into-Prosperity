@@ -88,7 +88,8 @@ class MultiDeviceSessionFlowTest {
         Resp bAfter = call("GET", "/auth/sessions", tokenB, null);
         assertThat(bAfter.status()).as("token B phải chết ngay sau khi thu hồi").isEqualTo(401);
 
-        // 8. Reconcile: tạo ví số dư "lệch" 500k, không có giao dịch → reconcile phải về 0
+        // 8. Reconcile: ví có số dư ĐẦU KỲ 500k, chưa có giao dịch → reconcile GIỮ NGUYÊN 500k
+        //    (số dư đầu kỳ là tiền có sẵn khi lập ví, KHÔNG bị coi là "lệch").
         Resp acc = call("POST", "/accounts", tokenA2,
                 Map.of("name", "Vi test", "type", "cash", "balance", 500000));
         assertThat(acc.status()).isEqualTo(201);
@@ -97,7 +98,7 @@ class MultiDeviceSessionFlowTest {
         Resp reconciled = call("POST", "/accounts/" + accountId + "/reconcile", tokenA2, null);
         assertThat(reconciled.status()).isEqualTo(200);
         Number balance = (Number) asMap(reconciled.body()).get("balance");
-        assertThat(balance.doubleValue()).as("số dư lệch phải được tính lại = 0 (không có giao dịch)").isEqualTo(0.0);
+        assertThat(balance.doubleValue()).as("số dư đầu kỳ 500k được giữ (không có giao dịch)").isEqualTo(500000.0);
 
         // ── Mục 3 phần sâu: số dư = Σ giao dịch (Part B) + optimistic concurrency (Part A) ──
         String userId = (String) regBody.get("userId");
@@ -113,7 +114,7 @@ class MultiDeviceSessionFlowTest {
                 "amount", 100000, "type", "income", "transactionDate", "2026-06-10"));
         assertThat(tIncome.status()).as("tạo income lỗi: " + tIncome.body()).isEqualTo(201);
         String incomeId = (String) asMap(tIncome.body()).get("id");
-        assertThat(accountBalance(tokenA2, accountId)).as("income 100k → số dư 100k").isEqualTo(100000.0);
+        assertThat(accountBalance(tokenA2, accountId)).as("đầu kỳ 500k + income 100k → 600k").isEqualTo(600000.0);
 
         // Chi 30k → số dư 70k
         Resp tExpense = call("POST", "/transactions", tokenA2, Map.of(
@@ -121,12 +122,12 @@ class MultiDeviceSessionFlowTest {
                 "amount", 30000, "type", "expense", "transactionDate", "2026-06-10"));
         assertThat(tExpense.status()).isEqualTo(201);
         String expenseId = (String) asMap(tExpense.body()).get("id");
-        assertThat(accountBalance(tokenA2, accountId)).as("expense 30k → số dư 70k").isEqualTo(70000.0);
+        assertThat(accountBalance(tokenA2, accountId)).as("đầu kỳ 500k +100k −30k → 570k").isEqualTo(570000.0);
 
         // Xóa giao dịch chi → số dư về 100k (giao dịch đã xóa bị loại khỏi tổng)
         Resp delTx = call("DELETE", "/transactions/" + expenseId, tokenA2, null);
         assertThat(delTx.status()).isEqualTo(204);
-        assertThat(accountBalance(tokenA2, accountId)).as("xóa expense → số dư 100k").isEqualTo(100000.0);
+        assertThat(accountBalance(tokenA2, accountId)).as("xóa expense → 600k").isEqualTo(600000.0);
 
         // Part A: sửa income với expectedUpdatedAt CŨ → 409 (chống lost-update đa thiết bị)
         Resp conflict = call("PUT", "/transactions/" + incomeId, tokenA2, Map.of(
@@ -134,20 +135,31 @@ class MultiDeviceSessionFlowTest {
                 "amount", 120000, "type", "income", "transactionDate", "2026-06-10",
                 "expectedUpdatedAt", "2000-01-01T00:00:00Z"));
         assertThat(conflict.status()).as("sửa với expectedUpdatedAt cũ → 409").isEqualTo(409);
-        assertThat(accountBalance(tokenA2, accountId)).as("409 không làm đổi số dư").isEqualTo(100000.0);
+        assertThat(accountBalance(tokenA2, accountId)).as("409 không làm đổi số dư").isEqualTo(600000.0);
 
         // Sửa KHÔNG kèm expectedUpdatedAt → 200, số dư cập nhật theo income mới (120k)
         Resp okUpdate = call("PUT", "/transactions/" + incomeId, tokenA2, Map.of(
                 "userId", userId, "accountId", accountId, "categoryId", catId,
                 "amount", 120000, "type", "income", "transactionDate", "2026-06-10"));
         assertThat(okUpdate.status()).as("sửa không kèm expectedUpdatedAt → 200").isEqualTo(200);
-        assertThat(accountBalance(tokenA2, accountId)).as("income sửa 120k → số dư 120k").isEqualTo(120000.0);
+        assertThat(accountBalance(tokenA2, accountId)).as("đầu kỳ 500k + income 120k → 620k").isEqualTo(620000.0);
 
         // 9. Đăng xuất A → 204, rồi token A chết
         Resp logout = call("POST", "/auth/logout", tokenA2, null);
         assertThat(logout.status()).isEqualTo(204);
         Resp aAfter = call("GET", "/auth/sessions", tokenA2, null);
         assertThat(aAfter.status()).as("token A phải chết sau logout").isEqualTo(401);
+    }
+
+    /** Cursor đồng bộ sai định dạng phải trả 400 (Bad Request), KHÔNG phải 500. */
+    @Test
+    void deltaEndpoint_rejectsMalformedCursor_with400() throws Exception {
+        String email = "bad-" + UUID.randomUUID() + "@test.com";
+        String token = (String) asMap(call("POST", "/auth/register", null,
+                Map.of("email", email, "password", "123456", "fullName", "X", "deviceName", "D")).body()).get("token");
+
+        Resp r = call("GET", "/transactions/delta?updatedSince=not-a-timestamp", token, null);
+        assertThat(r.status()).as("cursor sai định dạng → 400 (không phải 500)").isEqualTo(400);
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────────

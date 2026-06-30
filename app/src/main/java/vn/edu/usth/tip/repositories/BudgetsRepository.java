@@ -368,6 +368,7 @@ public class BudgetsRepository {
         String lastUpdAt   = null;
         String lastIdStr   = null;
         String finalCursor = null;
+        boolean completed  = false; // chỉ advance cursor khi đã kéo HẾT các trang trong window
 
         while (true) {
             Response<DeltaResponse<BudgetDto>> resp = financialApi
@@ -408,7 +409,7 @@ public class BudgetsRepository {
                 });
             }
 
-            if (!page.isHasMore()) break;
+            if (!page.isHasMore()) { completed = true; break; }
             if (items != null && !items.isEmpty()) {
                 BudgetDto last = items.get(items.size() - 1);
                 lastUpdAt = last.getUpdatedAt();
@@ -416,7 +417,7 @@ public class BudgetsRepository {
             }
         }
 
-        if (finalCursor != null)
+        if (completed && finalCursor != null)
             SyncPrefs.setCursor(appContext, SyncPrefs.KEY_BUDGET, finalCursor);
         return false;
     }

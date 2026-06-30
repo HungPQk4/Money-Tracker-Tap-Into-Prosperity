@@ -35,6 +35,14 @@ public class Account {
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
 
+    /**
+     * Số dư đầu kỳ (tiền đã có khi lập ví, không sinh ra từ giao dịch).
+     * Số dư hiển thị = openingBalance + Σ giao dịch. Nullable trên DB để tương thích
+     * dòng cũ (đọc null = 0); entity mới mặc định 0.
+     */
+    @Column(name = "opening_balance", precision = 18, scale = 2)
+    private BigDecimal openingBalance = BigDecimal.ZERO;
+
     @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency_code", nullable = false, columnDefinition = "CHAR(3)")
     private String currencyCode = "VND";

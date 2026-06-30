@@ -388,6 +388,9 @@ public class TransactionService {
         if (account == null) return;
         BigDecimal computed = transactionRepository.computeBalanceForAccount(account.getId());
         if (computed == null) computed = BigDecimal.ZERO;
+        // Số dư = số dư đầu kỳ + Σ giao dịch (đầu kỳ null = 0 cho dòng cũ) — giữ tiền có sẵn khi lập ví.
+        BigDecimal opening = account.getOpeningBalance() != null ? account.getOpeningBalance() : BigDecimal.ZERO;
+        computed = opening.add(computed);
         if (account.getBalance() == null || account.getBalance().compareTo(computed) != 0) {
             account.setBalance(computed);
             accountRepository.save(account);

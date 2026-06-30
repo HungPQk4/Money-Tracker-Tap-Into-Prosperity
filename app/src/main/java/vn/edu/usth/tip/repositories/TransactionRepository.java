@@ -1054,6 +1054,7 @@ public class TransactionRepository {
         String lastUpdAt   = null;
         String lastIdStr   = null;
         String finalCursor = null;
+        boolean completed  = false; // chỉ advance cursor khi đã kéo HẾT các trang trong window
 
         while (true) {
             Response<DeltaResponse<CategoryDto>> resp = financialApi
@@ -1089,7 +1090,7 @@ public class TransactionRepository {
                 });
             }
 
-            if (!page.isHasMore()) break;
+            if (!page.isHasMore()) { completed = true; break; }
             if (items != null && !items.isEmpty()) {
                 CategoryDto last = items.get(items.size() - 1);
                 lastUpdAt = last.getUpdatedAt();
@@ -1097,7 +1098,7 @@ public class TransactionRepository {
             }
         }
 
-        if (finalCursor != null)
+        if (completed && finalCursor != null)
             SyncPrefs.setCursor(appContext, SyncPrefs.KEY_CATEGORY, finalCursor);
     }
 
@@ -1107,6 +1108,7 @@ public class TransactionRepository {
         String lastUpdAt   = null;
         String lastIdStr   = null;
         String finalCursor = null;
+        boolean completed  = false; // chỉ advance cursor khi đã kéo HẾT các trang trong window
 
         while (true) {
             Response<DeltaResponse<AccountDto>> resp = financialApi
@@ -1145,7 +1147,7 @@ public class TransactionRepository {
                 });
             }
 
-            if (!page.isHasMore()) break;
+            if (!page.isHasMore()) { completed = true; break; }
             if (items != null && !items.isEmpty()) {
                 AccountDto last = items.get(items.size() - 1);
                 lastUpdAt = last.getUpdatedAt();
@@ -1153,7 +1155,7 @@ public class TransactionRepository {
             }
         }
 
-        if (finalCursor != null)
+        if (completed && finalCursor != null)
             SyncPrefs.setCursor(appContext, SyncPrefs.KEY_ACCOUNT, finalCursor);
     }
 
@@ -1163,6 +1165,7 @@ public class TransactionRepository {
         String lastUpdAt   = null;
         String lastIdStr   = null;
         String finalCursor = null;
+        boolean completed  = false; // chỉ advance cursor khi đã kéo HẾT các trang trong window
 
         while (true) {
             Response<DeltaResponse<TransactionDto>> resp = transactionApi
@@ -1237,7 +1240,7 @@ public class TransactionRepository {
                 });
             }
 
-            if (!page.isHasMore()) break;
+            if (!page.isHasMore()) { completed = true; break; }
             if (items != null && !items.isEmpty()) {
                 TransactionDto last = items.get(items.size() - 1);
                 lastUpdAt = last.getUpdatedAt();
@@ -1245,7 +1248,7 @@ public class TransactionRepository {
             }
         }
 
-        if (finalCursor != null)
+        if (completed && finalCursor != null)
             SyncPrefs.setCursor(appContext, SyncPrefs.KEY_TX, finalCursor);
         return false; // success
     }
