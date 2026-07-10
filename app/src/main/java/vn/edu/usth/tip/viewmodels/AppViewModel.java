@@ -461,60 +461,45 @@ public class AppViewModel extends AndroidViewModel {
         });
     }
 
+    // Budget/Goal/Debt theo offline-first: ghi Room (isSynced=false) rồi để TransactionSyncWorker
+    // đẩy lên server (push create/update/delete) — an toàn khi offline, không mất dữ liệu.
+
     public void addBudget(Budget b) {
         b.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
+        b.setSynced(false);
         AppDatabase.databaseWriteExecutor.execute(() -> {
             budgetDao.insert(b);
-        });
-        // Sync categories trước để đảm bảo có UUID thật trên server, rồi mới push budget
-        categoriesRepository.sync(new CategoriesRepository.SyncCallback() {
-            @Override
-            public void onSuccess() {
-                budgetsRepository.addOnline(b);
-            }
-
-            @Override
-            public void onError(String msg) {
-                // Dù sync lỗi, vẫn thử push budget (resolveCategoryId sẽ tự xử lý fallback)
-                budgetsRepository.addOnline(b);
-            }
+            enqueueSync();
         });
     }
 
     public void updateBudget(Budget b) {
         if (b.getUserId() == null) b.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
+        b.setSynced(false);
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            budgetDao.update(b);
-        });
-        categoriesRepository.sync(new CategoriesRepository.SyncCallback() {
-            @Override
-            public void onSuccess() {
-                budgetsRepository.updateOnline(b);
-            }
-
-            @Override
-            public void onError(String msg) {
-                budgetsRepository.updateOnline(b);
-            }
+            budgetDao.insert(b); // INSERT OR REPLACE
+            enqueueSync();
         });
     }
 
     public void deleteBudget(Budget b) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            budgetDao.delete(b);
-            budgetsRepository.deleteOnline(b.getId());
+            budgetDao.softDeleteById(b.getId()); // tombstone → worker đẩy lệnh xoá lên server
+            enqueueSync();
         });
     }
 
     public void addDebtLoan(DebtLoan debtLoan) {
         debtLoan.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
+        debtLoan.setSynced(false);
         AppDatabase.databaseWriteExecutor.execute(() -> {
             debtLoanDao.insert(debtLoan);
-            debtsRepository.addOnline(debtLoan);
+            enqueueSync();
         });
     }
 
     public void deleteDebtLoan(DebtLoan debtLoan) {
+        // Debt chưa có soft-delete: xoá cứng cục bộ + gửi lệnh xoá online (xoá offline là hạn chế đã biết).
         AppDatabase.databaseWriteExecutor.execute(() -> {
             debtLoanDao.delete(debtLoan);
             debtsRepository.deleteOnline(debtLoan.getId());
@@ -523,24 +508,26 @@ public class AppViewModel extends AndroidViewModel {
 
     public void addGoal(Goal goal) {
         goal.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
+        goal.setSynced(false);
         AppDatabase.databaseWriteExecutor.execute(() -> {
             goalDao.insert(goal);
-            goalsRepository.addOnline(goal);
+            enqueueSync();
         });
     }
 
     public void updateGoal(Goal goal) {
         if (goal.getUserId() == null) goal.setUserId(TokenManager.getOrCreate(getApplication()).getUserId());
+        goal.setSynced(false);
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            goalDao.update(goal);
-            goalsRepository.updateOnline(goal);
+            goalDao.insert(goal); // INSERT OR REPLACE
+            enqueueSync();
         });
     }
 
     public void deleteGoal(Goal goal) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            goalDao.delete(goal);
-            goalsRepository.deleteOnline(goal.getId());
+            goalDao.softDeleteById(goal.getId()); // tombstone → worker đẩy lệnh xoá lên server
+            enqueueSync();
         });
     }
 

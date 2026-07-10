@@ -156,7 +156,7 @@ public class GoalsRepository {
             if (dto.getTargetDate() != null) targetDate = sdf.parse(dto.getTargetDate()).getTime();
         } catch (Exception ignored) {}
 
-        return new Goal(
+        Goal g = new Goal(
             dto.getId().toString(),
             dto.getName(),
             "🎯", // Emoji mặc định
@@ -165,6 +165,57 @@ public class GoalsRepository {
             targetDate,
             "#6C5CE7" // Color mặc định
         );
+        g.setSynced(true); // bản ghi từ server = đã đồng bộ
+        return g;
+    }
+
+    private static boolean isUuid(String s) {
+        if (s == null) return false;
+        try { UUID.fromString(s); return true; } catch (IllegalArgumentException e) { return false; }
+    }
+
+    /**
+     * Đẩy goal có thay đổi cục bộ (isSynced=0) lên server: create/update/delete.
+     * Trả true nếu cần retry (5xx). Chạy ĐỒNG BỘ trên worker thread.
+     */
+    public boolean pushUnsyncedBlocking() throws IOException {
+        String userIdStr = tokenManager.getUserId();
+        if (userIdStr == null) return false;
+        List<Goal> unsynced = goalDao.getUnsyncedGoalsSync(userIdStr);
+        if (unsynced == null || unsynced.isEmpty()) return false;
+        UUID userId = UUID.fromString(userIdStr);
+        for (Goal g : unsynced) {
+            boolean isServerId = isUuid(g.getId());
+            // Tombstone: đẩy lệnh xoá rồi xoá cứng cục bộ (chống zombie-resurrection).
+            if (g.isDeleted()) {
+                if (isServerId) {
+                    Response<Void> r = financialApi.deleteGoal(UUID.fromString(g.getId())).execute();
+                    if (r.code() >= 500) return true;
+                    // 2xx hoặc 404 → coi như đã xoá trên server
+                }
+                goalDao.deleteById(g.getId());
+                continue;
+            }
+            FinancialRequests.CreateGoalRequest req = new FinancialRequests.CreateGoalRequest(
+                userId, g.getName(), new java.math.BigDecimal(g.getTargetAmount()),
+                new java.math.BigDecimal(g.getSavedAmount()), sdf.format(new java.util.Date(g.getTargetDateMs())));
+            if (isServerId) {
+                Response<GoalDto> r = financialApi.updateGoal(UUID.fromString(g.getId()), req).execute();
+                if (r.code() >= 500) return true;
+                if (r.isSuccessful()) { goalDao.markSynced(g.getId()); continue; }
+                if (r.code() != 404) continue;   // 4xx khác → để chu kỳ sau
+                // 404 → record chưa/không còn trên server → tạo mới bên dưới
+            }
+            Response<GoalDto> r = financialApi.createGoal(req).execute();
+            if (r.code() >= 500) return true;
+            if (r.isSuccessful() && r.body() != null) {
+                goalDao.deleteById(g.getId());               // bỏ id cục bộ
+                Goal serverModel = convertToModel(r.body()); // setSynced(true), id server
+                serverModel.setUserId(userIdStr);
+                goalDao.insert(serverModel);
+            }
+        }
+        return false;
     }
 
     public boolean syncDeltaBlocking() throws IOException {

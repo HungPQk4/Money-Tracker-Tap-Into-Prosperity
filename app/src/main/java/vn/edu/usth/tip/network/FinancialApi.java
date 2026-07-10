@@ -115,5 +115,13 @@ public interface FinancialApi {
 
     @DELETE("debts/{id}")
     Call<Void> deleteDebt(@Path("id") UUID id);
+
+    @GET("debts/delta")
+    Call<DeltaResponse<DebtDto>> getDebtsDelta(
+            @Query("updatedSince") String updatedSince,
+            @Query("untilTimestamp") String untilTimestamp,
+            @Query("lastUpdatedAt") String lastUpdatedAt,
+            @Query("lastId") String lastId,
+            @Query("limit") int limit);
 }
  

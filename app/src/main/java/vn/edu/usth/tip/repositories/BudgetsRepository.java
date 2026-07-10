@@ -208,7 +208,7 @@ public class BudgetsRepository {
         String categoryName = (dto.getCategoryName() != null && !dto.getCategoryName().isEmpty())
             ? dto.getCategoryName() : "General";
 
-        return new Budget(
+        Budget b = new Budget(
             dto.getId().toString(),
             "Ngân sách " + categoryName,
             "💰",
@@ -220,6 +220,61 @@ public class BudgetsRepository {
             end,
             System.currentTimeMillis()
         );
+        b.setSynced(true); // bản ghi từ server = đã đồng bộ
+        return b;
+    }
+
+    private static boolean isUuid(String s) {
+        if (s == null) return false;
+        try { UUID.fromString(s); return true; } catch (IllegalArgumentException e) { return false; }
+    }
+
+    /**
+     * Đẩy budget có thay đổi cục bộ (isSynced=0) lên server: create/update/delete.
+     * Tự resolve category (UUID server) qua {@link #resolveCategoryId}. Trả true nếu cần retry (5xx).
+     */
+    public boolean pushUnsyncedBlocking() throws IOException {
+        String userIdStr = tokenManager.getUserId();
+        if (userIdStr == null) return false;
+        List<Budget> unsynced = budgetDao.getUnsyncedBudgetsSync(userIdStr);
+        if (unsynced == null || unsynced.isEmpty()) return false;
+        UUID userId = UUID.fromString(userIdStr);
+        for (Budget b : unsynced) {
+            boolean isServerId = isUuid(b.getId());
+            // Tombstone: đẩy lệnh xoá rồi xoá cứng cục bộ (chống zombie-resurrection).
+            if (b.isDeleted()) {
+                if (isServerId) {
+                    Response<Void> r = financialApi.deleteBudget(UUID.fromString(b.getId())).execute();
+                    if (r.code() >= 500) return true;
+                    // 2xx hoặc 404 → coi như đã xoá trên server
+                }
+                budgetDao.deleteById(b.getId());
+                continue;
+            }
+            UUID categoryId = resolveCategoryId(b.getCategoryName());
+            if (categoryId == null) continue; // chưa resolve được category → để chu kỳ sau
+            long duration = b.getPeriodEndMs() - b.getPeriodStartMs();
+            String pType = (duration <= 8L * 24 * 60 * 60 * 1000) ? "weekly" : "monthly";
+            FinancialRequests.CreateBudgetRequest req = new FinancialRequests.CreateBudgetRequest(
+                userId, categoryId, new java.math.BigDecimal(b.getLimitAmount()), new java.math.BigDecimal(b.getSpentAmount()),
+                pType, sdf.format(new java.util.Date(b.getPeriodStartMs())), sdf.format(new java.util.Date(b.getPeriodEndMs())));
+            if (isServerId) {
+                Response<BudgetDto> r = financialApi.updateBudget(UUID.fromString(b.getId()), req).execute();
+                if (r.code() >= 500) return true;
+                if (r.isSuccessful()) { budgetDao.markSynced(b.getId()); continue; }
+                if (r.code() != 404) continue;   // 4xx khác → để chu kỳ sau
+                // 404 → record chưa/không còn trên server → tạo mới bên dưới
+            }
+            Response<BudgetDto> r = financialApi.createBudget(req).execute();
+            if (r.code() >= 500) return true;
+            if (r.isSuccessful() && r.body() != null) {
+                budgetDao.deleteById(b.getId());                 // bỏ id cục bộ
+                Budget serverModel = convertToModel(r.body());   // setSynced(true), id server
+                serverModel.setUserId(userIdStr);
+                budgetDao.insert(serverModel);
+            }
+        }
+        return false;
     }
 
     /**

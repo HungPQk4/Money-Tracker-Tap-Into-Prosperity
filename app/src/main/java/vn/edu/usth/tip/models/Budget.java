@@ -24,6 +24,8 @@ public class Budget {
     private long   periodStartMs;// Thời điểm bắt đầu (epoch ms)
     private long   periodEndMs;  // Thời điểm kết thúc (epoch ms)
     private long   createdMs;    // Thời điểm tạo
+    private boolean isSynced = false; // false = có thay đổi cục bộ chưa đẩy lên server (offline-first)
+    private boolean isDeleted = false; // soft-delete: giữ tombstone tới khi worker đẩy lệnh xoá lên server
     @ColumnInfo(name = "user_id")
     private String userId;
 
@@ -67,4 +69,8 @@ public class Budget {
     public void setCreatedMs(long t)         { this.createdMs = t; }
     public String getUserId()                { return userId; }
     public void setUserId(String userId)     { this.userId = userId; }
+    public boolean isSynced()                { return isSynced; }
+    public void setSynced(boolean synced)    { this.isSynced = synced; }
+    public boolean isDeleted()               { return isDeleted; }
+    public void setDeleted(boolean deleted)  { this.isDeleted = deleted; }
 }

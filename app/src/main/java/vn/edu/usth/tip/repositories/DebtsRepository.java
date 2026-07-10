@@ -2,7 +2,9 @@ package vn.edu.usth.tip.repositories;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import retrofit2.Call;
@@ -13,9 +15,11 @@ import vn.edu.usth.tip.models.DebtLoan;
 import vn.edu.usth.tip.models.DebtLoanDao;
 import vn.edu.usth.tip.network.FinancialApi;
 import vn.edu.usth.tip.network.RetrofitClient;
+import vn.edu.usth.tip.network.responses.DeltaResponse;
 import vn.edu.usth.tip.network.responses.FinancialDtos.DebtDto;
 import vn.edu.usth.tip.network.requests.FinancialRequests;
 import vn.edu.usth.tip.utils.NetworkUtils;
+import vn.edu.usth.tip.utils.SyncPrefs;
 import vn.edu.usth.tip.utils.TokenManager;
 import java.util.UUID;
 
@@ -201,6 +205,87 @@ public class DebtsRepository {
                 }
             });
         });
+    }
+
+    // ─── Đồng bộ nền (worker): push unsynced + delta pull ──────────────────────
+
+    /** Đẩy các khoản nợ/cho vay tạo offline (isSynced=0) lên server. Trả true nếu cần retry (5xx). */
+    public boolean pushUnsyncedBlocking() throws IOException {
+        String userIdStr = tokenManager.getUserId();
+        if (userIdStr == null) return false;
+        List<DebtLoan> unsynced = debtLoanDao.getUnsyncedDebtsSync(userIdStr);
+        if (unsynced == null || unsynced.isEmpty()) return false;
+        UUID userId = UUID.fromString(userIdStr);
+        for (DebtLoan d : unsynced) {
+            FinancialRequests.CreateDebtRequest req = new FinancialRequests.CreateDebtRequest(
+                userId, d.getPersonName(), new java.math.BigDecimal(d.getAmount()),
+                (d.getType() == DebtLoan.TYPE_LENT) ? "lend" : "borrow",
+                sdf.format(new java.util.Date(d.getDueDate())));
+            req.setNote(d.getReason());
+            Response<DebtDto> res = financialApi.createDebt(req).execute();
+            if (res.code() >= 500) return true; // retry theo backoff của worker
+            if (res.isSuccessful() && res.body() != null) {
+                debtLoanDao.delete(d);
+                DebtLoan synced = convertToModel(res.body()); // setSynced(true)
+                synced.setUserId(userIdStr);
+                debtLoanDao.insert(synced);
+            }
+        }
+        return false;
+    }
+
+    /** Delta pull nợ/cho vay (cursor-based, có tombstone). Trả true nếu cần retry (5xx). */
+    public boolean syncDeltaBlocking() throws IOException {
+        String cursor      = SyncPrefs.getCursor(appContext, SyncPrefs.KEY_DEBT);
+        String untilTs     = null;
+        String lastUpdAt   = null;
+        String lastIdStr   = null;
+        String finalCursor = null;
+        boolean completed  = false; // chỉ advance cursor khi đã kéo HẾT các trang trong window
+
+        while (true) {
+            Response<DeltaResponse<DebtDto>> resp = financialApi
+                    .getDebtsDelta(cursor, untilTs, lastUpdAt, lastIdStr, 500)
+                    .execute();
+            if (!resp.isSuccessful() || resp.body() == null) {
+                if (resp.code() >= 500) return true;
+                break;
+            }
+            DeltaResponse<DebtDto> page = resp.body();
+            if (untilTs == null) untilTs = page.getSyncTimestamp();
+            finalCursor = page.getSyncTimestamp();
+
+            List<DebtDto> items = page.getItems();
+            if (items != null && !items.isEmpty()) {
+                String userId = tokenManager.getUserId();
+                List<DebtLoan> toInsert = new ArrayList<>();
+                List<String>   toDelete = new ArrayList<>();
+                for (DebtDto dto : items) {
+                    if (dto.isDeleted()) {
+                        if (dto.getId() != null) toDelete.add(dto.getId().toString());
+                        continue;
+                    }
+                    DebtLoan m = convertToModel(dto);
+                    m.setUserId(userId);
+                    toInsert.add(m);
+                }
+                db.runInTransaction(() -> {
+                    for (String id : toDelete)  debtLoanDao.deleteById(id);
+                    for (DebtLoan m : toInsert) debtLoanDao.insert(m);
+                });
+            }
+
+            if (!page.isHasMore()) { completed = true; break; }
+            if (items != null && !items.isEmpty()) {
+                DebtDto last = items.get(items.size() - 1);
+                lastUpdAt = last.getUpdatedAt();
+                lastIdStr = last.getId() != null ? last.getId().toString() : null;
+            }
+        }
+
+        if (completed && finalCursor != null)
+            SyncPrefs.setCursor(appContext, SyncPrefs.KEY_DEBT, finalCursor);
+        return false;
     }
 
     private DebtLoan convertToModel(DebtDto dto) {

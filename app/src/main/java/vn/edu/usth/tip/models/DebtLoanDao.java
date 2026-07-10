@@ -28,6 +28,10 @@ public interface DebtLoanDao {
     @Query("SELECT * FROM debt_loans WHERE isSynced = 0 AND user_id = :userId")
     List<DebtLoan> getUnsyncedDebtsSync(String userId);
 
+    /** Xoá cứng theo id — dùng khi delta pull nhận tombstone (server đã xoá). */
+    @Query("DELETE FROM debt_loans WHERE id = :id")
+    void deleteById(String id);
+
     @Query("DELETE FROM debt_loans WHERE isSynced = 1 AND user_id = :userId")
     void deleteSyncedDebts(String userId);
 

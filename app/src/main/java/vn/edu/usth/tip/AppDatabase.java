@@ -31,7 +31,7 @@ import vn.edu.usth.tip.models.GoalDao;
 @Database(
         entities = {Transaction.class, Category.class, Wallet.class,
                 Budget.class, DebtLoan.class, Goal.class},
-        version = 20,
+        version = 21,
         exportSchema = false
 )
 @TypeConverters({Converters.class})
@@ -86,7 +86,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "money_tracker_database")
-                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
+                            .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
                             .fallbackToDestructiveMigration()
                             .addCallback(sRoomDatabaseCallback)
                             .build();
@@ -161,6 +161,18 @@ public abstract class AppDatabase extends RoomDatabase {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE transactions ADD COLUMN toWalletName TEXT");
+        }
+    };
+
+    // 20→21: offline-first cho budget & goal — thêm isSynced (dòng cũ = đã sync = 1, không bị re-push)
+    // và isDeleted (soft-delete/tombstone) để worker đẩy create/update/delete + chống zombie-resurrection.
+    static final Migration MIGRATION_20_21 = new Migration(20, 21) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE budgets ADD COLUMN isSynced INTEGER NOT NULL DEFAULT 1");
+            database.execSQL("ALTER TABLE budgets ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE goals ADD COLUMN isSynced INTEGER NOT NULL DEFAULT 1");
+            database.execSQL("ALTER TABLE goals ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0");
         }
     };
 

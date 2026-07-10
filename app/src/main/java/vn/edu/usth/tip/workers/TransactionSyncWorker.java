@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters;
 import java.io.IOException;
 
 import vn.edu.usth.tip.repositories.BudgetsRepository;
+import vn.edu.usth.tip.repositories.DebtsRepository;
 import vn.edu.usth.tip.repositories.GoalsRepository;
 import vn.edu.usth.tip.repositories.TransactionRepository;
 
@@ -32,17 +33,21 @@ public class TransactionSyncWorker extends Worker {
         TransactionRepository txRepo      = new TransactionRepository(ctx);
         BudgetsRepository     budgetRepo  = new BudgetsRepository(ctx);
         GoalsRepository       goalRepo    = new GoalsRepository(ctx);
+        DebtsRepository       debtRepo    = new DebtsRepository(ctx);
         try {
-            // Phase 1: push unsynced data, pull categories + accounts (master data)
+            // Phase 1: push unsynced transactions, pull categories + accounts (master data)
             boolean retry = txRepo.fullSyncPhase1();
             if (retry) return Result.retry();
 
-            // Pull entities that depend on categories/accounts
-            retry = budgetRepo.syncDeltaBlocking();
-            if (retry) return Result.retry();
+            // Mỗi entity master: PUSH thay đổi cục bộ (create/update/delete) TRƯỚC, rồi PULL delta.
+            retry = budgetRepo.pushUnsyncedBlocking(); if (retry) return Result.retry();
+            retry = budgetRepo.syncDeltaBlocking();    if (retry) return Result.retry();
 
-            retry = goalRepo.syncDeltaBlocking();
-            if (retry) return Result.retry();
+            retry = goalRepo.pushUnsyncedBlocking();   if (retry) return Result.retry();
+            retry = goalRepo.syncDeltaBlocking();      if (retry) return Result.retry();
+
+            retry = debtRepo.pushUnsyncedBlocking();   if (retry) return Result.retry();
+            retry = debtRepo.syncDeltaBlocking();      if (retry) return Result.retry();
 
             // Pull transactions last (depends on categories + accounts)
             retry = txRepo.pullDeltaTransactionsSync();

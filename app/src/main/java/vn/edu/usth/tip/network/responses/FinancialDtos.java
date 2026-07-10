@@ -98,6 +98,8 @@ public class FinancialDtos {
         private String type; // LENT, BORROWED
         private String dueDate;
         private String note;
+        private String updatedAt;   // ISO-8601, for delta sync
+        private boolean deleted;    // true = soft-deleted on server
 
         public UUID getId() { return id; }
         public String getContactName() { return contactName; }
@@ -105,5 +107,7 @@ public class FinancialDtos {
         public String getType() { return type; }
         public String getDueDate() { return dueDate; }
         public String getNote() { return note; }
+        public String getUpdatedAt() { return updatedAt; }
+        public boolean isDeleted() { return deleted; }
     }
 }
